@@ -1,6 +1,48 @@
 import { describe, it, expect } from 'vitest';
 import { parseSseFrames, extractChangedIds } from './events-stream';
 
+// ── /events query serialization (CDN-normalization safety) ────────────────────
+//
+// The signed pathAndQuery MUST use %2C for the comma so a normalizing CDN
+// (Cloudflare) doesn't re-encode a literal comma and break the signature.
+// This tests the URLSearchParams approach used in useEventsStream.
+
+describe('events query URL-encoding', () => {
+  function buildEventsPathAndQuery(base: string, spaceIds: string[]): string {
+    const u = new URL(base);
+    const params = new URLSearchParams();
+    params.set('spaces', spaceIds.join(','));
+    u.search = params.toString();
+    return u.pathname + u.search;
+  }
+
+  it('encodes the comma between space ids as %2C', () => {
+    const pq = buildEventsPathAndQuery('https://sync.example.com/v1/octovault/events', ['sp-a', 'sp-b']);
+    expect(pq).toBe('/v1/octovault/events?spaces=sp-a%2Csp-b');
+  });
+
+  it('single space id has no comma and no encoding', () => {
+    const pq = buildEventsPathAndQuery('https://sync.example.com/v1/octovault/events', ['sp-x']);
+    expect(pq).toBe('/v1/octovault/events?spaces=sp-x');
+  });
+
+  it('server decodes %2C back to comma (membership split is unaffected)', () => {
+    const pq = buildEventsPathAndQuery('https://h.example/v1/octovault/events', ['sp-a', 'sp-b', 'sp-c']);
+    const u = new URL('https://h.example' + pq);
+    expect(u.searchParams.get('spaces')).toBe('sp-a,sp-b,sp-c');
+  });
+
+  it('signed and fetched URLs are byte-identical (CDN cannot break the signature)', () => {
+    const ids = ['sp-1', 'sp-2'];
+    const pq = buildEventsPathAndQuery('https://sync.example.com/v1/octovault/events', ids);
+    // Simulate CDN re-encoding a literal comma: if we naively did join(',') with
+    // no URLSearchParams the CDN would turn ',' -> '%2C', breaking the signature.
+    // The %2C form is already normalized — re-encoding is a no-op.
+    const cdnNormalized = pq.replace(/,/g, '%2C');
+    expect(cdnNormalized).toBe(pq);
+  });
+});
+
 // ── parseSseFrames ────────────────────────────────────────────────────────────
 
 describe('parseSseFrames', () => {

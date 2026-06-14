@@ -47,9 +47,14 @@ export function useEventsStream(session: Session | null, spaceIds: string[]): vo
         if (!s || ids.length === 0) break;
 
         // Build the exact pathAndQuery the server will verify the signature against.
+        // Use URLSearchParams so the comma is encoded to %2C on both the signed
+        // string and the wire — a normalizing CDN (Cloudflare) would otherwise
+        // re-encode a literal comma and break the request signature.
         const base = getEventsUrl();
         const u = new URL(base);
-        u.search = `spaces=${ids.map(encodeURIComponent).join(',')}`;
+        const params = new URLSearchParams();
+        params.set('spaces', ids.join(','));
+        u.search = params.toString(); // spaces=sp-a%2Csp-b
         const pathAndQuery = u.pathname + u.search;
 
         let headers: Record<string, string>;
