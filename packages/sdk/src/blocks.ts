@@ -64,6 +64,9 @@ export const BLOCK_TYPES: BlockTypeDef[] = [
   { type: 'quote', label: 'Quote', icon: 'quote-mark', section: 'other', keywords: ['blockquote', 'cite', '>'], variant: 'body', mono: false, multiline: true, placeholder: 'Quote', mdPrefixes: ['> '] },
   { type: 'code', label: 'Code', icon: 'code-block', section: 'other', keywords: ['snippet', 'mono', '```'], variant: 'callout', mono: true, multiline: true, placeholder: 'Code', mdPrefixes: ['``` ', '```'] },
   { type: 'divider', label: 'Divider', icon: 'minus', section: 'other', keywords: ['rule', 'hr', 'separator', '---'], variant: 'body', mono: false, multiline: false, placeholder: '', mdPrefixes: ['--- ', '---'] },
+  { type: 'image', label: 'Image', icon: 'image', section: 'other', keywords: ['picture', 'photo', 'img', 'upload'], variant: 'body', mono: false, multiline: false, placeholder: '' },
+  { type: 'file', label: 'File', icon: 'paperclip', section: 'other', keywords: ['attachment', 'upload', 'pdf', 'doc', 'attach'], variant: 'body', mono: false, multiline: false, placeholder: '' },
+  { type: 'bookmark', label: 'Web bookmark', icon: 'link', section: 'other', keywords: ['url', 'link', 'bookmark', 'embed', 'web'], variant: 'body', mono: false, multiline: false, placeholder: 'Paste a link…' },
 ];
 
 const BY_TYPE: Record<BlockType, BlockTypeDef> = BLOCK_TYPES.reduce(

@@ -33,10 +33,21 @@ export type BlockType =
   | 'divider'
   | 'page'
   | 'image'
-  | 'file';
+  | 'file'
+  | 'bookmark';
 
 /** Block types that reference a child Object by id (no inline text; clicking navigates). */
 export const REF_BLOCK_TYPES: ReadonlySet<BlockType> = new Set<BlockType>(['page', 'image', 'file']);
+
+/** Cached OG metadata for a `bookmark` block (stored as a JSON LWW register). */
+export interface BookmarkMeta {
+  title: string;
+  description?: string;
+  image?: string;
+  favicon?: string;
+  /** The URL the metadata was fetched for — used to invalidate when `text` changes. */
+  fetchedFor: string;
+}
 
 export interface Block {
   id: string;
@@ -48,8 +59,10 @@ export interface Block {
   indent?: number;
   /** Only meaningful for `type === 'toggle'` — whether its deeper-indented run is hidden. */
   collapsed?: boolean;
-  /** Only meaningful for `type === 'page'` — the linked child Object's index id. */
+  /** Only meaningful for `type === 'page'|'image'|'file'` — the linked child Object's index id. */
   ref?: string;
+  /** Only meaningful for `type === 'bookmark'` — cached OG metadata from the unfurl server. */
+  bookmark?: BookmarkMeta;
 }
 
 export interface NewBlock {
@@ -66,6 +79,7 @@ const checkedReg = (id: string) => `checked:${id}`;
 const indentReg = (id: string) => `indent:${id}`;
 const collapsedReg = (id: string) => `collapsed:${id}`;
 const refReg = (id: string) => `ref:${id}`;
+const bookmarkReg = (id: string) => `bookmark:${id}`;
 const textList = (id: string) => `text:${id}`;
 
 function orderOf(doc: WalDocument): string[] {
@@ -87,6 +101,10 @@ export function readBlocks(doc: WalDocument): Block[] {
     const indentVal = state[indentReg(raw)];
     const collapsedVal = state[collapsedReg(raw)];
     const refVal = state[refReg(raw)];
+    const bookmarkVal = state[bookmarkReg(raw)];
+    const bookmark = bookmarkVal && typeof bookmarkVal === 'object' && !Array.isArray(bookmarkVal)
+      ? (bookmarkVal as unknown as BookmarkMeta)
+      : undefined;
     blocks.push({
       id: raw,
       type,
@@ -96,6 +114,7 @@ export function readBlocks(doc: WalDocument): Block[] {
       indent: typeof indentVal === 'number' && indentVal > 0 ? Math.floor(indentVal) : undefined,
       collapsed: typeof collapsedVal === 'boolean' ? collapsedVal : undefined,
       ref: typeof refVal === 'string' ? refVal : undefined,
+      bookmark,
     });
   }
   return blocks;
@@ -178,6 +197,7 @@ export function removeBlock(doc: WalDocument, id: string): void {
   doc.deleteField(indentReg(id));
   doc.deleteField(collapsedReg(id));
   doc.deleteField(refReg(id));
+  doc.deleteField(bookmarkReg(id));
 }
 
 /** Move a block to `toIndex` via a minimal reconcile of the order list. */
@@ -225,7 +245,7 @@ export function mergeBlockIntoPrevious(
   return { prevId, offset: prevText.length };
 }
 
-/** Insert a copy of `id` (type/text/checked/indent/ref) directly below it. */
+/** Insert a copy of `id` (type/text/checked/indent/ref/bookmark) directly below it. */
 export function duplicateBlock(doc: WalDocument, id: string): string | null {
   const order = orderOf(doc);
   const at = order.indexOf(id);
@@ -234,13 +254,19 @@ export function duplicateBlock(doc: WalDocument, id: string): string | null {
   const checkedVal = state[checkedReg(id)];
   const indentVal = state[indentReg(id)];
   const refVal = state[refReg(id)];
-  return insertBlock(doc, at + 1, {
+  const newId = insertBlock(doc, at + 1, {
     type: (state[typeReg(id)] as BlockType | undefined) ?? 'paragraph',
     text: doc.text(textList(id)),
     checked: typeof checkedVal === 'boolean' ? checkedVal : undefined,
     indent: typeof indentVal === 'number' ? indentVal : undefined,
     ref: typeof refVal === 'string' ? refVal : undefined,
   });
+  // Carry the cached OG metadata to the duplicate so it doesn't need a re-fetch.
+  const bkVal = state[bookmarkReg(id)];
+  if (bkVal && typeof bkVal === 'object' && !Array.isArray(bkVal)) {
+    doc.setField(bookmarkReg(newId), bkVal);
+  }
+  return newId;
 }
 
 /**
@@ -256,7 +282,13 @@ export function restoreBlock(doc: WalDocument, index: number, block: Block): voi
   if (block.indent) doc.setField(indentReg(block.id), block.indent);
   if (block.collapsed !== undefined) doc.setField(collapsedReg(block.id), block.collapsed);
   if (block.ref) doc.setField(refReg(block.id), block.ref);
+  if (block.bookmark) doc.setField(bookmarkReg(block.id), block.bookmark as unknown as Json);
   const order = orderOf(doc).filter((x) => x !== block.id);
   const at = Math.max(0, Math.min(index, order.length));
   doc.setList(ORDER, [...order.slice(0, at), block.id, ...order.slice(at)]);
+}
+
+/** Store (or update) the fetched OG metadata for a `bookmark` block. */
+export function setBlockBookmark(doc: WalDocument, id: string, meta: BookmarkMeta): void {
+  doc.setField(bookmarkReg(id), meta as unknown as Json);
 }

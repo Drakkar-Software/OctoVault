@@ -16,6 +16,25 @@ import type { ByteSealer } from './attachments';
 import { objectBlobName, objectBlobPull, objectBlobPush } from './paths';
 import { randomId } from '../domain/ids';
 
+/**
+ * Maximum allowed byte size for a single object blob upload.
+ * Keep in sync with `maxBodyBytes` for the `objblob` collection in
+ * `apps/server/src/config.ts` — both must be the same value.
+ */
+export const MAX_OBJECT_BLOB_BYTES = 11_534_336; // ~11 MB
+
+/** Thrown when a file exceeds {@link MAX_OBJECT_BLOB_BYTES} before any upload attempt. */
+export class FileTooLargeError extends Error {
+  readonly size: number;
+  readonly max: number;
+  constructor(size: number, max: number) {
+    super(`File is ${size} bytes — maximum allowed is ${max} bytes`);
+    this.name = 'FileTooLargeError';
+    this.size = size;
+    this.max = max;
+  }
+}
+
 export interface ObjectBlobRef {
   blobId: string;
   name: string;
@@ -23,7 +42,8 @@ export interface ObjectBlobRef {
   size: number;
 }
 
-/** Seal and upload bytes as an object blob; returns the ref to store in node props. */
+/** Seal and upload bytes as an object blob; returns the ref to store in node props.
+ *  Throws {@link FileTooLargeError} if `bytes` exceeds {@link MAX_OBJECT_BLOB_BYTES}. */
 export async function uploadObjectBlob(
   client: StarfishClient,
   enc: ByteSealer,
@@ -32,6 +52,11 @@ export async function uploadObjectBlob(
   name: string,
   mime: string,
 ): Promise<ObjectBlobRef> {
+  // Defense-in-depth: callers should check size before reading file bytes,
+  // but guard here too in case bytes are constructed without a prior size check.
+  if (bytes.length > MAX_OBJECT_BLOB_BYTES) {
+    throw new FileTooLargeError(bytes.length, MAX_OBJECT_BLOB_BYTES);
+  }
   const blobId = randomId();
   const sealed = await enc.sealBytes(bytes, objectBlobName(spaceId, blobId));
   await client.pushBlob(objectBlobPush(spaceId, blobId), sealed, 'application/octet-stream');

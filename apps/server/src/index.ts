@@ -8,6 +8,7 @@ import {
   saveConfig,
 } from "@drakkar.software/starfish-server";
 import { createEventsRoute } from "./events.js";
+import { createUnfurlRoute } from "./unfurl.js";
 import { FilesystemObjectStore } from "@drakkar.software/starfish-server/node";
 import { identitiesServerPlugin } from "@drakkar.software/starfish-identities";
 import { sharingServerPlugin } from "@drakkar.software/starfish-sharing";
@@ -144,6 +145,11 @@ app.route(
   "/",
   createEventsRoute({ enricher: sseEnricher, nonceCache, revocationStore }),
 );
+
+// Public OG-unfurl endpoint: fetches a URL server-side and returns OpenGraph metadata.
+// No auth required — the URL is caller-supplied and the result is non-sensitive metadata.
+// Mount before the sync router so /unfurl is not swallowed by its catch-all.
+app.route("/", createUnfurlRoute());
 
 // starfish-server is typed against the satellite workspace's hono copy; it's
 // runtime-compatible with ours, so cast across the nominal type-identity gap.

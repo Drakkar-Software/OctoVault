@@ -759,7 +759,7 @@ function BoardEmpty({ onSeed, onAddColumn }: { onSeed: () => void; onAddColumn: 
 }
 
 const styles = StyleSheet.create({
-  wrap: { gap: spacing.md },
+  wrap: { gap: spacing.md, paddingHorizontal: spacing.screenX },
   stripWrap: { position: 'relative' },
   columns: { gap: spacing.md, paddingBottom: spacing.sm, alignItems: 'flex-start' },
   column: { width: layout.boardColumnWidth, borderRadius: radii.card, borderWidth: 1, padding: spacing.sm, gap: spacing.xs },

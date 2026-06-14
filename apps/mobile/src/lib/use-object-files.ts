@@ -10,7 +10,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import { File as FSFile } from 'expo-file-system';
 
 import type { ByteSealer } from '@drakkar.software/octovault-sdk';
-import { uploadObjectBlob, getSpaceClient, buildEncryptor, keyringPull, ownerTrustedAdders } from '@drakkar.software/octovault-sdk';
+import { uploadObjectBlob, MAX_OBJECT_BLOB_BYTES, FileTooLargeError, getSpaceClient, buildEncryptor, keyringPull, ownerTrustedAdders } from '@drakkar.software/octovault-sdk';
 import type { Encryptor } from '@drakkar.software/starfish-client';
 import { useSession } from './session-context';
 import { useSpaceObjects } from './space-objects-context';
@@ -40,7 +40,18 @@ export function useObjectFiles(spaceId: string): UseObjectFilesResult {
     const name = asset.name ?? 'file';
     const mime = asset.mimeType ?? (asImage ? 'image/jpeg' : 'application/octet-stream');
 
+    // Pre-upload size guard: check BEFORE reading bytes into memory.
+    // DocumentPicker provides `size` when available (native); may be undefined on web.
+    const knownSize = (asset as { size?: number }).size;
+    if (knownSize !== undefined && knownSize > MAX_OBJECT_BLOB_BYTES) {
+      throw new FileTooLargeError(knownSize, MAX_OBJECT_BLOB_BYTES);
+    }
+
     const bytes = await new FSFile(uri).bytes();
+    // Secondary guard in case the picker didn't supply size (web fallback).
+    if (bytes.length > MAX_OBJECT_BLOB_BYTES) {
+      throw new FileTooLargeError(bytes.length, MAX_OBJECT_BLOB_BYTES);
+    }
 
     if (!session) throw new Error('No active session');
     // Blobs are always space-keyring sealed; open the keyring directly.
@@ -53,8 +64,20 @@ export function useObjectFiles(spaceId: string): UseObjectFilesResult {
     return { ...ref, asImage };
   }, [session, spaceId]);
 
+  /** Swallow cancellation silently; re-throw real errors (FileTooLargeError, network, etc.). */
+  const pickAndUploadOrNull = useCallback(async (mimeFilter: string[], asImage: boolean) => {
+    try {
+      return await pickAndUpload(mimeFilter, asImage);
+    } catch (err) {
+      // The picker was cancelled — DocumentPicker throws an AbortError or returns
+      // canceled:true; we return null for that case. Everything else propagates.
+      if (err instanceof Error && err.name === 'AbortError') return null;
+      throw err;
+    }
+  }, [pickAndUpload]);
+
   const createFileObject = useCallback(async (opts?: { parentId?: ID }): Promise<string | null> => {
-    const uploaded = await pickAndUpload(['*/*'], false).catch(() => null);
+    const uploaded = await pickAndUploadOrNull(['*/*'], false);
     if (!uploaded) return null;
     const id = objects.create({
       type: 'file',
@@ -63,10 +86,10 @@ export function useObjectFiles(spaceId: string): UseObjectFilesResult {
       meta: { props: { blobId: uploaded.blobId, name: uploaded.name, mime: uploaded.mime, size: uploaded.size } },
     });
     return id ?? null;
-  }, [pickAndUpload, objects]);
+  }, [pickAndUploadOrNull, objects]);
 
   const createImageObject = useCallback(async (opts?: { parentId?: ID }): Promise<string | null> => {
-    const uploaded = await pickAndUpload(['image/*'], true).catch(() => null);
+    const uploaded = await pickAndUploadOrNull(['image/*'], true);
     if (!uploaded) return null;
     const id = objects.create({
       type: 'image',
@@ -75,13 +98,13 @@ export function useObjectFiles(spaceId: string): UseObjectFilesResult {
       meta: { props: { blobId: uploaded.blobId, name: uploaded.name, mime: uploaded.mime, size: uploaded.size } },
     });
     return id ?? null;
-  }, [pickAndUpload, objects]);
+  }, [pickAndUploadOrNull, objects]);
 
   const attachBlob = useCallback(async (objectId: string, asImage = false): Promise<void> => {
-    const uploaded = await pickAndUpload(asImage ? ['image/*'] : ['*/*'], asImage).catch(() => null);
+    const uploaded = await pickAndUploadOrNull(asImage ? ['image/*'] : ['*/*'], asImage);
     if (!uploaded) return;
     objects.setProps(objectId, { blobId: uploaded.blobId, name: uploaded.name, mime: uploaded.mime, size: uploaded.size });
-  }, [pickAndUpload, objects]);
+  }, [pickAndUploadOrNull, objects]);
 
   return { createFileObject, createImageObject, attachBlob };
 }

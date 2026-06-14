@@ -36,6 +36,10 @@ import { useToast } from '@/components/ui/Toast';
 import { Txt } from '@/components/ui/Txt';
 import { BlockHandleMenu, InsertBlockMenu, SlashMenu, flattenBySection } from '@/components/work/BlockTypeMenu';
 import { ObjectHero } from '@/components/work/ObjectHero';
+import { AttachmentBlock } from '@/components/work/AttachmentBlock';
+import { BookmarkBlock } from '@/components/work/BookmarkBlock';
+import { useObjectFiles } from '@/lib/use-object-files';
+import type { BookmarkMeta } from '@/lib/use-page';
 
 /** Where the caret should land when a block (re)opens for editing. */
 const SEL_START: FieldSelection = { start: 0, end: 0 };
@@ -86,6 +90,7 @@ export function PageView({ spaceId, objectId, emoji, title, subtitle, onRenameTi
   const toast = useToast();
   const { isWide } = useResponsive();
   const { objects } = useSpaceObjects();
+  const { attachBlob } = useObjectFiles(spaceId);
 
   /** The one open editor: `seed` forces a remount (re-seed) of the same block's
    *  field after a conversion; `selection` places the caret (merge seam, travel). */
@@ -187,7 +192,12 @@ export function PageView({ spaceId, objectId, emoji, title, subtitle, onRenameTi
     // The "/query" the user typed was navigation, not content — drop its flush.
     suppressOnce(s.id, `/${s.query}`);
     if (REF_BLOCK_TYPES.has(def.type)) {
-      convertToRefBlock(s.id, def.type);
+      // image/file: stay inline (picker opens immediately, no navigation).
+      if (def.type === 'image' || def.type === 'file') {
+        insertAttachment(s.id, def.type);
+      } else {
+        convertToRefBlock(s.id, def.type);
+      }
       return;
     }
     if (def.type === 'divider') {
@@ -281,7 +291,7 @@ export function PageView({ spaceId, objectId, emoji, title, subtitle, onRenameTi
     const vi = visIndexOf(id);
     const prev = vi > 0 ? visibleRef.current[vi - 1] : undefined;
     if (!prev) return;
-    if (prev.type === 'divider' || prev.type === 'page') {
+    if (prev.type === 'divider' || prev.type === 'page' || prev.type === 'image' || prev.type === 'file' || prev.type === 'bookmark') {
       page.removeBlock(prev.id);
       return;
     }
@@ -304,7 +314,7 @@ export function PageView({ spaceId, objectId, emoji, title, subtitle, onRenameTi
     const step = dir === 'up' ? -1 : 1;
     for (i += step; i >= 0 && i < vis.length; i += step) {
       const b = vis[i]!;
-      if (b.type !== 'divider' && b.type !== 'page') return b;
+      if (b.type !== 'divider' && b.type !== 'page' && b.type !== 'image' && b.type !== 'file' && b.type !== 'bookmark') return b;
     }
     return undefined;
   };
@@ -406,6 +416,22 @@ export function PageView({ spaceId, objectId, emoji, title, subtitle, onRenameTi
     });
   };
 
+  /** Insert an image/file ref-block WITHOUT navigating away — stay on the page
+   *  so the inline AttachmentBlock renders and opens the OS picker immediately.
+   *  On cancel, the block keeps an Upload button (handled by AttachmentBlock). */
+  const insertAttachment = (blockId: string, type: 'image' | 'file') => {
+    const childId = objects.create({ type, title: '', parentId: objectId });
+    if (!childId) return;
+    page.setBlockType(blockId, type);
+    page.setBlockText(blockId, '');
+    page.setBlockRef(blockId, childId);
+    setEditing(null);
+    // Open the system file picker immediately (decision: picker on insert).
+    // attachBlob is a fire-and-forget — cancellation returns silently,
+    // real errors are surfaced inside AttachmentBlock's own upload handler.
+    void attachBlob(childId, type === 'image');
+  };
+
   /* ───────────────────────── key routing (slash nav + alt-moves) ─────────── */
 
   const onKeyCapture = (b: Block, key: string, mods: KeyMods): boolean => {
@@ -504,7 +530,7 @@ export function PageView({ spaceId, objectId, emoji, title, subtitle, onRenameTi
   };
 
   const focusFirstBlock = () => {
-    const first = visible.find((b) => b.type !== 'divider' && b.type !== 'page');
+    const first = visible.find((b) => b.type !== 'divider' && b.type !== 'page' && b.type !== 'image' && b.type !== 'file' && b.type !== 'bookmark');
     if (first) {
       focusBlock(first.id, SEL_START);
       return;
@@ -579,6 +605,8 @@ export function PageView({ spaceId, objectId, emoji, title, subtitle, onRenameTi
             onOpenRef={() => (b.ref ? openObject(b.ref) : undefined)}
             onOpenHandle={(anchor) => setHandleMenu({ id: b.id, anchor })}
             onOpenInsert={(anchor) => setInsertMenu({ afterId: b.id, anchor })}
+            spaceId={spaceId}
+            onBookmarkFetched={(meta) => page.setBlockBookmark(b.id, meta)}
           />
         ))}
 
@@ -634,7 +662,12 @@ export function PageView({ spaceId, objectId, emoji, title, subtitle, onRenameTi
           if (REF_BLOCK_TYPES.has(def.type)) {
             const at = insertIndexAfter(afterId);
             const nid = page.insertBlock(at, { type: 'paragraph' });
-            if (nid) convertToRefBlock(nid, def.type);
+            if (!nid) return;
+            if (def.type === 'image' || def.type === 'file') {
+              insertAttachment(nid, def.type);
+            } else {
+              convertToRefBlock(nid, def.type);
+            }
             return;
           }
           const nid = page.insertBlock(insertIndexAfter(afterId), { type: def.type, indent: getBlock(afterId)?.indent });
@@ -703,6 +736,10 @@ interface BlockRowProps {
   registerRow: (node: ViewType | null) => void;
   onLayoutRow: (y: number, h: number) => void;
   onEdit: () => void;
+  /** Space id — passed into AttachmentBlock for its upload/decrypt hooks. */
+  spaceId: string;
+  /** Persist fetched OG metadata for a `bookmark` block into the CRDT. */
+  onBookmarkFetched: (meta: BookmarkMeta) => void;
   onClose: () => void;
   onCommitText: (text: string) => void;
   onChange: (text: string) => void;
@@ -746,6 +783,8 @@ function BlockRow({
   onOpenRef,
   onOpenHandle,
   onOpenInsert,
+  spaceId,
+  onBookmarkFetched,
 }: BlockRowProps) {
   const { colors } = useTheme();
   const { hovered, hoverProps } = useRowHover();
@@ -785,6 +824,26 @@ function BlockRow({
     );
   }
 
+  if (block.type === 'bookmark') {
+    return (
+      <View
+        ref={setRef}
+        collapsable={false}
+        onLayout={(e) => onLayoutRow(e.nativeEvent.layout.y, e.nativeEvent.layout.height)}
+        style={[styles.row, indentPad ? { marginLeft: indentPad } : null]}
+        {...hoverProps}
+      >
+        <BlockGutter visible={showGutter} onAdd={onOpenInsert} onHandle={onOpenHandle} />
+        <BookmarkBlock
+          text={block.text}
+          bookmark={block.bookmark}
+          onChangeUrl={(url) => onCommitText(url)}
+          onBookmarkFetched={onBookmarkFetched}
+        />
+      </View>
+    );
+  }
+
   if (REF_BLOCK_TYPES.has(block.type)) {
     return (
       <View
@@ -795,7 +854,16 @@ function BlockRow({
         {...hoverProps}
       >
         <BlockGutter visible={showGutter} onAdd={onOpenInsert} onHandle={onOpenHandle} />
-        <ObjectRefRow node={childNode} blockType={block.type} onPress={onOpenRef} onLongPress={openHandle} />
+        {block.type === 'page'
+          ? <ObjectRefRow node={childNode} blockType={block.type} onPress={onOpenRef} onLongPress={openHandle} />
+          : <AttachmentBlock
+              node={childNode}
+              blockType={block.type as 'image' | 'file'}
+              spaceId={spaceId}
+              onOpen={onOpenRef}
+              onLongPress={openHandle}
+            />
+        }
       </View>
     );
   }

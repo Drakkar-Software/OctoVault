@@ -2,9 +2,9 @@ import { useCallback, useMemo } from 'react';
 
 import { useObjectContent } from './use-object-content';
 import * as page from '@drakkar.software/octovault-sdk';
-import type { Block, BlockType, NewBlock } from '@drakkar.software/octovault-sdk';
+import type { Block, BlockType, BookmarkMeta, NewBlock } from '@drakkar.software/octovault-sdk';
 
-export type { Block, BlockType, NewBlock } from '@drakkar.software/octovault-sdk';
+export type { Block, BlockType, BookmarkMeta, NewBlock } from '@drakkar.software/octovault-sdk';
 
 export interface PageHook {
   blocks: Block[];
@@ -35,6 +35,8 @@ export interface PageHook {
   duplicateBlock: (id: string) => string | null | undefined;
   /** Undo for a structural delete — re-insert with the ORIGINAL id at `index`. */
   restoreBlock: (index: number, block: Block) => void;
+  /** Store (or update) the fetched OG metadata for a `bookmark` block. */
+  setBlockBookmark: (id: string, meta: BookmarkMeta) => void;
 }
 
 /**
@@ -85,5 +87,6 @@ export function usePage(spaceId: string, pageId: string, opts: { enabled?: boole
     mergeBlockIntoPrevious: (id, textOverride) => mut((d) => page.mergeBlockIntoPrevious(d, id, textOverride)),
     duplicateBlock: (id) => mut((d) => page.duplicateBlock(d, id)),
     restoreBlock: (index, block) => mut((d) => page.restoreBlock(d, index, block)),
+    setBlockBookmark: (id, meta) => mut((d) => page.setBlockBookmark(d, id, meta)),
   };
 }
