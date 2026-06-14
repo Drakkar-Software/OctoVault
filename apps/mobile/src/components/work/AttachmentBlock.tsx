@@ -13,7 +13,7 @@
  *     • code   → scrollable source excerpt with filename header
  *     • file   → horizontal chip: icon · name · size · Share
  */
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { Image } from 'expo-image';
 import { useState, useMemo } from 'react';
 
@@ -21,6 +21,8 @@ import { useTheme } from '@/lib/use-theme';
 import { radii, spacing } from '@/theme';
 import { Button } from '@/components/ui/Button';
 import { Icon } from '@/components/ui/Icon';
+import { IconButton } from '@/components/ui/IconButton';
+import { Lightbox } from '@/components/ui/Lightbox';
 import { Txt } from '@/components/ui/Txt';
 import type { ObjectNode } from '@drakkar.software/octovault-sdk';
 import { FileTooLargeError, MAX_OBJECT_BLOB_BYTES, propsOf } from '@drakkar.software/octovault-sdk';
@@ -53,6 +55,8 @@ export function AttachmentBlock({ node, blockType, spaceId, onOpen, onLongPress 
 
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [zoomed, setZoomed] = useState(false);
+  const { width: winWidth, height: winHeight } = useWindowDimensions();
 
   const props = node ? propsOf(node) : {};
   const blobId = props['blobId'] as string | undefined;
@@ -216,24 +220,55 @@ export function AttachmentBlock({ node, blockType, spaceId, onOpen, onLongPress 
   // ── State E — image preview ───────────────────────────────────────────────
   if (kind === 'image' && dataUri) {
     return (
-      <Pressable
-        onPress={onOpen}
-        onLongPress={onLongPress}
-        style={[styles.imageWrapper, { borderColor: colors.lineFaint }]}
-      >
-        <Image
-          source={{ uri: dataUri }}
-          style={[styles.image, { borderRadius: radii.card }]}
-          contentFit="contain"
-        />
-        {(name || size != null) && (
-          <View style={[styles.imageCaption, { borderTopColor: colors.lineFaint }]}>
-            <Txt variant="caption" tone="inkMuted">
-              {name}{size != null ? ` · ${formatBytes(size)}` : ''}
-            </Txt>
-          </View>
-        )}
-      </Pressable>
+      <>
+        {/* Inline thumbnail — tap navigates to the object page (existing UX).
+            The expand button is a sibling outside imageWrapper (which clips via
+            overflow:hidden) so it appears in the top-right corner unclipped. */}
+        <View style={styles.imageContainer}>
+          <Pressable
+            onPress={onOpen}
+            onLongPress={onLongPress}
+            style={[styles.imageWrapper, { borderColor: colors.lineFaint }]}
+          >
+            <Image
+              source={{ uri: dataUri }}
+              style={[styles.image, { borderRadius: radii.card }]}
+              contentFit="contain"
+            />
+            {(name || size != null) && (
+              <View style={[styles.imageCaption, { borderTopColor: colors.lineFaint }]}>
+                <Txt variant="caption" tone="inkMuted">
+                  {name}{size != null ? ` · ${formatBytes(size)}` : ''}
+                </Txt>
+              </View>
+            )}
+          </Pressable>
+          {/* Zoom affordance — opens the fullscreen Lightbox without navigating away */}
+          <IconButton
+            name="expand"
+            size={15}
+            color={colors.onScrim}
+            tooltip="View full size"
+            onPress={() => setZoomed(true)}
+            style={[styles.expandBtn, { backgroundColor: colors.scrim }]}
+          />
+        </View>
+
+        {/* Fullscreen preview — dataUri already decrypted by useObjectBlob */}
+        <Lightbox
+          visible={zoomed}
+          onClose={() => setZoomed(false)}
+          onShare={() => void share()}
+          closeLabel={`Close ${name ?? 'image'} preview`}
+          shareLabel={`Share ${name ?? 'image'}`}
+        >
+          <Image
+            source={{ uri: dataUri }}
+            style={{ width: winWidth * 0.92, height: winHeight * 0.82 }}
+            contentFit="contain"
+          />
+        </Lightbox>
+      </>
     );
   }
 
@@ -369,6 +404,11 @@ const styles = StyleSheet.create({
   },
 
   // ── Image preview ────────────────────────────────────────────────────────
+  // Container: gives the absolute-positioned expand button something to anchor
+  // to without being clipped by imageWrapper's overflow:hidden.
+  imageContainer: {
+    position: 'relative',
+  },
   imageWrapper: {
     borderRadius: radii.card,
     overflow: 'hidden',
@@ -382,6 +422,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
     borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  // Expand icon — top-right corner of the image, on a translucent scrim disc.
+  expandBtn: {
+    position: 'absolute',
+    top: spacing.sm,
+    right: spacing.sm,
+    borderRadius: radii.pill,
   },
 
   // ── Code preview ─────────────────────────────────────────────────────────
