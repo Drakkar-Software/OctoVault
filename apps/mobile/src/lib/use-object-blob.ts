@@ -14,6 +14,18 @@ import type { ByteSealer, ObjectNode } from '@drakkar.software/octovault-sdk';
 import { loadObjectBlob, propsOf, getSpaceClient, buildEncryptor, keyringPull, ownerTrustedAdders } from '@drakkar.software/octovault-sdk';
 import { useSession } from './session-context';
 
+/** Convert a Uint8Array to a base64 data URI safely for any size.
+ *  `btoa(String.fromCharCode(...bytes))` hits the call-stack spread limit in
+ *  Hermes for arrays > ~65 KB, so we process in 32 KB chunks instead. */
+function toDataUri(mime: string, bytes: Uint8Array): string {
+  const CHUNK = 0x8000; // 32 KB
+  let binary = '';
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    binary += String.fromCharCode.apply(null, bytes.subarray(i, i + CHUNK) as unknown as number[]);
+  }
+  return `data:${mime};base64,${btoa(binary)}`;
+}
+
 export interface ObjectBlobState {
   bytes: Uint8Array | null;
   /** `data:${mime};base64,…` — only built when `mime` starts with `image/`. */
@@ -34,12 +46,15 @@ export function useObjectBlob(spaceId: string, node: ObjectNode | undefined): Ob
   const isImage = mime.startsWith('image/');
 
   const [bytes, setBytes] = useState<Uint8Array | null>(null);
-  const [loading, setLoading] = useState(false);
+  // Pre-init to true when we know there's a blob to fetch so the first render
+  // shows a spinner instead of falling through to the generic file-chip.
+  const [loading, setLoading] = useState<boolean>(() => !!blobId);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!blobId || !session) {
       setBytes(null);
+      setLoading(false);
       return;
     }
     let cancelled = false;
@@ -62,9 +77,7 @@ export function useObjectBlob(spaceId: string, node: ObjectNode | undefined): Ob
     return () => { cancelled = true; };
   }, [blobId, spaceId, session]);
 
-  const dataUri = bytes && isImage
-    ? `data:${mime};base64,${btoa(String.fromCharCode(...bytes))}`
-    : null;
+  const dataUri = bytes && isImage ? toDataUri(mime, bytes) : null;
 
   const share = useCallback(async () => {
     if (!bytes) return;
