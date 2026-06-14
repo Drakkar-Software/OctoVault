@@ -1,45 +1,99 @@
 import { describe, it, expect } from 'vitest';
-import { parseSseFrames, extractChangedIds } from './events-stream';
+import { buildSignedEventsRequest, parseSseFrames, extractChangedIds } from './events-stream';
 
-// ── /events query serialization (CDN-normalization safety) ────────────────────
+// ── buildSignedEventsRequest ──────────────────────────────────────────────────
 //
-// The signed pathAndQuery MUST use %2C for the comma so a normalizing CDN
-// (Cloudflare) doesn't re-encode a literal comma and break the signature.
-// This tests the URLSearchParams approach used in useEventsStream.
+// The helper must:
+//   1. Strip the syncBase mount prefix (e.g. "/sync") from the SIGNED path so
+//      the signature matches the path the origin verifies after nginx strips it —
+//      mirroring how starfish-client's /pull signs applyNamespace(path) without
+//      the baseUrl prefix.
+//   2. Encode the comma between space ids as %2C (URLSearchParams) so a
+//      normalizing CDN (Cloudflare) cannot re-encode a literal comma and break
+//      the signature.
+//   3. Keep the full mount in the fetched `url` so nginx can route the request.
 
-describe('events query URL-encoding', () => {
-  function buildEventsPathAndQuery(base: string, spaceIds: string[]): string {
-    const u = new URL(base);
-    const params = new URLSearchParams();
-    params.set('spaces', spaceIds.join(','));
-    u.search = params.toString();
-    return u.pathname + u.search;
-  }
+describe('buildSignedEventsRequest', () => {
+  // ── mount-strip cases ──────────────────────────────────────────────────────
+
+  it('strips the syncBase mount prefix from the signed pathAndQuery (production layout)', () => {
+    const { url, pathAndQuery } = buildSignedEventsRequest(
+      'https://h/sync/v1/octovault/events',
+      'https://h/sync',
+      ['sp-a', 'sp-b'],
+    );
+    // signed path must NOT include "/sync"
+    expect(pathAndQuery).toBe('/v1/octovault/events?spaces=sp-a%2Csp-b');
+    // fetch URL keeps the mount so nginx can route it
+    expect(url).toBe('https://h/sync/v1/octovault/events?spaces=sp-a%2Csp-b');
+  });
+
+  it('is a no-op strip when syncBase has no pathname (local dev)', () => {
+    const { url, pathAndQuery } = buildSignedEventsRequest(
+      'http://localhost:8787/events',
+      'http://localhost:8787',
+      ['sp-x'],
+    );
+    expect(pathAndQuery).toBe('/events?spaces=sp-x');
+    expect(url).toBe('http://localhost:8787/events?spaces=sp-x');
+  });
+
+  it('is a no-op strip when syncBase has namespace prefix but no mount (ns-only layout)', () => {
+    const { url, pathAndQuery } = buildSignedEventsRequest(
+      'https://h/v1/octovault/events',
+      'https://h',
+      ['sp-1', 'sp-2'],
+    );
+    expect(pathAndQuery).toBe('/v1/octovault/events?spaces=sp-1%2Csp-2');
+    expect(url).toBe('https://h/v1/octovault/events?spaces=sp-1%2Csp-2');
+  });
+
+  it('handles a trailing slash in syncBase without double-stripping', () => {
+    const { pathAndQuery } = buildSignedEventsRequest(
+      'https://h/sync/v1/octovault/events',
+      'https://h/sync/',
+      ['sp-a'],
+    );
+    expect(pathAndQuery).toBe('/v1/octovault/events?spaces=sp-a');
+  });
+
+  // ── comma encoding (%2C contract) ─────────────────────────────────────────
 
   it('encodes the comma between space ids as %2C', () => {
-    const pq = buildEventsPathAndQuery('https://sync.example.com/v1/octovault/events', ['sp-a', 'sp-b']);
-    expect(pq).toBe('/v1/octovault/events?spaces=sp-a%2Csp-b');
+    const { pathAndQuery } = buildSignedEventsRequest(
+      'https://sync.example.com/v1/octovault/events',
+      'https://sync.example.com',
+      ['sp-a', 'sp-b'],
+    );
+    expect(pathAndQuery).toBe('/v1/octovault/events?spaces=sp-a%2Csp-b');
   });
 
   it('single space id has no comma and no encoding', () => {
-    const pq = buildEventsPathAndQuery('https://sync.example.com/v1/octovault/events', ['sp-x']);
-    expect(pq).toBe('/v1/octovault/events?spaces=sp-x');
+    const { pathAndQuery } = buildSignedEventsRequest(
+      'https://sync.example.com/v1/octovault/events',
+      'https://sync.example.com',
+      ['sp-x'],
+    );
+    expect(pathAndQuery).toBe('/v1/octovault/events?spaces=sp-x');
   });
 
   it('server decodes %2C back to comma (membership split is unaffected)', () => {
-    const pq = buildEventsPathAndQuery('https://h.example/v1/octovault/events', ['sp-a', 'sp-b', 'sp-c']);
-    const u = new URL('https://h.example' + pq);
-    expect(u.searchParams.get('spaces')).toBe('sp-a,sp-b,sp-c');
+    const { url } = buildSignedEventsRequest(
+      'https://h.example/v1/octovault/events',
+      'https://h.example',
+      ['sp-a', 'sp-b', 'sp-c'],
+    );
+    expect(new URL(url).searchParams.get('spaces')).toBe('sp-a,sp-b,sp-c');
   });
 
-  it('signed and fetched URLs are byte-identical (CDN cannot break the signature)', () => {
-    const ids = ['sp-1', 'sp-2'];
-    const pq = buildEventsPathAndQuery('https://sync.example.com/v1/octovault/events', ids);
-    // Simulate CDN re-encoding a literal comma: if we naively did join(',') with
-    // no URLSearchParams the CDN would turn ',' -> '%2C', breaking the signature.
-    // The %2C form is already normalized — re-encoding is a no-op.
-    const cdnNormalized = pq.replace(/,/g, '%2C');
-    expect(cdnNormalized).toBe(pq);
+  it('signed and fetched URLs are CDN-normalization-proof (no re-encodable literal comma)', () => {
+    const { pathAndQuery } = buildSignedEventsRequest(
+      'https://sync.example.com/v1/octovault/events',
+      'https://sync.example.com',
+      ['sp-1', 'sp-2'],
+    );
+    // The %2C form is already normalised — a CDN re-encoding comma→%2C is a no-op.
+    expect(pathAndQuery.replace(/,/g, '%2C')).toBe(pathAndQuery);
   });
 });
 

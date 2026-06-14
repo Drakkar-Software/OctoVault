@@ -9,11 +9,11 @@
  */
 import { useEffect, useRef } from 'react';
 
-import { buildAuthHeaders, getEventsUrl } from '@drakkar.software/octovault-sdk';
+import { buildAuthHeaders, getEventsUrl, getSyncBase } from '@drakkar.software/octovault-sdk';
 import { dispatchDocChange, emitSseStatus } from '@drakkar.software/octovault-sdk';
 import type { Session } from '@drakkar.software/octovault-sdk';
 
-import { openEventsStream } from './events-stream';
+import { buildSignedEventsRequest, openEventsStream } from './events-stream';
 
 const MIN_BACKOFF_MS = 1_000;
 const MAX_BACKOFF_MS = 30_000;
@@ -46,16 +46,17 @@ export function useEventsStream(session: Session | null, spaceIds: string[]): vo
         const ids = spaceIdsRef.current;
         if (!s || ids.length === 0) break;
 
-        // Build the exact pathAndQuery the server will verify the signature against.
-        // Use URLSearchParams so the comma is encoded to %2C on both the signed
-        // string and the wire — a normalizing CDN (Cloudflare) would otherwise
-        // re-encode a literal comma and break the request signature.
-        const base = getEventsUrl();
-        const u = new URL(base);
-        const params = new URLSearchParams();
-        params.set('spaces', ids.join(','));
-        u.search = params.toString(); // spaces=sp-a%2Csp-b
-        const pathAndQuery = u.pathname + u.search;
+        // Build the fetch URL and the signed pathAndQuery.
+        // buildSignedEventsRequest strips the getSyncBase() mount prefix (e.g.
+        // "/sync") from the signed path so it matches the path the nginx origin
+        // verifies after stripping the mount — exactly as starfish-client's /pull
+        // signs applyNamespace(path) without the baseUrl prefix.  The comma is
+        // encoded to %2C (CDN-safe); the fetch URL retains the full mount path.
+        const { url, pathAndQuery } = buildSignedEventsRequest(
+          getEventsUrl(),
+          getSyncBase(),
+          ids,
+        );
 
         let headers: Record<string, string>;
         try {
@@ -66,7 +67,7 @@ export function useEventsStream(session: Session | null, spaceIds: string[]): vo
         if (cancelled) break;
 
         await openEventsStream({
-          url: u.toString(),
+          url,
           headers,
           onEvent: ({ spaceId, objectId, nodeId }) => {
             if (spaceId) dispatchDocChange(spaceId);

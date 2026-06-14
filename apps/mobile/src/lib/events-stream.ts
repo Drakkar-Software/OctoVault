@@ -82,6 +82,50 @@ export function extractChangedIds(dataJson: string): ChangedIds {
 }
 
 /**
+ * Build the fetch URL and the signed `pathAndQuery` for the /events SSE request.
+ *
+ * The signed path drops the `getSyncBase()` mount prefix (e.g. "/sync") because
+ * the deployment's nginx strips that mount before the origin verifies the request
+ * signature — so the signed path must match the un-prefixed path the origin sees,
+ * exactly as `starfish-client`'s /pull signs `applyNamespace(path)` without the
+ * base-URL prefix.  The comma between space ids is encoded to %2C (URLSearchParams)
+ * so a normalising CDN (Cloudflare) cannot re-encode a literal comma and break the
+ * signature; the fetch URL retains the full mount path so nginx can route it.
+ *
+ * @param eventsUrl  Full events endpoint URL (from `getEventsUrl()`).
+ * @param syncBase   Sync server base URL (from `getSyncBase()`), used to derive
+ *                   the mount prefix to strip.
+ * @param spaceIds   Space ids to subscribe to.
+ * @returns `url` — the full URL to fetch; `pathAndQuery` — the mount-stripped path
+ *          to include in the Ed25519 signature.
+ */
+export function buildSignedEventsRequest(
+  eventsUrl: string,
+  syncBase: string,
+  spaceIds: string[],
+): { url: string; pathAndQuery: string } {
+  const u = new URL(eventsUrl);
+  const params = new URLSearchParams();
+  params.set('spaces', spaceIds.join(','));
+  u.search = params.toString(); // spaces=sp-a%2Csp-b
+
+  // Strip the sync-base mount path (e.g. "/sync") from the signed path so it
+  // matches the path the origin sees after nginx strips the mount prefix.
+  let basePath = '';
+  try {
+    basePath = new URL(syncBase).pathname.replace(/\/+$/, '');
+  } catch {
+    /* relative base — no prefix to strip */
+  }
+  const signedPath =
+    basePath && u.pathname.startsWith(basePath)
+      ? u.pathname.slice(basePath.length)
+      : u.pathname;
+
+  return { url: u.toString(), pathAndQuery: signedPath + u.search };
+}
+
+/**
  * Open one SSE stream to `url` using header-capable fetch (EventSource cannot
  * set Authorization). Reads frames until the signal aborts or the stream ends.
  * Calls onStatus(true) on first read, onStatus(false) on exit.
