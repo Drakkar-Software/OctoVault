@@ -7,7 +7,6 @@
  */
 import { useCallback } from 'react';
 import * as DocumentPicker from 'expo-document-picker';
-import { File as FSFile } from 'expo-file-system';
 
 import type { ByteSealer } from '@drakkar.software/octovault-sdk';
 import { uploadObjectBlob, MAX_OBJECT_BLOB_BYTES, FileTooLargeError, getSpaceClient, buildEncryptor, keyringPull, ownerTrustedAdders } from '@drakkar.software/octovault-sdk';
@@ -47,7 +46,7 @@ export function useObjectFiles(spaceId: string): UseObjectFilesResult {
       throw new FileTooLargeError(knownSize, MAX_OBJECT_BLOB_BYTES);
     }
 
-    const bytes = await new FSFile(uri).bytes();
+    const bytes = new Uint8Array(await (await fetch(uri)).arrayBuffer());
     // Secondary guard in case the picker didn't supply size (web fallback).
     if (bytes.length > MAX_OBJECT_BLOB_BYTES) {
       throw new FileTooLargeError(bytes.length, MAX_OBJECT_BLOB_BYTES);

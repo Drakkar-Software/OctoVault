@@ -166,32 +166,49 @@ export function AttachmentBlock({ node, blockType, spaceId, onOpen, onLongPress 
   if (!blobId) {
     return (
       <Pressable
-        onPress={() => void handleUpload()}
+        onPress={uploading ? undefined : () => void handleUpload()}
         onLongPress={onLongPress}
         style={({ pressed }) => [
           styles.placeholder,
           {
-            backgroundColor: pressed ? colors.pressed : colors.surface,
-            borderColor: colors.rule,
+            backgroundColor: pressed && !uploading ? colors.accentBgStrong : colors.accentBg,
+            borderColor: colors.accentBorder,
           },
         ]}
       >
-        <Icon
-          name={isImage ? 'image' : 'paperclip'}
-          size={24}
-          color={colors.inkMuted}
-        />
-        <Txt variant="body" tone="inkMuted" style={styles.placeholderLabel}>
-          {isImage ? 'Add image' : 'Upload file'}
-        </Txt>
-        <View style={styles.uploadBtn}>
-          <Button
-            label={uploading ? 'Uploading…' : 'Upload'}
-            variant="secondary"
-            size="sm"
-            onPress={() => void handleUpload()}
-          />
-        </View>
+        {uploading ? (
+          <View style={styles.uploadingState}>
+            <ActivityIndicator size="small" color={colors.accent} />
+            <Txt variant="callout" tone="inkMuted" style={styles.uploadingLabel}>
+              Uploading…
+            </Txt>
+          </View>
+        ) : (
+          <>
+            <View style={[styles.iconRing, { backgroundColor: colors.accentBgStrong, borderColor: colors.accentBorder }]}>
+              <Icon
+                name={isImage ? 'image' : 'arrow-up'}
+                size={20}
+                color={colors.accent}
+              />
+            </View>
+            <Txt variant="callout" weight="semibold" tone="accentInk" style={styles.placeholderLabel}>
+              {isImage ? 'Add image' : 'Upload file'}
+            </Txt>
+            <Txt variant="caption" tone="inkFaint">
+              Tap to choose from your {isImage ? 'photos' : 'files'}
+            </Txt>
+            <View style={styles.uploadBtn}>
+              <Button
+                label="Choose file"
+                variant="primary"
+                size="sm"
+                iconName="arrow-up"
+                onPress={() => void handleUpload()}
+              />
+            </View>
+          </>
+        )}
       </Pressable>
     );
   }
@@ -321,19 +338,34 @@ const styles = StyleSheet.create({
   placeholder: {
     borderRadius: radii.card,
     borderWidth: 1,
-    borderStyle: 'dashed',
-    minHeight: 96,
+    minHeight: 112,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: spacing.lg,
+    paddingVertical: spacing.xl,
     paddingHorizontal: spacing.lg,
     gap: spacing.xs,
+  },
+  iconRing: {
+    width: 44,
+    height: 44,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.xs,
   },
   placeholderLabel: {
     marginTop: spacing.xs,
   },
   uploadBtn: {
-    marginTop: spacing.sm,
+    marginTop: spacing.md,
+  },
+  uploadingState: {
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  uploadingLabel: {
+    marginTop: spacing.xs,
   },
 
   // ── Image preview ────────────────────────────────────────────────────────
