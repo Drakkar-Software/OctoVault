@@ -18,7 +18,7 @@ import { Image } from 'expo-image';
 import { useState, useMemo } from 'react';
 
 import { useTheme } from '@/lib/use-theme';
-import { radii, spacing } from '@/theme';
+import { layout, radii, spacing } from '@/theme';
 import { Button } from '@/components/ui/Button';
 import { Icon } from '@/components/ui/Icon';
 import { IconButton } from '@/components/ui/IconButton';
@@ -56,6 +56,9 @@ export function AttachmentBlock({ node, blockType, spaceId, onOpen, onLongPress 
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [zoomed, setZoomed] = useState(false);
+  // Measured width÷height ratio of the decoded image. null = not yet known
+  // (first render after decode), so we use a placeholder height instead.
+  const [aspect, setAspect] = useState<number | null>(null);
   const { width: winWidth, height: winHeight } = useWindowDimensions();
 
   const props = node ? propsOf(node) : {};
@@ -232,8 +235,23 @@ export function AttachmentBlock({ node, blockType, spaceId, onOpen, onLongPress 
           >
             <Image
               source={{ uri: dataUri }}
-              style={[styles.image, { borderRadius: radii.card }]}
+              style={[
+                styles.image,
+                { borderRadius: radii.card },
+                // Give the image a concrete height. Once the intrinsic dimensions
+                // arrive via onLoad we switch to a true aspectRatio (Yoga derives
+                // height from the 100%-wide layout). Until then use the fallback
+                // so the box is never collapsed to 0. maxHeight on styles.image
+                // caps tall portraits regardless.
+                aspect
+                  ? { aspectRatio: aspect }
+                  : { height: layout.inlineImageMinHeight },
+              ]}
               contentFit="contain"
+              onLoad={(e) => {
+                const { width, height } = e.source ?? {};
+                if (width && height) setAspect(width / height);
+              }}
             />
             {(name || size != null) && (
               <View style={[styles.imageCaption, { borderTopColor: colors.lineFaint }]}>
@@ -416,7 +434,7 @@ const styles = StyleSheet.create({
   },
   image: {
     width: '100%',
-    maxHeight: 320,
+    maxHeight: layout.inlineImageMaxHeight,
   },
   imageCaption: {
     paddingHorizontal: spacing.sm,

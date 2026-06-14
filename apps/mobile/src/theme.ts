@@ -634,6 +634,12 @@ export const layout = {
    * app's own chrome. macOS-only; Windows/Linux use a native title bar.
    */
   desktopTitlebarInset: 28,
+  /** Max height of an inline image block preview (AttachmentBlock). Keeps tall
+   *  portrait shots from dominating the reading column. */
+  inlineImageMaxHeight: 320,
+  /** Placeholder height before the intrinsic aspect ratio is measured, so the
+   *  block never collapses to 0 height while the image is loading. */
+  inlineImageMinHeight: 200,
 } as const;
 
 // ── Semantic helpers ───────────────────────────────────────────────────────
