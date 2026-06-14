@@ -1,9 +1,8 @@
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'expo-router';
-import type { View as ViewType } from 'react-native';
-import { Platform, Pressable, StyleSheet } from 'react-native';
+import { Pressable, StyleSheet } from 'react-native';
 
-import { layout, radii, spacing } from '@/theme';
+import { radii, spacing } from '@/theme';
 import { focusRingStyle, useFocusRing } from '@/lib/focus';
 import { useHover } from '@/lib/use-hover';
 import { useSpaces } from '@/lib/use-spaces';
@@ -13,31 +12,39 @@ import { AccountSwitcher } from '@/components/account/AccountSwitcher';
 import { Avatar } from '@/components/ui/Avatar';
 import { Icon } from '@/components/ui/Icon';
 import { Menu, MenuItem, MenuLabel, MenuSeparator } from '@/components/ui/Menu';
-import { Popover } from '@/components/ui/Popover';
 import { Sheet } from '@/components/ui/Sheet';
 import { Txt } from '@/components/ui/Txt';
+import { SpaceListRow } from '@/components/work/SpaceListRow';
 
 /** Space monogram fallback when no image is set. */
 const monogram = (s: Space) => (s.short || s.name.slice(0, 2)).toUpperCase();
 
+/** Maximum number of spaces shown inline in the mobile sheet before adding "See all". */
+const SPACE_LIST_CAP = 5;
+
 interface SpaceSwitcherProps {
   /**
-   * `sidebar` — the desktop sidebar header: name + avatar + chevron opening an
-   * anchored {@link Popover} (Notion's top-left workspace switcher).
+   * `sidebar` — the desktop sidebar header: name + avatar, press navigates to
+   * the active space's settings page. No dropdown on desktop — switching spaces
+   * is handled by the SpacesRail.
    * `appbar` — the phone Vault tab's AppBar title: same trigger shape opening a
-   * bottom {@link Sheet}, because phones previously had NO way to change space.
+   * bottom {@link Sheet} with the full space list + account switcher.
    */
   variant: 'sidebar' | 'appbar';
 }
 
 /**
- * The workspace switcher — one menu, every form factor: the space list (avatar,
- * check on the active one), "Join or create a space", the active space's
- * settings, and the account section (switch / add / profile / log out, reusing
- * {@link AccountSwitcher} so multi-account lives one press from the space name
- * instead of buried behind the desktop-only rail avatar). Selecting a space
- * goes through `switchSpace`, which navigates the main pane home BEFORE
- * activating — switching under an open document used to silently revert.
+ * The workspace switcher — two form factors:
+ *
+ * **Desktop (`sidebar`):** avatar + name trigger navigates directly to
+ * `/space/[id]` (the space settings / details screen). Space switching is
+ * handled by the SpacesRail, so there is no dropdown here.
+ *
+ * **Mobile (`appbar`):** same trigger shape opens a bottom {@link Sheet} with
+ * the full menu — space list (avatar, check on active), "Join or create",
+ * "Space settings", and the full account section ({@link AccountSwitcher}).
+ * When there are more than {@link SPACE_LIST_CAP} spaces, the list is capped
+ * and a "See all" row navigates to `/spaces`.
  */
 export function SpaceSwitcher({ variant }: SpaceSwitcherProps) {
   const router = useRouter();
@@ -46,7 +53,6 @@ export function SpaceSwitcher({ variant }: SpaceSwitcherProps) {
   const { hovered, hoverProps } = useHover();
   const { focused, focusProps } = useFocusRing();
   const [open, setOpen] = useState(false);
-  const anchorRef = useRef<ViewType>(null);
 
   const active = spaces.find((s) => s.id === activeId) ?? spaces[0] ?? null;
   const close = () => setOpen(false);
@@ -56,12 +62,61 @@ export function SpaceSwitcher({ variant }: SpaceSwitcherProps) {
     if (id !== activeId) switchSpace(id);
   };
 
+  // ── Desktop sidebar: navigate straight to space details ────────────────────
+  if (variant === 'sidebar') {
+    return (
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={active ? `${active.name} — space settings` : 'Space settings'}
+        hitSlop={6}
+        onPress={() => {
+          if (active) {
+            router.push({ pathname: '/space/[id]', params: { id: active.id } });
+          } else {
+            router.push('/join');
+          }
+        }}
+        {...hoverProps}
+        {...focusProps}
+        style={({ pressed }) => [
+          styles.triggerSidebar,
+          pressed ? { backgroundColor: colors.pressed } : hovered ? { backgroundColor: colors.hover } : null,
+          focused && focusRingStyle(colors),
+        ]}
+      >
+        {active ? <Avatar label={monogram(active)} image={active.image} size={22} /> : null}
+        <Txt variant="heading" weight="semibold" numberOfLines={1} style={styles.triggerName}>
+          {active?.name ?? 'OctoVault'}
+        </Txt>
+      </Pressable>
+    );
+  }
+
+  // ── Mobile appbar: full sheet menu ────────────────────────────────────────
+  // Cap the inline space list to SPACE_LIST_CAP; always show the active space.
+  const otherSpaces = spaces.filter((s) => s.id !== active?.id);
+  const cappedSpaces =
+    spaces.length > SPACE_LIST_CAP
+      ? [...(active ? [active] : []), ...otherSpaces.slice(0, SPACE_LIST_CAP - (active ? 1 : 0))]
+      : spaces;
+  const hasSeeAll = spaces.length > SPACE_LIST_CAP;
+
   const menu = (
     <Menu>
       {spaces.length > 0 ? <MenuLabel>Spaces</MenuLabel> : null}
-      {spaces.map((s) => (
-        <SpaceRow key={s.id} space={s} active={s.id === active?.id} onPress={() => onSelect(s.id)} />
+      {cappedSpaces.map((s) => (
+        <SpaceListRow key={s.id} space={s} active={s.id === active?.id} onPress={() => onSelect(s.id)} />
       ))}
+      {hasSeeAll ? (
+        <MenuItem
+          icon="chev-right"
+          label={`See all (${spaces.length})`}
+          onPress={() => {
+            close();
+            router.push('/spaces');
+          }}
+        />
+      ) : null}
       <MenuItem
         icon="plus"
         label={spaces.length > 0 ? 'Join or create a space' : 'Create your first space'}
@@ -89,7 +144,6 @@ export function SpaceSwitcher({ variant }: SpaceSwitcherProps) {
   return (
     <>
       <Pressable
-        ref={anchorRef}
         accessibilityRole="button"
         accessibilityLabel={active ? `${active.name} — switch space` : 'Switch space'}
         accessibilityState={{ expanded: open }}
@@ -98,7 +152,7 @@ export function SpaceSwitcher({ variant }: SpaceSwitcherProps) {
         {...hoverProps}
         {...focusProps}
         style={({ pressed }) => [
-          variant === 'sidebar' ? styles.triggerSidebar : styles.triggerAppbar,
+          styles.triggerAppbar,
           pressed ? { backgroundColor: colors.pressed } : hovered ? { backgroundColor: colors.hover } : null,
           focused && focusRingStyle(colors),
         ]}
@@ -109,51 +163,10 @@ export function SpaceSwitcher({ variant }: SpaceSwitcherProps) {
         </Txt>
         <Icon name="chev-down" size={14} color={colors.inkMuted} />
       </Pressable>
-      {variant === 'sidebar' ? (
-        <Popover visible={open} onClose={close} anchorRef={anchorRef} placement="bottom-start" width={layout.popoverWidth}>
-          {menu}
-        </Popover>
-      ) : (
-        <Sheet visible={open} onClose={close} presentation="sheet">
-          {menu}
-        </Sheet>
-      )}
+      <Sheet visible={open} onClose={close} presentation="sheet">
+        {menu}
+      </Sheet>
     </>
-  );
-}
-
-interface SpaceRowProps {
-  space: Space;
-  active: boolean;
-  onPress: () => void;
-}
-
-/** One space in the menu — a MenuItem-shaped row with a leading Avatar (which
- *  MenuItem's `icon: IconName` can't express) and a trailing check when active. */
-function SpaceRow({ space, active, onPress }: SpaceRowProps) {
-  const { colors } = useTheme();
-  const { hovered, hoverProps } = useHover();
-  const { focused, focusProps } = useFocusRing();
-  return (
-    <Pressable
-      accessibilityRole="menuitem"
-      accessibilityLabel={active ? `${space.name} (current)` : `Switch to ${space.name}`}
-      accessibilityState={{ selected: active }}
-      onPress={onPress}
-      {...hoverProps}
-      {...focusProps}
-      style={({ pressed }) => [
-        styles.spaceRow,
-        pressed ? { backgroundColor: colors.pressed } : hovered ? { backgroundColor: colors.hover } : null,
-        focused && focusRingStyle(colors),
-      ]}
-    >
-      <Avatar label={monogram(space)} image={space.image} size={24} />
-      <Txt variant="subhead" weight={active ? 'semibold' : 'regular'} numberOfLines={1} style={styles.spaceName}>
-        {space.name}
-      </Txt>
-      {active ? <Icon name="check" size={15} color={colors.accent} /> : null}
-    </Pressable>
   );
 }
 
@@ -180,15 +193,4 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
   },
   triggerName: { flexShrink: 1, minWidth: 0 },
-  /** Mirrors MenuItem's row metrics so avatar rows sit flush with icon rows. */
-  spaceRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radii.md,
-    minHeight: Platform.OS === 'web' ? undefined : spacing.controlMinHeight,
-  },
-  spaceName: { flex: 1, minWidth: 0 },
 });
