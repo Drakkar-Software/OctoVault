@@ -714,6 +714,7 @@ export function resolveOctoSpacesTheme(scheme: ColorScheme): OctoSpacesTheme {
       surfaceModal: p.paper,
       surfaceInput: p.paperAlt,
       sidebar: p.canvas,
+      sidebarPanel: p.paperAlt,
       sidebarActive: p.selected,
 
       border: p.lineSoft,

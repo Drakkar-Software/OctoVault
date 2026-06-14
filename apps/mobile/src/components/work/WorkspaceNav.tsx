@@ -14,6 +14,7 @@ import { formatShortcut } from '@/lib/use-shortcuts';
 import { useSpaces } from '@/lib/use-spaces';
 import { useTheme } from '@/lib/use-theme';
 import type { Space } from '@drakkar.software/octovault-sdk';
+import { Sidebar, SidebarHeader } from '@drakkar.software/octospaces-ui';
 import { Avatar } from '@/components/ui/Avatar';
 import { Icon } from '@/components/ui/Icon';
 import { IconButton } from '@/components/ui/IconButton';
@@ -70,43 +71,50 @@ export function WorkspaceNav() {
         </Tooltip>
       </View>
 
-      <View style={[styles.sidebar, { width: layout.sidebarWidth, backgroundColor: colors.paperAlt, borderRightColor: colors.lineSoft }]}>
-        <View style={styles.head}>
-          <SpaceSwitcher variant="sidebar" />
-          <IconButton
-            name="search"
-            size={15}
-            color={colors.inkMuted}
-            // The palette, not the Search tab — desktop search IS quick-find
-            // (the tooltip advertises ⌘K, so the click must match the key).
-            onPress={openQuickFind}
-            tooltip="Search"
-            shortcut={formatShortcut('mod+k')}
-            accessibilityLabel="Search"
+      <Sidebar
+        header={
+          <SidebarHeader
+            style={styles.head}
+            leading={<SpaceSwitcher variant="sidebar" />}
+            actions={
+              <View style={styles.headActions}>
+                <IconButton
+                  name="search"
+                  size={15}
+                  color={colors.inkMuted}
+                  // The palette, not the Search tab — desktop search IS quick-find
+                  // (the tooltip advertises ⌘K, so the click must match the key).
+                  onPress={openQuickFind}
+                  tooltip="Search"
+                  shortcut={formatShortcut('mod+k')}
+                  accessibilityLabel="Search"
+                />
+                <IconButton
+                  name="plus"
+                  size={15}
+                  color={colors.inkMuted}
+                  onPress={newPage}
+                  tooltip="New page"
+                  shortcut={formatShortcut('mod+n')}
+                  accessibilityLabel="New page"
+                />
+                <IconButton
+                  name="sidebar"
+                  size={15}
+                  color={colors.inkMuted}
+                  onPress={() => setSidebarCollapsedPref(true)}
+                  tooltip="Hide sidebar"
+                  shortcut={formatShortcut('mod+\\')}
+                  accessibilityLabel="Hide sidebar"
+                />
+              </View>
+            }
           />
-          <IconButton
-            name="plus"
-            size={15}
-            color={colors.inkMuted}
-            onPress={newPage}
-            tooltip="New page"
-            shortcut={formatShortcut('mod+n')}
-            accessibilityLabel="New page"
-          />
-          <IconButton
-            name="sidebar"
-            size={15}
-            color={colors.inkMuted}
-            onPress={() => setSidebarCollapsedPref(true)}
-            tooltip="Hide sidebar"
-            shortcut={formatShortcut('mod+\\')}
-            accessibilityLabel="Hide sidebar"
-          />
-        </View>
-        <ScrollView contentContainerStyle={styles.tree} showsVerticalScrollIndicator={false}>
-          <WorkObjects spaceId={space?.id ?? null} selectedId={openObjectId ?? undefined} />
-        </ScrollView>
-      </View>
+        }
+        contentContainerStyle={styles.tree}
+      >
+        <WorkObjects spaceId={space?.id ?? null} selectedId={openObjectId ?? undefined} />
+      </Sidebar>
     </>
   );
 }
@@ -164,14 +172,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  sidebar: { borderRightWidth: 1 },
+  // head — passed as SidebarHeader.style; provides only the outer padding.
+  // SidebarHeader owns the flex-row layout internally.
   head: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm,
+  },
+  headActions: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-    paddingLeft: spacing.sm,
-    paddingRight: spacing.sm,
-    paddingVertical: spacing.sm,
   },
   tree: { paddingHorizontal: spacing.sm, paddingBottom: spacing.lg },
 });
