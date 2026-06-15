@@ -58,17 +58,7 @@ export function AttachmentBlock({ node, blockType, spaceId, onOpen, onLongPress 
   const [zoomed, setZoomed] = useState(false);
   // Intrinsic pixel size of the decoded image (from onLoad). null until known.
   const [natural, setNatural] = useState<{ w: number; h: number } | null>(null);
-  // Width of the containing column (from onLayout on the full-width measure wrapper).
-  const [boxWidth, setBoxWidth] = useState<number | null>(null);
   const { width: winWidth, height: winHeight } = useWindowDimensions();
-
-  // Compute display size: fit into the column without ever upscaling.
-  // Math.min(1, …) caps scale at 1 so small images stay at their natural pixels.
-  const imageSize = useMemo(() => {
-    if (!natural || !boxWidth) return null;
-    const scale = Math.min(1, boxWidth / natural.w, layout.inlineImageMaxHeight / natural.h);
-    return { width: Math.round(natural.w * scale), height: Math.round(natural.h * scale) };
-  }, [natural, boxWidth]);
 
   const props = node ? propsOf(node) : {};
   const blobId = props['blobId'] as string | undefined;
@@ -233,15 +223,10 @@ export function AttachmentBlock({ node, blockType, spaceId, onOpen, onLongPress 
   if (kind === 'image' && dataUri) {
     return (
       <>
-        {/* Full-width measure wrapper — never receives an explicit width, so it
-            always spans the reading column and gives us the available width via
-            onLayout. imageContainer is then sized to the computed imageSize so
-            the border + expand button hug the actual image. */}
-        <View style={styles.imageMeasure} onLayout={(e) => setBoxWidth(e.nativeEvent.layout.width)}>
         {/* Inline thumbnail — tap navigates to the object page (existing UX).
             The expand button is a sibling outside imageWrapper (which clips via
             overflow:hidden) so it appears in the top-right corner unclipped. */}
-        <View style={[styles.imageContainer, imageSize ? { width: imageSize.width } : null]}>
+        <View style={styles.imageContainer}>
           <Pressable
             onPress={onOpen}
             onLongPress={onLongPress}
@@ -251,11 +236,16 @@ export function AttachmentBlock({ node, blockType, spaceId, onOpen, onLongPress 
               source={{ uri: dataUri }}
               style={[
                 { borderRadius: radii.card },
-                // Once both the column width and the intrinsic image size are
-                // known we render at exact pixels (never upscaling). Until then
-                // a full-width placeholder prevents the box collapsing to 0.
-                imageSize
-                  ? { width: imageSize.width, height: imageSize.height }
+                // width:'100%' fills the column; maxWidth caps at the image's
+                // natural pixels so small images are never upscaled. aspectRatio
+                // + maxHeight handle proportional scaling for large/tall images.
+                natural
+                  ? {
+                      width: '100%',
+                      maxWidth: natural.w,
+                      aspectRatio: natural.w / natural.h,
+                      maxHeight: layout.inlineImageMaxHeight,
+                    }
                   : { width: '100%', height: layout.inlineImageMinHeight },
               ]}
               contentFit="contain"
@@ -281,7 +271,6 @@ export function AttachmentBlock({ node, blockType, spaceId, onOpen, onLongPress 
             onPress={() => setZoomed(true)}
             style={[styles.expandBtn, { backgroundColor: colors.scrim }]}
           />
-        </View>
         </View>
 
         {/* Fullscreen preview — dataUri already decrypted by useObjectBlob */}
@@ -434,13 +423,6 @@ const styles = StyleSheet.create({
   },
 
   // ── Image preview ────────────────────────────────────────────────────────
-  // Full-width transparent wrapper whose sole job is to report the available
-  // column width via onLayout so imageSize can be computed.
-  imageMeasure: {
-    width: '100%',
-  },
-  // Sized to the computed imageSize so the border + expand button hug the image.
-  // Falls back to full-width until measurements land.
   imageContainer: {
     position: 'relative',
   },
