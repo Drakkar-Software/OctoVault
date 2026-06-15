@@ -24,37 +24,3 @@ export {
 } from '@drakkar.software/octospaces-sdk';
 export type { NodeAccessHandle } from '@drakkar.software/octospaces-sdk';
 
-// ── Compat shims (Phase 3: update callers to use getNodeAccess directly) ─────
-
-import {
-  getSpaceClient,
-  buildEncryptor,
-  ownerTrustedAdders,
-  keyringPull,
-  type Session,
-} from '@drakkar.software/octospaces-sdk';
-import type { Encryptor, StarfishClient } from '@drakkar.software/starfish-client';
-
-/**
- * @deprecated Use `getNodeAccess(spaceId, nodeId, node, session, reg)` instead.
- * Returns the space-wide keyring encryptor (for E2EE spaces) and the member client.
- * For plaintext spaces / nodes without enc:true, `encryptor` is null.
- */
-export async function getSpaceEncryptor(
-  spaceId: string,
-  session: Session,
-  reg: { owner: string | null; members: string[] } | null,
-): Promise<{ encryptor: Encryptor | null; client: StarfishClient }> {
-  const client = getSpaceClient(spaceId, session);
-  // Use the owner's known public key as the trusted adder so non-owner members
-  // can open the shared keyring. Falls back to ownerTrustedAdders(session) when
-  // reg is unavailable (first-open as the owner before reg has been fetched).
-  const trustedAdders = reg?.owner ? [reg.owner] : ownerTrustedAdders(session);
-  const encryptor = await buildEncryptor(
-    client,
-    session.keys,
-    keyringPull(spaceId),
-    trustedAdders,
-  );
-  return { encryptor, client };
-}
