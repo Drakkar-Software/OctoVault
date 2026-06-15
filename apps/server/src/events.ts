@@ -18,9 +18,9 @@
  * stream the global firehose to an unauthorized client.
  *
  * Whistlers topic derivation: queue.ts onPublish emits
- * `octovault.object.changed.<spaceId>`; Whistlers applies the `octovault` namespace
+ * `octospaces.object.changed.<spaceId>`; Whistlers applies the `octospaces` namespace
  * prefix then sanitizeTopic — every char outside [a-zA-Z0-9-_~%] → "-", giving
- * `octovault-octovault-object-changed-<spaceId>`. This proxy reconstructs that exact
+ * `octospaces-octospaces-object-changed-<spaceId>`. This proxy reconstructs that exact
  * transform server-side so Whistlers' ?topic= filter matches.
  */
 import { Hono, type Context } from "hono";
@@ -46,15 +46,15 @@ const WHISTLERS_INTERNAL_URL =
 const sanitizeTopic = (t: string) => t.replace(/[^a-zA-Z0-9\-_~%]/g, "-");
 
 /** Whistlers namespace — MUST match the namespace key in infra/whistlers.config.json. */
-const WHISTLERS_NAMESPACE = "octovault";
+const WHISTLERS_NAMESPACE = "octospaces";
 
 /**
  * Build the sanitized Whistlers destinationTopic for a given spaceId.
- * Exported for unit testing — the exact string must survive as `octovault.object.changed`
- * (not the old `octovault.chat.changed`) so the SSE proxy subscribes to the right topic.
+ * Exported for unit testing — the exact string must survive as `octospaces.object.changed`
+ * (not the old `octovault.object.changed`) so the SSE proxy subscribes to the right topic.
  */
 export function buildWhistlersTopic(spaceId: string): string {
-  return `${WHISTLERS_NAMESPACE}-${sanitizeTopic(`octovault.object.changed.${spaceId}`)}`;
+  return `${WHISTLERS_NAMESPACE}-${sanitizeTopic(`octospaces.object.changed.${spaceId}`)}`;
 }
 
 /**

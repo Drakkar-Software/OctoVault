@@ -12,13 +12,13 @@ import { extractChangedIds } from './events-stream';
 
 describe('extractChangedIds', () => {
   it('extracts spaceId from sourceTopic', () => {
-    const data = JSON.stringify({ sourceTopic: 'octovault.object.changed.sp-abc' });
+    const data = JSON.stringify({ sourceTopic: 'octospaces.object.changed.sp-abc' });
     expect(extractChangedIds(data)).toEqual({ spaceId: 'sp-abc' });
   });
 
   it('extracts objectId from rawPayload.params (object form)', () => {
     const data = JSON.stringify({
-      sourceTopic: 'octovault.object.changed.sp-abc',
+      sourceTopic: 'octospaces.object.changed.sp-abc',
       rawPayload: { params: { spaceId: 'sp-abc', objectId: 'obj-1' } },
     });
     expect(extractChangedIds(data)).toEqual({ spaceId: 'sp-abc', objectId: 'obj-1' });
@@ -26,7 +26,7 @@ describe('extractChangedIds', () => {
 
   it('extracts objectId from rawPayload.params (JSON string form)', () => {
     const data = JSON.stringify({
-      sourceTopic: 'octovault.object.changed.sp-abc',
+      sourceTopic: 'octospaces.object.changed.sp-abc',
       rawPayload: JSON.stringify({ params: { spaceId: 'sp-abc', objectId: 'obj-2', nodeId: 'n-3' } }),
     });
     const ids = extractChangedIds(data);
@@ -49,14 +49,14 @@ describe('extractChangedIds', () => {
   });
 
   it('returns empty string spaceId when topic suffix is empty', () => {
-    // "octovault.object.changed." — trailing dot, zero-length spaceId
-    const data = JSON.stringify({ sourceTopic: 'octovault.object.changed.' });
+    // "octospaces.object.changed." — trailing dot, zero-length spaceId
+    const data = JSON.stringify({ sourceTopic: 'octospaces.object.changed.' });
     expect(extractChangedIds(data)).toEqual({ spaceId: '' });
   });
 
   it('ignores a non-JSON rawPayload string (valid envelope, invalid inner payload)', () => {
     const data = JSON.stringify({
-      sourceTopic: 'octovault.object.changed.sp-abc',
+      sourceTopic: 'octospaces.object.changed.sp-abc',
       rawPayload: 'not-valid-json',
     });
     const ids = extractChangedIds(data);

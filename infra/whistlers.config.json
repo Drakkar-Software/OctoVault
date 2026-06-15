@@ -2,9 +2,9 @@
   "version": 1,
   "subscriptions": [],
   "namespaces": {
-    "octovault": {
+    "octospaces": {
       "subscriptions": [
-        { "name": "octovault-objects", "topics": ["octovault.object.changed.*"] }
+        { "name": "octospaces-objects", "topics": ["octospaces.object.changed.*"] }
       ]
     }
   }
