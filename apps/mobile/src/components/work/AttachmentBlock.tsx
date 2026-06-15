@@ -29,16 +29,11 @@ import { FileTooLargeError, MAX_OBJECT_BLOB_BYTES, propsOf } from '@drakkar.soft
 import { useObjectBlob } from '@/lib/use-object-blob';
 import { useObjectFiles } from '@/lib/use-object-files';
 import { attachmentKind } from '@/lib/attachment-kind';
+import { formatBytes, inlineImageConstraints } from '@/lib/attachment-utils';
 
 // Code preview caps — show a useful excerpt without loading the full file
 const CODE_LINE_LIMIT = 100;
 const CODE_BYTE_LIMIT = 8 * 1024; // 8 KB
-
-function formatBytes(n: number): string {
-  if (n < 1024) return `${n} B`;
-  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
-  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
-}
 
 interface AttachmentBlockProps {
   node?: ObjectNode;
@@ -223,10 +218,11 @@ export function AttachmentBlock({ node, blockType, spaceId, onOpen, onLongPress 
   if (kind === 'image' && dataUri) {
     return (
       <>
-        {/* Inline thumbnail — tap navigates to the object page (existing UX).
-            The expand button is a sibling outside imageWrapper (which clips via
-            overflow:hidden) so it appears in the top-right corner unclipped. */}
-        <View style={styles.imageContainer}>
+        {/* Inline thumbnail — tap navigates to the object page.
+            imageContainer is capped to the image's natural width so the expand
+            button (absolute, top-right of the container) always lands inside the
+            visible image area rather than floating in empty column space. */}
+        <View style={[styles.imageContainer, natural ? { maxWidth: natural.w } : null]}>
           <Pressable
             onPress={onOpen}
             onLongPress={onLongPress}
@@ -236,17 +232,7 @@ export function AttachmentBlock({ node, blockType, spaceId, onOpen, onLongPress 
               source={{ uri: dataUri }}
               style={[
                 { borderRadius: radii.card },
-                // width:'100%' fills the column; maxWidth caps at the image's
-                // natural pixels so small images are never upscaled. aspectRatio
-                // + maxHeight handle proportional scaling for large/tall images.
-                natural
-                  ? {
-                      width: '100%',
-                      maxWidth: natural.w,
-                      aspectRatio: natural.w / natural.h,
-                      maxHeight: layout.inlineImageMaxHeight,
-                    }
-                  : { width: '100%', height: layout.inlineImageMinHeight },
+                inlineImageConstraints(natural, layout.inlineImageMaxHeight, layout.inlineImageMinHeight),
               ]}
               contentFit="contain"
               onLoad={(e) => {
@@ -436,12 +422,14 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
     borderTopWidth: StyleSheet.hairlineWidth,
   },
-  // Expand icon — top-right corner of the image, on a translucent scrim disc.
+  // Expand icon — overlaid top-right inside the image; zIndex ensures it
+  // renders above the expo-image native layer on all platforms.
   expandBtn: {
     position: 'absolute',
     top: spacing.sm,
     right: spacing.sm,
     borderRadius: radii.pill,
+    zIndex: 1,
   },
 
   // ── Code preview ─────────────────────────────────────────────────────────
