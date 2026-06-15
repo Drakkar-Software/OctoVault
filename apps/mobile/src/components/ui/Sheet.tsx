@@ -18,6 +18,9 @@ interface SheetProps {
   onClose: () => void;
   /** Optional header row: serif title + a close button. */
   title?: string;
+  /** Back chevron rendered before the title — lets a sheet swap between sub-views
+   *  without closing and reopening the Modal (avoids the two-Modal race on native). */
+  onBack?: () => void;
   /**
    * `auto` (default) follows the viewport: bottom sheet on phones, centered
    * dialog on wide screens. `panel` docks a full-height pane on the right
@@ -55,7 +58,7 @@ interface SheetProps {
  * unmounts (RN Modal kills children instantly otherwise), driven by a small
  * mounted-state machine.
  */
-export function Sheet({ visible, onClose, title, presentation = 'auto', width, align = 'center', children, footer }: SheetProps) {
+export function Sheet({ visible, onClose, title, onBack, presentation = 'auto', width, align = 'center', children, footer }: SheetProps) {
   const { colors } = useTheme();
   const { isWide } = useResponsive();
   const insets = useSafeAreaInsets();
@@ -167,6 +170,7 @@ export function Sheet({ visible, onClose, title, presentation = 'auto', width, a
           {mode === 'sheet' ? <View style={[styles.handle, { backgroundColor: colors.fillDeep }]} /> : null}
           {title ? (
             <View style={styles.titleRow}>
+              {onBack ? <IconButton name="arrow-l" size={18} onPress={onBack} accessibilityLabel="Back" /> : null}
               <Txt variant="heading" numberOfLines={1} style={styles.title}>
                 {title}
               </Txt>

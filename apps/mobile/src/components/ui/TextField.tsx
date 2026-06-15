@@ -63,7 +63,7 @@ export function TextField({
   onContentSizeChange,
   ...rest
 }: TextFieldProps) {
-  const { colors } = useTheme();
+  const { colors, scheme } = useTheme();
   const [focused, setFocused] = useState(false);
   // Auto-grow tracks the rendered content height so the field expands with the text
   // (no inner scroll) — the doc page scrolls as one surface instead.
@@ -134,6 +134,7 @@ export function TextField({
           // dark mode and off-brand in light mode.
           selectionColor={colors.accent}
           cursorColor={colors.accent}
+          keyboardAppearance={scheme === 'dark' ? 'dark' : 'light'}
           underlineColorAndroid="transparent"
           onFocus={(e) => {
             setFocused(true);

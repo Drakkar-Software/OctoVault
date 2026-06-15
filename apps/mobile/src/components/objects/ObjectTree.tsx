@@ -149,7 +149,8 @@ function ObjectTreeRow({ node, isFirst, isLast, ctx }: RowProps) {
   // onHoverIn on a View, which previously left rows un-hoverable and hid the add-child "+".
   const { hovered, hoverProps } = useRowHover();
   const [menuOpen, setMenuOpen] = useState(false);
-  const [moveOpen, setMoveOpen] = useState(false);
+  /** Which content panel the single overlay is showing. */
+  const [menuView, setMenuView] = useState<'actions' | 'move'>('actions');
   // Overlays stay unmounted until first use: a large tree renders hundreds of rows
   // and a per-row Sheet/Popover (reanimated values, Dimensions listeners) would be
   // real weight. Once opened the surface stays mounted so its exit animation plays.
@@ -172,13 +173,14 @@ function ObjectTreeRow({ node, isFirst, isLast, ctx }: RowProps) {
   const openMenu = useCallback(() => {
     tapFeedback();
     setSurfacesMounted(true);
+    setMenuView('actions');
     setMenuOpen(true);
   }, []);
 
   // Web reveals controls on hover (kept while a menu is open so the anchor doesn't
   // vanish under its own popover); native always shows a dim "⋯" — hover-only
   // affordances are unreachable on touch, and long-press is invisible without it.
-  const controlsVisible = !!actions && !isCategory && !editing && (Platform.OS === 'web' ? hovered || menuOpen || moveOpen : true);
+  const controlsVisible = !!actions && !isCategory && !editing && (Platform.OS === 'web' ? hovered || menuOpen : true);
 
   // Selected rows hold a persistent accent wash; hover layers one step deeper.
   const rowBg = selected
@@ -270,21 +272,38 @@ function ObjectTreeRow({ node, isFirst, isLast, ctx }: RowProps) {
         ) : null}
       </View>
       {surfacesMounted && actions ? (
-        <>
-          <RowMenu
-            visible={menuOpen}
-            onClose={() => setMenuOpen(false)}
-            anchorRef={dotsRef}
-            isWide={ctx.isWide}
-            title={node.title || 'Untitled'}
-          >
+        // One adaptive surface (Popover on wide, Sheet on narrow) that swaps
+        // between the action list and the move-target list in-place. This avoids
+        // the two-Modal race on native: with two sibling Sheet/Modals, closing one
+        // and opening the other in the same tick caused the incoming Modal to
+        // silently fail to present on iOS/Android (exit animation of the first
+        // kept it mounted while the second tried to mount). One surface, no race.
+        <RowMenu
+          visible={menuOpen}
+          onClose={() => setMenuOpen(false)}
+          anchorRef={dotsRef}
+          isWide={ctx.isWide}
+          title={menuView === 'move' ? 'Move to' : node.title || 'Untitled'}
+          onBack={menuView === 'move' ? () => setMenuView('actions') : undefined}
+          width={menuView === 'move' ? layout.popoverWidth : undefined}
+        >
+          {menuView === 'move' ? (
+            <MoveToList
+              node={node}
+              roots={ctx.roots}
+              onPick={(parentId) => {
+                setMenuOpen(false);
+                actions.moveTo(node, parentId);
+              }}
+            />
+          ) : (
             <Menu>
               <MenuItem icon="edit" label="Rename" onPress={() => { setMenuOpen(false); ctx.edit.begin(node.id); }} />
               {registry.creatableTypes().filter((d) => d.workTree && d.editor !== 'file').map((d) => (
                 <MenuItem key={d.type} icon={d.icon} label={`Add sub-${d.label.toLowerCase()}`} onPress={() => { setMenuOpen(false); actions.addChild(node, d.type); }} />
               ))}
               <MenuSeparator />
-              <MenuItem icon="move-to" label="Move to…" onPress={() => { setMenuOpen(false); setMoveOpen(true); }} />
+              <MenuItem icon="move-to" label="Move to…" onPress={() => setMenuView('move')} />
               <MenuItem icon="arrow-up" label="Move up" disabled={isFirst} onPress={() => { setMenuOpen(false); actions.moveUp(node); }} />
               <MenuItem icon="arrow-down" label="Move down" disabled={isLast} onPress={() => { setMenuOpen(false); actions.moveDown(node); }} />
               <MenuItem icon="duplicate" label="Duplicate" onPress={() => { setMenuOpen(false); actions.duplicate(node); }} />
@@ -294,20 +313,8 @@ function ObjectTreeRow({ node, isFirst, isLast, ctx }: RowProps) {
               <MenuSeparator />
               <MenuItem icon="trash" label="Archive" danger onPress={() => { setMenuOpen(false); actions.archive(node); }} />
             </Menu>
-          </RowMenu>
-          <MoveToPicker
-            visible={moveOpen}
-            onClose={() => setMoveOpen(false)}
-            node={node}
-            roots={ctx.roots}
-            anchorRef={dotsRef}
-            isWide={ctx.isWide}
-            onPick={(parentId) => {
-              setMoveOpen(false);
-              actions.moveTo(node, parentId);
-            }}
-          />
-        </>
+          )}
+        </RowMenu>
       ) : null}
       {hasChildren && !isCollapsed ? <TreeLevel nodes={node.children} ctx={ctx} /> : null}
     </>
@@ -358,35 +365,38 @@ interface RowMenuProps {
   isWide: boolean;
   /** Bottom-sheet header on narrow screens (the popover needs no title). */
   title: string;
+  /** Back button rendered in the sheet header — lets sub-views navigate back
+   *  without closing and reopening the Modal. Popover has no header so this is
+   *  narrow/native only. */
+  onBack?: () => void;
+  /** Fixed card width forwarded to the wide Popover (e.g. move-target list
+   *  needs a wider card than the default action menu). */
+  width?: number;
   children: ReactNode;
 }
 
 /** Presentation shell for a row's context menu: anchored popover on wide screens,
  *  bottom sheet on narrow ones — one menu definition serves both. */
-function RowMenu({ visible, onClose, anchorRef, isWide, title, children }: RowMenuProps) {
+function RowMenu({ visible, onClose, anchorRef, isWide, title, onBack, width, children }: RowMenuProps) {
   if (isWide) {
     return (
-      <Popover visible={visible} onClose={onClose} anchorRef={anchorRef} placement="bottom-end">
+      <Popover visible={visible} onClose={onClose} anchorRef={anchorRef} placement="bottom-end" width={width}>
         {children}
       </Popover>
     );
   }
   return (
-    <Sheet visible={visible} onClose={onClose} title={title}>
+    <Sheet visible={visible} onClose={onClose} title={title} onBack={onBack}>
       {children}
     </Sheet>
   );
 }
 
-interface MoveToPickerProps {
-  visible: boolean;
-  onClose: () => void;
+interface MoveToListProps {
   /** The node being moved — its own subtree is excluded (a cycle) and its current
    *  parent renders checked. */
   node: ObjectTreeNode;
   roots: ObjectTreeNode[];
-  anchorRef: RefObject<ViewType | null>;
-  isWide: boolean;
   onPick: (parentId: ID | null) => void;
 }
 
@@ -415,11 +425,15 @@ function flattenTargets(roots: ObjectTreeNode[], excluded: Set<ID>): ObjectTreeN
   return out;
 }
 
-/** "Move to…" target list: the workspace root plus every node outside the moved
- *  subtree, indented to mirror the tree so the destination reads spatially. */
-function MoveToPicker({ visible, onClose, node, roots, anchorRef, isWide, onPick }: MoveToPickerProps) {
+/**
+ * Content-only "Move to" target list — rendered inside the shared `RowMenu`
+ * surface (Popover or Sheet). Surface ownership lives in the row so only one
+ * Modal ever exists; swapping `menuView` between `'actions'` and `'move'` avoids
+ * the two-Modal overlap race that prevented the picker from appearing on native.
+ */
+function MoveToList({ node, roots, onPick }: MoveToListProps) {
   const targets = useMemo(() => flattenTargets(roots, subtreeOf(node)), [roots, node]);
-  const body = (
+  return (
     <Menu>
       <MenuItem icon="layers" label="Workspace" checked={node.parentId == null} onPress={() => onPick(null)} />
       {targets.map((t) => (
@@ -432,18 +446,6 @@ function MoveToPicker({ visible, onClose, node, roots, anchorRef, isWide, onPick
         </View>
       ))}
     </Menu>
-  );
-  if (isWide) {
-    return (
-      <Popover visible={visible} onClose={onClose} anchorRef={anchorRef} placement="bottom-end" width={layout.popoverWidth}>
-        {body}
-      </Popover>
-    );
-  }
-  return (
-    <Sheet visible={visible} onClose={onClose} title="Move to">
-      {body}
-    </Sheet>
   );
 }
 
