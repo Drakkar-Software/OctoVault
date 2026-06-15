@@ -20,6 +20,7 @@ import {
 } from '@drakkar.software/octovault-sdk';
 import { REF_BLOCK_TYPES, visibleBlocks } from '@drakkar.software/octovault-sdk';
 import { usePage, type Block, type BlockType } from '@/lib/use-page';
+import { usePageComments } from '@/lib/use-comments';
 import { iconForNode } from '@drakkar.software/octovault-sdk';
 import { useSpaceObjects } from '@/lib/space-objects-context';
 import type { ObjectNode } from '@drakkar.software/octovault-sdk';
@@ -38,6 +39,7 @@ import { BlockHandleMenu, InsertBlockMenu, SlashMenu, flattenBySection } from '@
 import { ObjectHero } from '@/components/work/ObjectHero';
 import { AttachmentBlock } from '@/components/work/AttachmentBlock';
 import { BookmarkBlock } from '@/components/work/BookmarkBlock';
+import { BlockComments } from '@/components/work/BlockComments';
 import { useObjectFiles } from '@/lib/use-object-files';
 import type { BookmarkMeta } from '@/lib/use-page';
 
@@ -86,6 +88,7 @@ interface PageViewProps {
  */
 export function PageView({ spaceId, objectId, emoji, title, subtitle, onRenameTitle, onChangeEmoji, focusTitle, onToolbar }: PageViewProps) {
   const page = usePage(spaceId, objectId);
+  const comments = usePageComments(spaceId, objectId);
   const router = useRouter();
   const toast = useToast();
   const { isWide } = useResponsive();
@@ -109,6 +112,8 @@ export function PageView({ spaceId, objectId, emoji, title, subtitle, onRenameTi
   const [insertMenu, setInsertMenu] = useState<{ afterId: string; anchor: RefObject<ViewType | null> } | null>(null);
   const [iconOpen, setIconOpen] = useState(false);
   const [selectedDivider, setSelectedDivider] = useState<string | null>(null);
+  /** The block whose discussion panel/sheet is open (null = closed). */
+  const [commentsFor, setCommentsFor] = useState<string | null>(null);
   const iconAnchorRef = useRef<ViewType | null>(null);
   /** Per-row anchors (handle menus from the native toolbar) + row geometry
    *  (the slash card hangs off the active row inside the blocks container). */
@@ -396,6 +401,12 @@ export function PageView({ spaceId, objectId, emoji, title, subtitle, onRenameTi
   const openObject = (id: string) =>
     router.push({ pathname: '/work/object/[id]', params: { id, spaceId } });
 
+  /** Open a block's discussion and advance its read mark (clears the unread dot). */
+  const openComments = (blockId: string) => {
+    setCommentsFor(blockId);
+    comments.markThreadRead(blockId);
+  };
+
   /** "/Page|Image|File": create a child Object, turn this block into a ref-link,
    *  and navigate into the created object so it can be named / filled. */
   const convertToRefBlock = (blockId: string, type: BlockType) => {
@@ -607,6 +618,9 @@ export function PageView({ spaceId, objectId, emoji, title, subtitle, onRenameTi
             onOpenInsert={(anchor) => setInsertMenu({ afterId: b.id, anchor })}
             spaceId={spaceId}
             onBookmarkFetched={(meta) => page.setBlockBookmark(b.id, meta)}
+            commentCount={comments.threads.get(b.id)?.comments.length ?? 0}
+            commentUnread={comments.unread.has(b.id)}
+            onOpenComments={comments.supported ? () => openComments(b.id) : undefined}
           />
         ))}
 
@@ -716,6 +730,18 @@ export function PageView({ spaceId, objectId, emoji, title, subtitle, onRenameTi
         }}
         onClose={() => setHandleMenu(null)}
       />
+
+      <BlockComments
+        visible={commentsFor != null}
+        onClose={() => setCommentsFor(null)}
+        thread={commentsFor ? comments.threads.get(commentsFor) : undefined}
+        currentUserId={comments.currentUserId}
+        onAdd={(text) => { if (commentsFor) comments.addComment(commentsFor, text); }}
+        onEdit={(commentId, text) => comments.editComment(commentId, text)}
+        onRemove={(commentId) => { if (commentsFor) comments.removeComment(commentsFor, commentId); }}
+        onResolve={(resolved) => { if (commentsFor) comments.resolveThread(commentsFor, resolved); }}
+        onToggleReaction={(commentId, emoji) => comments.toggleReaction(commentId, emoji)}
+      />
     </View>
   );
 }
@@ -740,6 +766,12 @@ interface BlockRowProps {
   spaceId: string;
   /** Persist fetched OG metadata for a `bookmark` block into the CRDT. */
   onBookmarkFetched: (meta: BookmarkMeta) => void;
+  /** Number of comments on this block (0 hides the persistent count). */
+  commentCount: number;
+  /** A comment from someone else arrived since this block's discussion was last read. */
+  commentUnread: boolean;
+  /** Open this block's discussion; omitted when comments aren't supported (hides the tab). */
+  onOpenComments?: () => void;
   onClose: () => void;
   onCommitText: (text: string) => void;
   onChange: (text: string) => void;
@@ -785,6 +817,9 @@ function BlockRow({
   onOpenInsert,
   spaceId,
   onBookmarkFetched,
+  commentCount,
+  commentUnread,
+  onOpenComments,
 }: BlockRowProps) {
   const { colors } = useTheme();
   const { hovered, hoverProps } = useRowHover();
@@ -795,6 +830,12 @@ function BlockRow({
   const showGutter = hovered || editing;
   const indentPad = (block.indent ?? 0) * layout.blockIndentStep;
   const openHandle = () => onOpenHandle({ current: rowRef.current });
+  // Notion-style right-margin comment affordance: persistent once a block has a
+  // discussion, hover-revealed otherwise. Hidden entirely when comments aren't
+  // supported for the page (`onOpenComments` omitted).
+  const commentTab = onOpenComments ? (
+    <CommentTab count={commentCount} unread={commentUnread} visible={showGutter} onPress={onOpenComments} />
+  ) : null;
 
   const setRef = (node: ViewType | null) => {
     rowRef.current = node;
@@ -840,6 +881,7 @@ function BlockRow({
           onChangeUrl={(url) => onCommitText(url)}
           onBookmarkFetched={onBookmarkFetched}
         />
+        {commentTab}
       </View>
     );
   }
@@ -864,6 +906,7 @@ function BlockRow({
               onLongPress={openHandle}
             />
         }
+        {commentTab}
       </View>
     );
   }
@@ -960,7 +1003,35 @@ function BlockRow({
           )}
         </CodeChrome>
       </View>
+      {commentTab}
     </View>
+  );
+}
+
+/* ─────────────────────────── comment affordance ───────────────────────────── */
+
+/**
+ * Right-margin comment control for a block row (Notion's idiom). Persistent with a
+ * count once a discussion exists; hover/edit-revealed otherwise. An accent dot marks
+ * a discussion with unread comments from other members.
+ */
+function CommentTab({ count, unread, visible, onPress }: { count: number; unread: boolean; visible: boolean; onPress: () => void }) {
+  const { colors } = useTheme();
+  if (count === 0 && !visible) return null;
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={count > 0 ? `${count} comment${count === 1 ? '' : 's'}` : 'Add a comment'}
+      onPress={onPress}
+      hitSlop={6}
+      style={styles.commentTab}
+    >
+      <Icon name="chat" size={14} color={count > 0 ? colors.inkMuted : colors.inkFaint} />
+      {count > 0 ? <Txt variant="micro" mono tone="inkMuted">{count}</Txt> : null}
+      {unread ? (
+        <View style={[styles.commentDot, { backgroundColor: colors.accent }]} />
+      ) : null}
+    </Pressable>
   );
 }
 
@@ -1193,4 +1264,17 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
   },
   toolbarSpacer: { flex: 1 },
+  // Right-margin comment control, vertically centered against the first text line.
+  commentTab: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingTop: 3,
+    paddingLeft: spacing.xs,
+  },
+  commentDot: {
+    width: layout.commentUnreadDot,
+    height: layout.commentUnreadDot,
+    borderRadius: layout.commentUnreadDot / 2,
+  },
 });
