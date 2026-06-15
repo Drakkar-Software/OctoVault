@@ -73,49 +73,14 @@ export {
   // ── Utilities ──────────────────────────────────────────────────────────────
   userIdFromEdPub,
   bytesToHex,
+
+  // ── Path-name helpers (promoted to octospaces-sdk) ─────────────────────────
+  spaceIdFromRoomId,
+  attachmentName,
+  objIndexName,
+  objLogName,
+  objDocName,
+  objectBlobName,
+  typesIndexName,
 } from '@drakkar.software/octospaces-sdk';
 export type { PublicObjectDirEntry } from '@drakkar.software/octospaces-sdk';
-
-// ── Local path-name helpers (not yet in octospaces-sdk public API) ──────────
-// Derived from the same naming convention used internally by octospaces-sdk.
-
-/**
- * spaceId prefix from a `{spaceId}-{objectId}`-style room ID.
- *
- * Assumes spaceId contains exactly one hyphen segment (e.g. `"sp-abc123"`).
- * Incorrect for multi-segment spaceIds — verify the format before changing
- * the slice count.
- */
-export function spaceIdFromRoomId(roomId: string): string {
-  return roomId.split('-').slice(0, 2).join('-');
-}
-
-/** Starfish name for an attachment blob (`spaces/{spaceId}/attachments/{roomId}/{blobId}`). */
-export function attachmentName(roomId: string, blobId: string): string {
-  return `spaces/${spaceIdFromRoomId(roomId)}/attachments/${roomId}/${blobId}`;
-}
-
-/** Starfish name for the object index doc (`spaces/{spaceId}/objects/_index`). */
-export function objIndexName(spaceId: string): string {
-  return `spaces/${spaceId}/objects/_index`;
-}
-
-/** Starfish name for an object WAL log (`spaces/{spaceId}/objects/logs/{objectId}`). */
-export function objLogName(spaceId: string, objectId: string): string {
-  return `spaces/${spaceId}/objects/logs/${objectId}`;
-}
-
-/** Starfish name for an object merge doc (`spaces/{spaceId}/objects/docs/{objectId}`). */
-export function objDocName(spaceId: string, objectId: string): string {
-  return `spaces/${spaceId}/objects/docs/${objectId}`;
-}
-
-/** Starfish name for an object blob (`spaces/{spaceId}/objects/blobs/{blobId}`). */
-export function objectBlobName(spaceId: string, blobId: string): string {
-  return `spaces/${spaceId}/objects/blobs/${blobId}`;
-}
-
-/** Starfish name for the custom types index (`spaces/{spaceId}/types/_index`). */
-export function typesIndexName(spaceId: string): string {
-  return `spaces/${spaceId}/types/_index`;
-}
