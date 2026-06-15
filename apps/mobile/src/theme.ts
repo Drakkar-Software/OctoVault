@@ -615,6 +615,10 @@ export const layout = {
   breadcrumbCrumbMaxWidth: 200,
   /** Avatar edit badge (camera) diameter on the account/space identity blocks. */
   avatarBadgeSize: 24,
+  /** Author avatar in a block comment row. */
+  commentAvatarSize: 26,
+  /** "New comments" unread dot on a block's comment affordance. */
+  commentUnreadDot: 7,
   /** Anchored popover (account/space context menu) width. */
   popoverWidth: 264,
   /** Minimum width of an anchored Menu so short option lists don't shrink-wrap. */

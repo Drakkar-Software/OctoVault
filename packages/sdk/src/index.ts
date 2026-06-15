@@ -54,6 +54,7 @@ export * from './blocks';
 // ── Content models (WAL/CRDT) ─────────────────────────────────────────────────
 export * from './object-content-model';
 export * from './page-content';
+export * from './comments-content';
 export * from './board-content';
 export * from './task-model';
 
