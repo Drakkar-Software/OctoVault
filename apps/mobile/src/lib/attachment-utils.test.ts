@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatBytes, inlineImageConstraints } from './attachment-utils';
+import { formatBytes, computeInlineImageSize } from './attachment-utils';
 
 describe('formatBytes', () => {
   it('formats bytes under 1 KB', () => {
@@ -10,7 +10,7 @@ describe('formatBytes', () => {
 
   it('formats kilobytes', () => {
     expect(formatBytes(1024)).toBe('1.0 KB');
-    expect(formatBytes(35635)).toBe('34.8 KB'); // ftx.png in the bug report
+    expect(formatBytes(35635)).toBe('34.8 KB'); // ftx.png in the original bug report
     expect(formatBytes(1024 * 1023)).toBe('1023.0 KB');
   });
 
@@ -20,53 +20,48 @@ describe('formatBytes', () => {
   });
 });
 
-describe('inlineImageConstraints', () => {
+describe('computeInlineImageSize', () => {
   const MAX_H = 320;
-  const MIN_H = 200;
+  const COL = 400; // typical column width
 
-  it('returns full-width placeholder before natural size is known', () => {
-    const s = inlineImageConstraints(null, MAX_H, MIN_H);
-    expect(s).toEqual({ width: '100%', height: MIN_H });
-    // maxWidth must be absent — before onLoad fires, the container stays full-width
-    // so the block is visible (the core regression: imageSize={0,0} made it invisible)
-    expect(s.maxWidth).toBeUndefined();
+  it('returns null before natural size is known (shows placeholder — the original regression)', () => {
+    // Regression guard: returning {0,0} made the image invisible. null = keep placeholder.
+    expect(computeInlineImageSize(null, COL, MAX_H)).toBeNull();
   });
 
-  it('caps the container at natural pixel width — never upscales a small image', () => {
-    const s = inlineImageConstraints({ w: 120, h: 80 }, MAX_H, MIN_H);
-    // maxWidth on the container = natural width → Yoga clamps to min(column, 120)
-    expect(s.maxWidth).toBe(120);
-    expect(s.width).toBe('100%');
-    // No explicit height — aspect ratio drives it
-    expect(s.height).toBeUndefined();
+  it('returns null before boxWidth is measured (onLayout not yet fired)', () => {
+    expect(computeInlineImageSize({ w: 120, h: 80 }, null, MAX_H)).toBeNull();
   });
 
-  it('preserves the correct aspect ratio for a landscape image', () => {
-    const s = inlineImageConstraints({ w: 1200, h: 800 }, MAX_H, MIN_H);
-    expect(s.aspectRatio).toBeCloseTo(1200 / 800);
-    expect(s.maxWidth).toBe(1200);
-    expect(s.maxHeight).toBe(MAX_H);
+  it('never upscales a small image — scale capped at 1', () => {
+    // 120×80 image in a 400px column: must stay at 120×80, not stretch to 400px
+    const s = computeInlineImageSize({ w: 120, h: 80 }, COL, MAX_H);
+    expect(s).toEqual({ width: 120, height: 80 });
   });
 
-  it('applies maxHeight for a tall portrait (no wide letterbox)', () => {
-    // A phone screenshot: narrow but very tall — should be capped by maxHeight
-    const s = inlineImageConstraints({ w: 390, h: 844 }, MAX_H, MIN_H);
-    expect(s.maxHeight).toBe(MAX_H);
-    expect(s.maxWidth).toBe(390);
-    expect(s.aspectRatio).toBeCloseTo(390 / 844);
+  it('scales down a wide image to fit the column', () => {
+    // 1200×800 in 400px column: scale = 400/1200 = 0.333
+    const s = computeInlineImageSize({ w: 1200, h: 800 }, COL, MAX_H);
+    expect(s).toEqual({ width: 400, height: 267 });
+  });
+
+  it('caps a tall portrait at maxHeight without wide letterbox', () => {
+    // 390×844 portrait: scale = min(1, 400/390, 320/844) = min(1, 1.026, 0.379) = 0.379
+    const s = computeInlineImageSize({ w: 390, h: 844 }, COL, MAX_H);
+    expect(s!.height).toBe(MAX_H);
+    expect(s!.width).toBeLessThanOrEqual(390); // narrower than column, hugs portrait
   });
 
   it('handles a square image', () => {
-    const s = inlineImageConstraints({ w: 512, h: 512 }, MAX_H, MIN_H);
-    expect(s.aspectRatio).toBe(1);
-    expect(s.maxWidth).toBe(512);
+    // 512×512 in 400px column: scale = min(1, 400/512, 320/512) = 0.625
+    const s = computeInlineImageSize({ w: 512, h: 512 }, COL, MAX_H);
+    expect(s!.width).toBe(s!.height); // stays square
+    expect(s!.width).toBeLessThanOrEqual(COL);
+    expect(s!.height).toBeLessThanOrEqual(MAX_H);
   });
 
-  it('handles a wide image larger than typical column width', () => {
-    // Image wider than screen: maxWidth stays at natural.w; Yoga clamps to column
-    const s = inlineImageConstraints({ w: 4000, h: 2000 }, MAX_H, MIN_H);
-    expect(s.maxWidth).toBe(4000);
-    expect(s.aspectRatio).toBeCloseTo(2);
-    expect(s.maxHeight).toBe(MAX_H);
+  it('rejects premature onLayout width=0 by returning null', () => {
+    // Callers pass 0 from a filtered onLayout; null keeps the placeholder visible
+    expect(computeInlineImageSize({ w: 400, h: 300 }, 0, MAX_H)).toBeNull();
   });
 });

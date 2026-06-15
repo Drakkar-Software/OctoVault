@@ -7,24 +7,21 @@ export function formatBytes(n: number): string {
 }
 
 /**
- * Returns React Native style constraints for an inline image preview.
+ * Compute explicit pixel dimensions for an inline image preview.
  *
- * Principles:
- * - Before intrinsic size is known (natural === null): full-width placeholder.
- * - After onLoad: `width: '100%'` fills the container (which is already capped
- *   to the image's natural width via maxWidth on the container), so the image
- *   never upscales. `aspectRatio` + `maxHeight` handle tall portraits.
+ * Returns null until both the intrinsic size (from onLoad) and the measured
+ * column width (from onLayout, filtered to reject premature width=0 values)
+ * are known. Explicit pixel sizing is used instead of CSS maxWidth because
+ * Yoga on native doesn't reliably apply maxWidth on stretched flex children.
+ *
+ * Scale is capped at 1 — a small image is never upscaled.
  */
-export function inlineImageConstraints(
+export function computeInlineImageSize(
   natural: { w: number; h: number } | null,
+  boxWidth: number | null,
   maxHeight: number,
-  minHeight: number,
-): { width: '100%'; maxWidth?: number; aspectRatio?: number; maxHeight?: number; height?: number } {
-  if (!natural) return { width: '100%', height: minHeight };
-  return {
-    width: '100%',
-    maxWidth: natural.w,
-    aspectRatio: natural.w / natural.h,
-    maxHeight,
-  };
+): { width: number; height: number } | null {
+  if (!natural || !boxWidth) return null;
+  const scale = Math.min(1, boxWidth / natural.w, maxHeight / natural.h);
+  return { width: Math.round(natural.w * scale), height: Math.round(natural.h * scale) };
 }

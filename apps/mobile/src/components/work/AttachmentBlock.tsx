@@ -29,7 +29,7 @@ import { FileTooLargeError, MAX_OBJECT_BLOB_BYTES, propsOf } from '@drakkar.soft
 import { useObjectBlob } from '@/lib/use-object-blob';
 import { useObjectFiles } from '@/lib/use-object-files';
 import { attachmentKind } from '@/lib/attachment-kind';
-import { formatBytes, inlineImageConstraints } from '@/lib/attachment-utils';
+import { formatBytes, computeInlineImageSize } from '@/lib/attachment-utils';
 
 // Code preview caps — show a useful excerpt without loading the full file
 const CODE_LINE_LIMIT = 100;
@@ -53,6 +53,13 @@ export function AttachmentBlock({ node, blockType, spaceId, onOpen, onLongPress 
   const [zoomed, setZoomed] = useState(false);
   // Intrinsic pixel size of the decoded image (from onLoad). null until known.
   const [natural, setNatural] = useState<{ w: number; h: number } | null>(null);
+  // Available column width measured via onLayout. Filter width=0 to reject
+  // premature fires before the parent has computed its layout.
+  const [boxWidth, setBoxWidth] = useState<number | null>(null);
+  const imageSize = useMemo(
+    () => computeInlineImageSize(natural, boxWidth, layout.inlineImageMaxHeight),
+    [natural, boxWidth],
+  );
   const { width: winWidth, height: winHeight } = useWindowDimensions();
 
   const props = node ? propsOf(node) : {};
@@ -219,10 +226,16 @@ export function AttachmentBlock({ node, blockType, spaceId, onOpen, onLongPress 
     return (
       <>
         {/* Inline thumbnail — tap navigates to the object page.
-            imageContainer is capped to the image's natural width so the expand
-            button (absolute, top-right of the container) always lands inside the
-            visible image area rather than floating in empty column space. */}
-        <View style={[styles.imageContainer, natural ? { maxWidth: natural.w } : null]}>
+            imageMeasure reports the available column width; imageContainer shrinks
+            to imageSize.width so the expand button hugs the visible image area. */}
+        <View
+          style={styles.imageMeasure}
+          onLayout={(e) => {
+            const w = e.nativeEvent.layout.width;
+            if (w > 0) setBoxWidth(w); // reject premature width=0 fires
+          }}
+        >
+        <View style={[styles.imageContainer, imageSize ? { width: imageSize.width } : null]}>
           <Pressable
             onPress={onOpen}
             onLongPress={onLongPress}
@@ -232,7 +245,9 @@ export function AttachmentBlock({ node, blockType, spaceId, onOpen, onLongPress 
               source={{ uri: dataUri }}
               style={[
                 { borderRadius: radii.card },
-                inlineImageConstraints(natural, layout.inlineImageMaxHeight, layout.inlineImageMinHeight),
+                imageSize
+                  ? { width: imageSize.width, height: imageSize.height }
+                  : { width: '100%', height: layout.inlineImageMinHeight },
               ]}
               contentFit="contain"
               onLoad={(e) => {
@@ -257,6 +272,7 @@ export function AttachmentBlock({ node, blockType, spaceId, onOpen, onLongPress 
             onPress={() => setZoomed(true)}
             style={[styles.expandBtn, { backgroundColor: colors.scrim }]}
           />
+        </View>
         </View>
 
         {/* Fullscreen preview — dataUri already decrypted by useObjectBlob */}
@@ -409,6 +425,9 @@ const styles = StyleSheet.create({
   },
 
   // ── Image preview ────────────────────────────────────────────────────────
+  // Full-width measurement wrapper — onLayout here gives the available column
+  // width without the premature-zero issue of measuring the image container itself.
+  imageMeasure: { width: '100%' },
   imageContainer: {
     position: 'relative',
   },
