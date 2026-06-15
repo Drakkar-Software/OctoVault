@@ -5,7 +5,7 @@ settings:
   excludeLinksFromLockfile: false
 
 overrides:
-  hosted-git-info@4>lru-cache: ^7.18.3
+  '@drakkar.software/octospaces-sdk': file:../../Drakkar-Software/octospaces/packages/ts/octospaces-sdk/drakkar.software-octospaces-sdk-0.7.0.tgz
 
 importers:
 
@@ -51,8 +51,8 @@ importers:
   apps/mobile:
     dependencies:
       '@drakkar.software/octospaces-ui':
-        specifier: 0.4.1
-        version: 0.4.1(react-native@0.85.3(@babel/core@7.29.7)(@react-native/metro-config@0.85.3(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.3))(react@19.2.3)
+        specifier: 0.4.2
+        version: 0.4.2(react-native@0.85.3(@babel/core@7.29.7)(@react-native/metro-config@0.85.3(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.3))(react@19.2.3)
       '@drakkar.software/octovault-sdk':
         specifier: workspace:*
         version: link:../../packages/sdk
@@ -326,8 +326,8 @@ importers:
   packages/sdk:
     dependencies:
       '@drakkar.software/octospaces-sdk':
-        specifier: 0.5.0
-        version: 0.5.0(@drakkar.software/starfish-client@3.0.0-alpha.27(immer@10.2.0)(react@19.2.3)(zustand@5.0.14(@types/react@19.2.17)(immer@10.2.0)(react@19.2.3)(use-sync-external-store@1.6.0(react@19.2.3))))(@drakkar.software/starfish-identities@3.0.0-alpha.27(immer@10.2.0)(react@19.2.3)(zustand@5.0.14(@types/react@19.2.17)(immer@10.2.0)(react@19.2.3)(use-sync-external-store@1.6.0(react@19.2.3))))(@drakkar.software/starfish-keyring@3.0.0-alpha.27(immer@10.2.0)(react@19.2.3)(zustand@5.0.14(@types/react@19.2.17)(immer@10.2.0)(react@19.2.3)(use-sync-external-store@1.6.0(react@19.2.3))))(@drakkar.software/starfish-protocol@3.0.0-alpha.27)(@drakkar.software/starfish-sharing@3.0.0-alpha.27(immer@10.2.0)(react@19.2.3)(zustand@5.0.14(@types/react@19.2.17)(immer@10.2.0)(react@19.2.3)(use-sync-external-store@1.6.0(react@19.2.3))))
+        specifier: file:../../../../Drakkar-Software/octospaces/packages/ts/octospaces-sdk/drakkar.software-octospaces-sdk-0.7.0.tgz
+        version: file:../../Drakkar-Software/octospaces/packages/ts/octospaces-sdk/drakkar.software-octospaces-sdk-0.7.0.tgz(@drakkar.software/starfish-client@3.0.0-alpha.27(immer@10.2.0)(react@19.2.3)(zustand@5.0.14(@types/react@19.2.17)(immer@10.2.0)(react@19.2.3)(use-sync-external-store@1.6.0(react@19.2.3))))(@drakkar.software/starfish-identities@3.0.0-alpha.27(immer@10.2.0)(react@19.2.3)(zustand@5.0.14(@types/react@19.2.17)(immer@10.2.0)(react@19.2.3)(use-sync-external-store@1.6.0(react@19.2.3))))(@drakkar.software/starfish-keyring@3.0.0-alpha.27(immer@10.2.0)(react@19.2.3)(zustand@5.0.14(@types/react@19.2.17)(immer@10.2.0)(react@19.2.3)(use-sync-external-store@1.6.0(react@19.2.3))))(@drakkar.software/starfish-protocol@3.0.0-alpha.27)(@drakkar.software/starfish-sharing@3.0.0-alpha.27(immer@10.2.0)(react@19.2.3)(zustand@5.0.14(@types/react@19.2.17)(immer@10.2.0)(react@19.2.3)(use-sync-external-store@1.6.0(react@19.2.3))))
       '@drakkar.software/starfish-client':
         specifier: 3.0.0-alpha.27
         version: 3.0.0-alpha.27(immer@10.2.0)(react@19.2.3)(zustand@5.0.14(@types/react@19.2.17)(immer@10.2.0)(react@19.2.3)(use-sync-external-store@1.6.0(react@19.2.3)))
@@ -779,8 +779,9 @@ packages:
   '@craftzdog/react-native-buffer@6.1.2':
     resolution: {integrity: sha512-KV1HitN05FHLLDG7Zb/yftDsa+mKBYBzFMQ0PMldvUicq6vWOtAvz9mDavt7Fzozh+WNqORE+yFDkkdWysZ/SA==}
 
-  '@drakkar.software/octospaces-sdk@0.5.0':
-    resolution: {integrity: sha512-jVfWcmpMOIfZuC4K5NXemTy14LpR0GfwNUrutvb3rg324GlOpg5bm84tA7dTQCvTf4L6a5wVyU4TORnQKxAC3g==}
+  '@drakkar.software/octospaces-sdk@file:../../Drakkar-Software/octospaces/packages/ts/octospaces-sdk/drakkar.software-octospaces-sdk-0.7.0.tgz':
+    resolution: {integrity: sha512-4/tbEpCzD3v7zSVs+ly/iArNjGavqfNlfxBryRg79d6IIYTjt8pwdiZWq8XHhmNhze30UmITanpy2uVXJlahrg==, tarball: file:../../Drakkar-Software/octospaces/packages/ts/octospaces-sdk/drakkar.software-octospaces-sdk-0.7.0.tgz}
+    version: 0.7.0
     peerDependencies:
       '@drakkar.software/starfish-client': '>=3.0.0-alpha.27'
       '@drakkar.software/starfish-identities': '>=3.0.0-alpha.27'
@@ -788,8 +789,8 @@ packages:
       '@drakkar.software/starfish-protocol': '>=3.0.0-alpha.27'
       '@drakkar.software/starfish-sharing': '>=3.0.0-alpha.27'
 
-  '@drakkar.software/octospaces-ui@0.4.1':
-    resolution: {integrity: sha512-z7QRZSPpxeaNyivk1gTzRm/YmlxKNDKkOt2gdi9JGkVrvmnERSlihtt69ibCn/WIvmETBm0xnXzuon78yAVlRA==}
+  '@drakkar.software/octospaces-ui@0.4.2':
+    resolution: {integrity: sha512-25ewb/syB7yzK6qBNpGPr/hQJT4FQR4bsf6bri0RNACccWPxXOMPdeUAHu/McdM0GAZHe7bnB3rXS88uwBoQAg==}
     peerDependencies:
       react: '>=18'
       react-native: '>=0.75'
@@ -4370,9 +4371,9 @@ packages:
   lru-cache@5.1.1:
     resolution: {integrity: sha512-KpNARQA3Iwv+jTA0utUVVbrh+Jlrr1Fv0e56GGzAFOXN7dk/FviaDW8LHmK52DlcH4WP2n6gI8vN1aesBFgo9w==}
 
-  lru-cache@7.18.3:
-    resolution: {integrity: sha512-jumlc0BIUrS3qJGgIkWZsyfAM7NCWiBcCDhnd+3NNM5KbBmLTgHVfWBcg6W+rLUsIpzpERPsvwUP7CckAQSOoA==}
-    engines: {node: '>=12'}
+  lru-cache@6.0.0:
+    resolution: {integrity: sha512-Jo6dJ04CmSjuznwJSS3pUeWmd/H0ffTlkXXgwZi+eq1UCmqQwCh+eLsYOYCwY991i2Fah4h1BEMCx4qThGbsiA==}
+    engines: {node: '>=10'}
 
   lz-string@1.5.0:
     resolution: {integrity: sha512-h5bgJWpxJNswbU7qCrV0tIKQCaS3blPDrqKWx+QxzuzL1zGUzij9XCWLrSLsJPu5t+eWA/ycetzYAO5IOMcWAQ==}
@@ -6681,7 +6682,7 @@ snapshots:
       - react
       - react-native
 
-  '@drakkar.software/octospaces-sdk@0.5.0(@drakkar.software/starfish-client@3.0.0-alpha.27(immer@10.2.0)(react@19.2.3)(zustand@5.0.14(@types/react@19.2.17)(immer@10.2.0)(react@19.2.3)(use-sync-external-store@1.6.0(react@19.2.3))))(@drakkar.software/starfish-identities@3.0.0-alpha.27(immer@10.2.0)(react@19.2.3)(zustand@5.0.14(@types/react@19.2.17)(immer@10.2.0)(react@19.2.3)(use-sync-external-store@1.6.0(react@19.2.3))))(@drakkar.software/starfish-keyring@3.0.0-alpha.27(immer@10.2.0)(react@19.2.3)(zustand@5.0.14(@types/react@19.2.17)(immer@10.2.0)(react@19.2.3)(use-sync-external-store@1.6.0(react@19.2.3))))(@drakkar.software/starfish-protocol@3.0.0-alpha.27)(@drakkar.software/starfish-sharing@3.0.0-alpha.27(immer@10.2.0)(react@19.2.3)(zustand@5.0.14(@types/react@19.2.17)(immer@10.2.0)(react@19.2.3)(use-sync-external-store@1.6.0(react@19.2.3))))':
+  '@drakkar.software/octospaces-sdk@file:../../Drakkar-Software/octospaces/packages/ts/octospaces-sdk/drakkar.software-octospaces-sdk-0.7.0.tgz(@drakkar.software/starfish-client@3.0.0-alpha.27(immer@10.2.0)(react@19.2.3)(zustand@5.0.14(@types/react@19.2.17)(immer@10.2.0)(react@19.2.3)(use-sync-external-store@1.6.0(react@19.2.3))))(@drakkar.software/starfish-identities@3.0.0-alpha.27(immer@10.2.0)(react@19.2.3)(zustand@5.0.14(@types/react@19.2.17)(immer@10.2.0)(react@19.2.3)(use-sync-external-store@1.6.0(react@19.2.3))))(@drakkar.software/starfish-keyring@3.0.0-alpha.27(immer@10.2.0)(react@19.2.3)(zustand@5.0.14(@types/react@19.2.17)(immer@10.2.0)(react@19.2.3)(use-sync-external-store@1.6.0(react@19.2.3))))(@drakkar.software/starfish-protocol@3.0.0-alpha.27)(@drakkar.software/starfish-sharing@3.0.0-alpha.27(immer@10.2.0)(react@19.2.3)(zustand@5.0.14(@types/react@19.2.17)(immer@10.2.0)(react@19.2.3)(use-sync-external-store@1.6.0(react@19.2.3))))':
     dependencies:
       '@drakkar.software/starfish-client': 3.0.0-alpha.27(immer@10.2.0)(react@19.2.3)(zustand@5.0.14(@types/react@19.2.17)(immer@10.2.0)(react@19.2.3)(use-sync-external-store@1.6.0(react@19.2.3)))
       '@drakkar.software/starfish-identities': 3.0.0-alpha.27(immer@10.2.0)(react@19.2.3)(zustand@5.0.14(@types/react@19.2.17)(immer@10.2.0)(react@19.2.3)(use-sync-external-store@1.6.0(react@19.2.3)))
@@ -6693,7 +6694,7 @@ snapshots:
       '@scure/bip39': 2.2.0
       hash-wasm: 4.12.0
 
-  '@drakkar.software/octospaces-ui@0.4.1(react-native@0.85.3(@babel/core@7.29.7)(@react-native/metro-config@0.85.3(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.3))(react@19.2.3)':
+  '@drakkar.software/octospaces-ui@0.4.2(react-native@0.85.3(@babel/core@7.29.7)(@react-native/metro-config@0.85.3(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.3))(react@19.2.3)':
     dependencies:
       react: 19.2.3
       react-native: 0.85.3(@babel/core@7.29.7)(@react-native/metro-config@0.85.3(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.3)
@@ -8316,9 +8317,7 @@ snapshots:
       metro-runtime: 0.84.4
     transitivePeerDependencies:
       - '@babel/core'
-      - bufferutil
       - supports-color
-      - utf-8-validate
 
   '@react-native/normalize-colors@0.74.89': {}
 
@@ -10389,7 +10388,7 @@ snapshots:
 
   hosted-git-info@4.1.0:
     dependencies:
-      lru-cache: 7.18.3
+      lru-cache: 6.0.0
 
   hosted-git-info@7.0.2:
     dependencies:
@@ -10732,7 +10731,9 @@ snapshots:
     dependencies:
       yallist: 3.1.1
 
-  lru-cache@7.18.3: {}
+  lru-cache@6.0.0:
+    dependencies:
+      yallist: 4.0.0
 
   lz-string@1.5.0: {}
 

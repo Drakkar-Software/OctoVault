@@ -125,6 +125,9 @@ export * from './starfish/pull-cache';
 // Stream bots
 export * from './starfish/stream-bots';
 
+// SSE events transport (generic, parse-injected — from octospaces-sdk)
+export * from './starfish/events';
+
 // WAL document factory
 export * from './starfish/wal/index';
 

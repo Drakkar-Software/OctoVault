@@ -3,31 +3,29 @@
  * docs update live without waiting for the 4-second fallback poll.
  *
  * One stream per session × space-set. Reconnects automatically (capped
- * exponential backoff). Tears down cleanly on session change or unmount.
+ * exponential backoff handled by subscribeChanges in octospaces-sdk). Tears
+ * down cleanly on session change, space-set change, or unmount.
  *
  * Wire-up: call inside SpacesProvider (has both session + spaces).
  */
 import { useEffect, useRef } from 'react';
 
-import { buildAuthHeaders, getEventsUrl, getSyncBase } from '@drakkar.software/octovault-sdk';
+import { buildAuthHeaders, subscribeChanges } from '@drakkar.software/octovault-sdk';
 import { dispatchDocChange, emitSseStatus } from '@drakkar.software/octovault-sdk';
 import type { Session } from '@drakkar.software/octovault-sdk';
 
-import { buildSignedEventsRequest, openEventsStream } from './events-stream';
-
-const MIN_BACKOFF_MS = 1_000;
-const MAX_BACKOFF_MS = 30_000;
+import { extractChangedIds } from './events-stream';
+import type { ChangedIds } from './events-stream';
 
 export function useEventsStream(session: Session | null, spaceIds: string[]): void {
   // Stable key: re-run only when the session identity or the space set changes.
   const spaceKey = spaceIds.join(',');
 
-  // Keep latest refs so the async loop always reads fresh values without
-  // re-creating the effect (which would tear down a live stream unnecessarily).
+  // Keep a ref to the latest session so the authHeaders callback always uses
+  // fresh cap credentials across reconnects, even if the session object rotates
+  // without the userId changing (which does NOT trigger effect re-run).
   const sessionRef = useRef(session);
-  const spaceIdsRef = useRef(spaceIds);
   useEffect(() => { sessionRef.current = session; }, [session]);
-  useEffect(() => { spaceIdsRef.current = spaceIds; }, [spaceIds]);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps -- spaceKey is the stable dep for spaceIds
   useEffect(() => {
@@ -36,59 +34,25 @@ export function useEventsStream(session: Session | null, spaceIds: string[]): vo
       return;
     }
 
-    let cancelled = false;
-    let backoff = MIN_BACKOFF_MS;
-    const ac = new AbortController();
-
-    void (async () => {
-      while (!cancelled) {
+    const unsubscribe = subscribeChanges<ChangedIds>({
+      spaces: spaceIds,
+      authHeaders: (method, pathAndQuery) => {
         const s = sessionRef.current;
-        const ids = spaceIdsRef.current;
-        if (!s || ids.length === 0) break;
-
-        // Build the fetch URL and the signed pathAndQuery.
-        // buildSignedEventsRequest strips the getSyncBase() mount prefix (e.g.
-        // "/sync") from the signed path so it matches the path the nginx origin
-        // verifies after stripping the mount — exactly as starfish-client's /pull
-        // signs applyNamespace(path) without the baseUrl prefix.  The comma is
-        // encoded to %2C (CDN-safe); the fetch URL retains the full mount path.
-        const { url, pathAndQuery } = buildSignedEventsRequest(
-          getEventsUrl(),
-          getSyncBase(),
-          ids,
-        );
-
-        let headers: Record<string, string>;
-        try {
-          headers = await buildAuthHeaders(s.chatCap, s.keys.edPriv, 'GET', pathAndQuery);
-        } catch {
-          break; // signing failure — session likely gone, stop loop
-        }
-        if (cancelled) break;
-
-        await openEventsStream({
-          url,
-          headers,
-          onEvent: ({ spaceId, objectId, nodeId }) => {
-            if (spaceId) dispatchDocChange(spaceId);
-            if (objectId) dispatchDocChange(objectId);
-            // nodeId is an alias for objectId in some collections; dispatch only if distinct.
-            if (nodeId && nodeId !== objectId) dispatchDocChange(nodeId);
-          },
-          onStatus: emitSseStatus,
-          signal: ac.signal,
-        });
-
-        if (cancelled || ac.signal.aborted) break;
-        // Stream dropped — backoff before reconnect.
-        await new Promise<void>((resolve) => setTimeout(resolve, backoff));
-        backoff = Math.min(backoff * 2, MAX_BACKOFF_MS);
-      }
-    })();
+        if (!s) return Promise.reject(new Error('no session'));
+        return buildAuthHeaders(s.chatCap, s.keys.edPriv, method, pathAndQuery);
+      },
+      parse: extractChangedIds,
+      onChange: ({ spaceId, objectId, nodeId }) => {
+        if (spaceId) dispatchDocChange(spaceId);
+        if (objectId) dispatchDocChange(objectId);
+        // nodeId is an alias for objectId in some collections; dispatch only if distinct.
+        if (nodeId && nodeId !== objectId) dispatchDocChange(nodeId);
+      },
+      onStatus: emitSseStatus,
+    });
 
     return () => {
-      cancelled = true;
-      ac.abort();
+      unsubscribe();
       emitSseStatus(false);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
