@@ -11,7 +11,7 @@ import { File as FSFile, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 
 import type { ByteSealer, ObjectNode } from '@drakkar.software/octovault-sdk';
-import { loadObjectBlob, propsOf, getSpaceClient, buildEncryptor, keyringPull, ownerTrustedAdders } from '@drakkar.software/octovault-sdk';
+import { humanizeError, loadObjectBlob, propsOf, getSpaceClient, buildEncryptor, keyringPull, ownerTrustedAdders } from '@drakkar.software/octovault-sdk';
 import { useSession } from './session-context';
 
 /** Convert a Uint8Array to a base64 data URI safely for any size.
@@ -69,7 +69,7 @@ export function useObjectBlob(spaceId: string, node: ObjectNode | undefined): Ob
         const data = await loadObjectBlob(blobClient, enc, spaceId, blobId);
         if (!cancelled) setBytes(data);
       } catch (e) {
-        if (!cancelled) setError(e instanceof Error ? e.message : 'Failed to load file');
+        if (!cancelled) setError(humanizeError(e, 'Failed to load file'));
       } finally {
         if (!cancelled) setLoading(false);
       }

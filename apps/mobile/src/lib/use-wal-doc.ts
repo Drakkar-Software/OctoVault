@@ -2,7 +2,7 @@ import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import type { Encryptor, StarfishClient } from '@drakkar.software/starfish-client';
 import type { WalDocument } from '@drakkar.software/starfish-wal';
 
-import { createWalDocument } from '@drakkar.software/octovault-sdk';
+import { createWalDocument, humanizeError } from '@drakkar.software/octovault-sdk';
 
 export interface WalDocHandle {
   /** The opened WAL document, or null until `open()` resolves. */
@@ -79,7 +79,7 @@ export function useWalDoc(opts: UseWalDocOptions): WalDocHandle {
       .catch((e: unknown) => {
         if (!cancelled) {
           setOpening(false);
-          setOpenError(String(e));
+          setOpenError(humanizeError(e, 'Could not open the document. Try again.'));
         }
       });
     return () => {

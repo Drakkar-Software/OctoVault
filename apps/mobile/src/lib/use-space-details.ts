@@ -25,7 +25,7 @@ import type { Space } from '@drakkar.software/octovault-sdk';
 import { pickAndProcessAvatar } from './avatar-image';
 import { useSession } from './session-context';
 import { useSpaces } from './use-spaces';
-import { broadcastSpaceMeta, readSpaceAccess, writeSpaceAccess } from '@drakkar.software/octovault-sdk';
+import { broadcastSpaceMeta, humanizeError, readSpaceAccess, writeSpaceAccess } from '@drakkar.software/octovault-sdk';
 
 /** Hard cap on a space name (the old field's maxLength, now enforced in the lib —
  *  the rail tile, switcher and breadcrumbs all assume a short label). */
@@ -181,7 +181,7 @@ export function useSpaceDetails(spaceId: string): SpaceDetails {
           nameRef.current = prev;
           setName(prev);
         }
-        setError(e instanceof Error ? e.message : 'Could not save the space name.');
+        setError(humanizeError(e, 'Could not save the space name.'));
       }
     },
     [session, space, isOwner, persist],
@@ -194,7 +194,7 @@ export function useSpaceDetails(spaceId: string): SpaceDetails {
     try {
       uri = await pickAndProcessAvatar();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not use that image.');
+      setError(humanizeError(e, 'Could not use that image.'));
       return;
     }
     if (uri == null) return; // cancelled
@@ -209,7 +209,7 @@ export function useSpaceDetails(spaceId: string): SpaceDetails {
         imageRef.current = prev;
         setImage(prev);
       }
-      setError(e instanceof Error ? e.message : 'Could not save the space image.');
+      setError(humanizeError(e, 'Could not save the space image.'));
     }
   }, [session, space, isOwner, persist]);
 
@@ -227,7 +227,7 @@ export function useSpaceDetails(spaceId: string): SpaceDetails {
         imageRef.current = prev;
         setImage(prev);
       }
-      setError(e instanceof Error ? e.message : 'Could not remove the space image.');
+      setError(humanizeError(e, 'Could not remove the space image.'));
     }
   }, [session, space, isOwner, persist]);
 

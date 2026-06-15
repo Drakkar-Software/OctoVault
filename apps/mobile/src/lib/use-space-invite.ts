@@ -8,7 +8,7 @@
 import { useCallback, useState } from 'react';
 
 import { useSession } from './session-context';
-import { inviteToSpace } from '@drakkar.software/octovault-sdk';
+import { humanizeError, inviteToSpace } from '@drakkar.software/octovault-sdk';
 
 export interface SpaceInviteState {
   busy: boolean;
@@ -46,7 +46,7 @@ export function useSpaceInvite(spaceId: string): SpaceInviteState {
         const invite = await inviteToSpace(session, spaceId, req);
         setResult(invite);
       } catch (e) {
-        setError(e instanceof Error ? e.message : 'Could not generate that invite.');
+        setError(humanizeError(e, 'Could not generate that invite.'));
       } finally {
         setBusy(false);
       }

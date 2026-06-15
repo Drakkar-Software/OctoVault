@@ -18,7 +18,7 @@ import {
 } from 'react';
 
 import { pickAndProcessAvatar } from './avatar-image';
-import { readProfile, writeProfile } from '@drakkar.software/octovault-sdk';
+import { humanizeError, readProfile, writeProfile } from '@drakkar.software/octovault-sdk';
 import { useSession } from './session-context';
 import { primeProfile } from './use-pseudos';
 
@@ -107,7 +107,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       avatarEdited.current = true;
       setAvatarDraftState(uri);
     } catch (e) {
-      setAvatarError(e instanceof Error ? e.message : 'Could not use that image.');
+      setAvatarError(humanizeError(e, 'Could not use that image.'));
     }
   }, []);
 

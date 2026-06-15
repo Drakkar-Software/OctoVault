@@ -39,7 +39,7 @@ export function humanizeError(e: unknown, fallback: string = GENERIC_FALLBACK): 
 
   // Connectivity: the most common real-world failure across every flow.
   if (NETWORK_RE.test(message) || NETWORK_RE.test(name)) {
-    return 'Can’t reach the sync server. Check your connection and try again.';
+    return "Can't reach the sync server. Check your connection and try again.";
   }
   // WebAuthn: the user closed the passkey sheet (or the authenticator timed out).
   // DOMException name is the stable signal; messages vary wildly per browser.
@@ -53,8 +53,11 @@ export function humanizeError(e: unknown, fallback: string = GENERIC_FALLBACK): 
   // so this module doesn't import the SDK.
   const status = (e as { status?: unknown })?.status;
   if (typeof status === 'number') {
-    if (status === 401 || status === 403) return 'You don’t have access to that. Check the invite or ask its owner.';
+    if (status === 401 || status === 403) return "You don't have access to that. Check the invite or ask its owner.";
+    if (status === 404) return fallback;
+    if (status === 429) return 'Too many requests — wait a moment and try again.';
     if (status >= 500) return 'The sync server hit a problem. Try again in a moment.';
+    if (status >= 400) return fallback;
   }
   return looksHuman(message) ? message : fallback;
 }

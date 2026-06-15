@@ -13,7 +13,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { sortDiscoverEntries } from '@drakkar.software/octospaces-ui';
 import type { DiscoverEntry } from '@drakkar.software/octospaces-ui';
-import { readObjectDirectory } from '@drakkar.software/octovault-sdk';
+import { humanizeError, readObjectDirectory } from '@drakkar.software/octovault-sdk';
 
 import { useSpaces } from './use-spaces';
 
@@ -60,7 +60,7 @@ export function useObjectDirectory(opts: { enabled: boolean }): ObjectDirectoryR
       if (cancelledRef.current) return;
       if (!isRefresh) {
         // Hard-load failure: show error state.
-        setError(err instanceof Error ? err.message : 'Failed to load directory');
+        setError(humanizeError(err, 'Failed to load directory'));
         setStatus('error');
       }
       // Pull-to-refresh failure: keep the existing list silently (retry is there).
