@@ -14,14 +14,9 @@ import { useSpaceOpen } from './use-room-open-flow';
 import { useWalDoc } from './use-wal-doc';
 import { useDocLiveSync } from './use-doc-live-sync';
 import { getNotificationSettings, subscribeNotificationSettings } from './notification-settings';
+import { commentsDocId, readKey } from './comments-paths';
 
 export type { Comment, CommentReaction, DiscussionThread } from '@drakkar.software/octovault-sdk';
-
-/** The sibling comments doc id for a page (a synthetic object id under the same
- *  space — sealed by the same space keyring, authorized by the space-member cap). */
-const commentsDocId = (pageId: string) => `${pageId}__comments`;
-/** Per-(page, block) read-mark key, reusing the synced read-marks store (`reads.ts`). */
-const readKey = (pageId: string, blockId: string) => `${pageId}__comments__${blockId}`;
 
 export interface CommentsHook {
   /** Every block's discussion that holds at least one comment, keyed by block id. */
