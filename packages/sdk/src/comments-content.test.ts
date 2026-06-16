@@ -28,7 +28,7 @@ function memTransport(): WalTransport {
   };
 }
 
-async function openDoc(transport: WalTransport, documentKey = 'page~comments'): Promise<WalDocument> {
+async function openDoc(transport: WalTransport, documentKey = 'page__comments'): Promise<WalDocument> {
   const { privHex, pubHex } = ed25519Suite.generateSignerKeypair();
   const doc = new WalDocument({
     documentKey,

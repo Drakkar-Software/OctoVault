@@ -19,9 +19,9 @@ export type { Comment, CommentReaction, DiscussionThread } from '@drakkar.softwa
 
 /** The sibling comments doc id for a page (a synthetic object id under the same
  *  space — sealed by the same space keyring, authorized by the space-member cap). */
-const commentsDocId = (pageId: string) => `${pageId}~comments`;
+const commentsDocId = (pageId: string) => `${pageId}__comments`;
 /** Per-(page, block) read-mark key, reusing the synced read-marks store (`reads.ts`). */
-const readKey = (pageId: string, blockId: string) => `${pageId}~comments~${blockId}`;
+const readKey = (pageId: string, blockId: string) => `${pageId}__comments__${blockId}`;
 
 export interface CommentsHook {
   /** Every block's discussion that holds at least one comment, keyed by block id. */

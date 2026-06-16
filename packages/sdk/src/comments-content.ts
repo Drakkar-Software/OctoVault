@@ -1,7 +1,7 @@
 /**
  * Per-block discussions on a {@link WalDocument} — the Notion-style "floating
  * comment" core. Lives in a page's **sibling** comments WAL doc (one per page,
- * keyed `…~comments`), separate from the page content doc so the page snapshot
+ * keyed `…__comments`), separate from the page content doc so the page snapshot
  * stays lean and comments load in parallel.
  *
  * A **discussion** is the thread anchored to one block (by its stable block id):

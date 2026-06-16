@@ -93,6 +93,21 @@ export const config: SyncConfig = {
       maxBodyBytes: 262_144,
       allowedMimeTypes: JSON_ONLY,
     },
+    // GENERIC WAL snapshot (private/E2EE): sibling LWW `<objlog>__snapshot`. Registered
+    // BEFORE `objlog` so the more-specific `{objectId}__snapshot` route is matched first;
+    // plain log pulls (no `__snapshot` suffix) fall through to `objlog`. Materialized
+    // `state` is sealed by the WAL encryptor INSIDE the doc, so the collection itself is
+    // `none` (plaintext uptoTs/writerSeq/producedBy + a signature). NOT queued — readers
+    // resume from the log.
+    {
+      name: "objsnap",
+      storagePath: "spaces/{spaceId}/objects/logs/{objectId}__snapshot",
+      readRoles: ["space:member"],
+      writeRoles: ["space:member"],
+      encryption: "none",
+      maxBodyBytes: 1_048_576,
+      allowedMimeTypes: JSON_ONLY,
+    },
     // GENERIC WAL op-log (private/E2EE): one append-only `by_timestamp` log per Object
     // with contentKind "append" (pages, tasks, boards-view, …). Each element is a sealed
     // CRDT op-batch folded client-side by starfish-wal. `requireAuthorSignature` so every
@@ -108,19 +123,6 @@ export const config: SyncConfig = {
       encryption: "delegated",
       appendOnly: { type: "by_timestamp", requireAuthorSignature: true },
       maxBodyBytes: 262_144,
-      allowedMimeTypes: JSON_ONLY,
-    },
-    // GENERIC WAL snapshot (private/E2EE): sibling LWW `<objlog>__snapshot`. Materialized
-    // `state` is sealed by the WAL encryptor INSIDE the doc, so the collection itself is
-    // `none` (plaintext uptoTs/writerSeq/producedBy + a signature). NOT queued — readers
-    // resume from the log.
-    {
-      name: "objsnap",
-      storagePath: "spaces/{spaceId}/objects/logs/{objectId}__snapshot",
-      readRoles: ["space:member"],
-      writeRoles: ["space:member"],
-      encryption: "none",
-      maxBodyBytes: 1_048_576,
       allowedMimeTypes: JSON_ONLY,
     },
     // GENERIC merge-doc (private/E2EE): LWW last-writer-wins doc per Object with
