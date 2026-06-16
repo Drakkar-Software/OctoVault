@@ -24,8 +24,8 @@ export interface FeedbackHook {
   addItem: (title: string) => string | undefined;
   deleteItem: (id: string) => void;
   patchItem: (id: string, patch: Partial<Omit<FeedbackItem, 'id' | 'voters'>>) => void;
-  vote: (id: string, userId: string, currentVoters: string[]) => void;
-  unvote: (id: string, userId: string, currentVoters: string[]) => void;
+  vote: (id: string, userId: string) => void;
+  unvote: (id: string, userId: string) => void;
 }
 
 export function useFeedback(spaceId: string, objectId: string, opts: { enabled?: boolean } = {}): FeedbackHook {
@@ -59,7 +59,7 @@ export function useFeedback(spaceId: string, objectId: string, opts: { enabled?:
     addItem: (title) => mut((d) => addItem(d, title)),
     deleteItem: (id) => mut((d) => deleteItem(d, id)),
     patchItem: (id, patch) => mut((d) => patchItem(d, id, patch)),
-    vote: (id, userId, currentVoters) => mut((d) => vote(d, id, userId, currentVoters)),
-    unvote: (id, userId, currentVoters) => mut((d) => unvote(d, id, userId, currentVoters)),
+    vote: (id, userId) => mut((d) => vote(d, id, userId)),
+    unvote: (id, userId) => mut((d) => unvote(d, id, userId)),
   };
 }

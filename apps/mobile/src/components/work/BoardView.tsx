@@ -20,7 +20,7 @@ import { EmojiPicker } from '@/components/ui/EmojiPicker';
 import { Icon } from '@/components/ui/Icon';
 import { IconButton } from '@/components/ui/IconButton';
 import { Menu, MenuItem, MenuLabel, MenuSeparator } from '@/components/ui/Menu';
-import { Popover } from '@/components/ui/Popover';
+import { AdaptiveMenu } from '@/components/ui/AdaptiveMenu';
 import { Sheet } from '@/components/ui/Sheet';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { TextField } from '@/components/ui/TextField';
@@ -701,24 +701,6 @@ function AddCardRow({ onPress, disabled }: { onPress: () => void; disabled: bool
 }
 
 // ── Presentation helpers ─────────────────────────────────────────────────────
-
-/** One menu definition, two surfaces: anchored Popover on wide screens, bottom
- *  Sheet on phones — the EmojiPicker idiom, kept local to the board. */
-function AdaptiveMenu({ visible, onClose, anchorRef, title, children }: { visible: boolean; onClose: () => void; anchorRef: React.RefObject<ViewType | null>; title: string; children: React.ReactNode }) {
-  const { isWide } = useResponsive();
-  if (isWide) {
-    return (
-      <Popover visible={visible} onClose={onClose} anchorRef={anchorRef} placement="bottom-start">
-        {children}
-      </Popover>
-    );
-  }
-  return (
-    <Sheet visible={visible} onClose={onClose} title={title}>
-      {children}
-    </Sheet>
-  );
-}
 
 /** Loading state that mirrors the real strip — a board opening must never look
  *  like an empty board (trust). */

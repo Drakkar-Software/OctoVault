@@ -1,8 +1,9 @@
-import { Alert, ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 
-import { radii, spacing } from '@/theme';
+import { layout, radii, spacing } from '@/theme';
 import { relativeTime } from '@drakkar.software/octovault-sdk';
 import { useForm, type FormField, type FormFieldKind, type FormResponse } from '@/lib/use-form';
+import { useConfirm } from '@/lib/use-confirm';
 import { useTheme } from '@/lib/use-theme';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { IconButton } from '@/components/ui/IconButton';
@@ -32,6 +33,7 @@ interface FieldRowProps {
 
 function FieldRow({ field, onDelete }: FieldRowProps) {
   const { colors } = useTheme();
+  const confirm = useConfirm();
   return (
     <View style={[styles.itemRow, { borderBottomColor: colors.lineFaint }]}>
       <View style={styles.itemMain}>
@@ -47,11 +49,13 @@ function FieldRow({ field, onDelete }: FieldRowProps) {
         name="trash"
         tooltip="Delete field"
         accessibilityLabel={`Delete ${field.label}`}
-        onPress={() => {
-          Alert.alert('Delete field?', `"${field.label || 'Untitled field'}" will be removed.`, [
-            { text: 'Delete', style: 'destructive', onPress: onDelete },
-            { text: 'Cancel', style: 'cancel' },
-          ]);
+        onPress={async () => {
+          const ok = await confirm({
+            title: 'Delete field?',
+            message: `"${field.label || 'Untitled field'}" will be removed.`,
+            danger: true,
+          });
+          if (ok) onDelete();
         }}
       />
     </View>
@@ -165,7 +169,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   emptySection: {
-    height: 180,
+    minHeight: layout.emptySectionMinHeight,
   },
   itemRow: {
     flexDirection: 'row',

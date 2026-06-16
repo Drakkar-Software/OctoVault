@@ -1,8 +1,9 @@
-import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { SWATCH_NAMES, swatches, radii, spacing } from '@/theme';
 import { relativeTime } from '@drakkar.software/octovault-sdk';
 import { useCalendar, type CalendarEvent } from '@/lib/use-calendar';
+import { useConfirm } from '@/lib/use-confirm';
 import { useTheme } from '@/lib/use-theme';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { IconButton } from '@/components/ui/IconButton';
@@ -37,6 +38,7 @@ interface EventRowProps {
 
 function EventRow({ event, index, onDelete }: EventRowProps) {
   const { colors, scheme } = useTheme();
+  const confirm = useConfirm();
   const swatchKey = event.color && SWATCH_NAMES.includes(event.color as typeof SWATCH_NAMES[number])
     ? (event.color as typeof SWATCH_NAMES[number])
     : SWATCH_NAMES[index % SWATCH_NAMES.length];
@@ -45,11 +47,9 @@ function EventRow({ event, index, onDelete }: EventRowProps) {
   return (
     <Pressable
       accessibilityRole="button"
-      onLongPress={() => {
-        Alert.alert(event.title || 'Event', undefined, [
-          { text: 'Delete', style: 'destructive', onPress: onDelete },
-          { text: 'Cancel', style: 'cancel' },
-        ]);
+      onLongPress={async () => {
+        const ok = await confirm({ title: `Delete "${event.title || 'Event'}"?`, danger: true });
+        if (ok) onDelete();
       }}
       style={({ pressed }) => [
         styles.eventRow,

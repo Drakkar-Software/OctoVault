@@ -1,12 +1,16 @@
-import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
-import { radii, spacing } from '@/theme';
+import { layout, opacity, radii, spacing } from '@/theme';
 import { useFeedback, type FeedbackItem, type FeedbackStatus } from '@/lib/use-feedback';
+import { useConfirm } from '@/lib/use-confirm';
 import { useSession } from '@/lib/session-context';
 import { useTheme } from '@/lib/use-theme';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { IconButton } from '@/components/ui/IconButton';
+import { Menu, MenuItem, MenuSeparator } from '@/components/ui/Menu';
 import { Pill, type PillTone } from '@/components/ui/Pill';
+import { Sheet } from '@/components/ui/Sheet';
 import { Txt } from '@/components/ui/Txt';
 
 interface FeedbackViewProps {
@@ -43,8 +47,12 @@ interface FeedbackRowProps {
   onStatusChange: (status: FeedbackStatus) => void;
 }
 
+const FEEDBACK_STATUSES: FeedbackStatus[] = ['open', 'planned', 'in-progress', 'done'];
+
 function FeedbackRow({ item, userId, onVote, onUnvote, onDelete, onStatusChange }: FeedbackRowProps) {
   const { colors } = useTheme();
+  const confirm = useConfirm();
+  const [menuOpen, setMenuOpen] = useState(false);
   const hasVoted = !!userId && item.voters.includes(userId);
   const voteCount = item.voters.length;
 
@@ -54,30 +62,20 @@ function FeedbackRow({ item, userId, onVote, onUnvote, onDelete, onStatusChange 
     else onVote();
   };
 
-  const handleLongPress = () => {
-    Alert.alert(item.title || 'Feedback', undefined, [
-      {
-        text: 'Change status…',
-        onPress: () => {
-          const statuses: FeedbackStatus[] = ['open', 'planned', 'in-progress', 'done'];
-          Alert.alert('Set status', undefined, [
-            ...statuses.map((s) => ({
-              text: statusLabel(s),
-              onPress: () => onStatusChange(s),
-            })),
-            { text: 'Cancel', style: 'cancel' as const },
-          ]);
-        },
-      },
-      { text: 'Delete', style: 'destructive' as const, onPress: onDelete },
-      { text: 'Cancel', style: 'cancel' as const },
-    ]);
+  const handleDelete = async () => {
+    setMenuOpen(false);
+    const ok = await confirm({
+      title: `Delete "${item.title || 'Feedback'}"?`,
+      message: 'This item and its votes will be removed.',
+      danger: true,
+    });
+    if (ok) onDelete();
   };
 
   return (
     <Pressable
       accessibilityRole="button"
-      onLongPress={handleLongPress}
+      onLongPress={() => setMenuOpen(true)}
       style={({ pressed }) => [
         styles.feedbackRow,
         { borderBottomColor: colors.lineFaint },
@@ -96,7 +94,7 @@ function FeedbackRow({ item, userId, onVote, onUnvote, onDelete, onStatusChange 
             backgroundColor: hasVoted ? colors.accentBg : colors.fill,
             borderColor: hasVoted ? colors.accentBorder : colors.lineSoft,
           },
-          pressed && { opacity: 0.7 },
+          pressed && { opacity: opacity.muted },
         ]}
       >
         <Txt variant="micro" weight="bold" color={hasVoted ? colors.accent : colors.inkSoft}>
@@ -121,6 +119,23 @@ function FeedbackRow({ item, userId, onVote, onUnvote, onDelete, onStatusChange 
         label={statusLabel(item.status)}
         tone={statusTone(item.status)}
       />
+
+      {/* Context menu: long-press opens a Sheet (no fixed anchor on long-press) with
+          status options and a danger delete that requires a confirm. */}
+      <Sheet visible={menuOpen} onClose={() => setMenuOpen(false)} title={item.title || 'Feedback'}>
+        <Menu>
+          {FEEDBACK_STATUSES.map((s) => (
+            <MenuItem
+              key={s}
+              label={statusLabel(s)}
+              checked={item.status === s}
+              onPress={() => { setMenuOpen(false); onStatusChange(s); }}
+            />
+          ))}
+          <MenuSeparator />
+          <MenuItem label="Delete" danger onPress={handleDelete} />
+        </Menu>
+      </Sheet>
     </Pressable>
   );
 }
@@ -162,8 +177,8 @@ export function FeedbackView({ spaceId, objectId }: FeedbackViewProps) {
               key={item.id}
               item={item}
               userId={userId}
-              onVote={() => { if (userId) feedback.vote(item.id, userId, item.voters); }}
-              onUnvote={() => { if (userId) feedback.unvote(item.id, userId, item.voters); }}
+              onVote={() => { if (userId) feedback.vote(item.id, userId); }}
+              onUnvote={() => { if (userId) feedback.unvote(item.id, userId); }}
               onDelete={() => feedback.deleteItem(item.id)}
               onStatusChange={(status) => feedback.patchItem(item.id, { status })}
             />
@@ -194,8 +209,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   voteBtn: {
-    minWidth: 36,
-    height: 36,
+    minWidth: layout.voteControlSize,
+    height: layout.voteControlSize,
     borderRadius: radii.md,
     borderWidth: 1,
     alignItems: 'center',

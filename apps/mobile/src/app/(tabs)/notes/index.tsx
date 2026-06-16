@@ -1,15 +1,20 @@
-import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useRef, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import type { View as ViewType } from 'react-native';
 import { useRouter } from 'expo-router';
 
-import { spacing } from '@/theme';
+import { layout, spacing } from '@/theme';
 import { relativeTime } from '@drakkar.software/octovault-sdk';
 import { useNotes, type NoteEntry, type NoteSort } from '@/lib/use-notes';
+import { useConfirm } from '@/lib/use-confirm';
 import { useSession } from '@/lib/session-context';
 import { useSpaceObjects } from '@/lib/space-objects-context';
 import { useTheme } from '@/lib/use-theme';
+import { AdaptiveMenu } from '@/components/ui/AdaptiveMenu';
 import { AppBar } from '@/components/ui/AppBar';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { IconButton } from '@/components/ui/IconButton';
+import { Menu, MenuItem } from '@/components/ui/Menu';
 import { Pill } from '@/components/ui/Pill';
 import { SignInPrompt } from '@/components/ui/SignInPrompt';
 import { StackScreen } from '@/components/ui/StackScreen';
@@ -17,7 +22,6 @@ import { Txt } from '@/components/ui/Txt';
 
 const SORT_LABELS: Record<NoteSort, string> = {
   updatedAt: 'Last updated',
-  createdAt: 'Date created',
   title: 'Title',
 };
 
@@ -29,16 +33,19 @@ interface NoteRowProps {
 
 function NoteRow({ note, onPress, onDelete }: NoteRowProps) {
   const { colors } = useTheme();
+  const confirm = useConfirm();
 
   return (
     <Pressable
       accessibilityRole="button"
       onPress={onPress}
-      onLongPress={() => {
-        Alert.alert(note.title || 'Note', undefined, [
-          { text: 'Delete', style: 'destructive', onPress: onDelete },
-          { text: 'Cancel', style: 'cancel' },
-        ]);
+      onLongPress={async () => {
+        const ok = await confirm({
+          title: `Delete "${note.title || 'Note'}"?`,
+          message: 'The note and its content will be archived.',
+          danger: true,
+        });
+        if (ok) onDelete();
       }}
       style={({ pressed }) => [
         styles.noteRow,
@@ -80,6 +87,8 @@ function NotesScreenContent() {
   const { colors } = useTheme();
   const notes = useNotes();
   const { objects } = useSpaceObjects();
+  const [sortMenuOpen, setSortMenuOpen] = useState(false);
+  const sortAnchorRef = useRef<ViewType>(null);
 
   function handleCreate() {
     const id = notes.createNote();
@@ -88,20 +97,7 @@ function NotesScreenContent() {
     }
   }
 
-  function handleSortPress() {
-    const options: NoteSort[] = ['updatedAt', 'createdAt', 'title'];
-    Alert.alert(
-      'Sort by',
-      undefined,
-      [
-        ...options.map((s) => ({
-          text: SORT_LABELS[s] + (notes.sort === s ? ' ✓' : ''),
-          onPress: () => notes.setSort(s),
-        })),
-        { text: 'Cancel', style: 'cancel' as const },
-      ],
-    );
-  }
+  const SORT_OPTIONS: NoteSort[] = ['updatedAt', 'title'];
 
   function openNote(note: NoteEntry) {
     if (!notes.personalSpaceId) return;
@@ -121,12 +117,14 @@ function NotesScreenContent() {
           title="My Notes"
           right={
             <View style={styles.headerRight}>
-              <IconButton
-                name="dots-v"
-                onPress={handleSortPress}
-                tooltip="Sort notes"
-                accessibilityLabel="Sort notes"
-              />
+              <View ref={sortAnchorRef}>
+                <IconButton
+                  name="dots-v"
+                  onPress={() => setSortMenuOpen(true)}
+                  tooltip="Sort notes"
+                  accessibilityLabel="Sort notes"
+                />
+              </View>
               <IconButton
                 name="plus"
                 onPress={handleCreate}
@@ -187,6 +185,25 @@ function NotesScreenContent() {
           </ScrollView>
         )}
       </View>
+
+      {/* Sort picker: Popover on wide, Sheet on narrow, anchored to the dots-v button. */}
+      <AdaptiveMenu
+        visible={sortMenuOpen}
+        onClose={() => setSortMenuOpen(false)}
+        anchorRef={sortAnchorRef}
+        title="Sort by"
+      >
+        <Menu>
+          {SORT_OPTIONS.map((s) => (
+            <MenuItem
+              key={s}
+              label={SORT_LABELS[s]}
+              checked={notes.sort === s}
+              onPress={() => { notes.setSort(s); setSortMenuOpen(false); }}
+            />
+          ))}
+        </Menu>
+      </AdaptiveMenu>
     </StackScreen>
   );
 }
@@ -211,7 +228,7 @@ export default function NotesScreen() {
 }
 
 const styles = StyleSheet.create({
-  content: { paddingHorizontal: spacing.sm, paddingTop: spacing.sm, paddingBottom: 96 },
+  content: { paddingHorizontal: spacing.sm, paddingTop: spacing.sm, paddingBottom: layout.tabBarHeight + spacing.xxl },
   inner: { flex: 1 },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   tagScroll: { flexShrink: 0, borderBottomWidth: StyleSheet.hairlineWidth },
@@ -223,7 +240,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   list: { flex: 1 },
-  listContent: { paddingBottom: 96 },
+  listContent: { paddingBottom: layout.tabBarHeight + spacing.xxl },
   noteRow: {
     paddingHorizontal: spacing.screenX,
     paddingVertical: spacing.sm,
