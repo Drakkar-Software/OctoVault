@@ -1,6 +1,5 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
-import type { View as ViewType } from 'react-native';
 import { Platform, Pressable, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
@@ -343,27 +342,21 @@ interface FootMenuProps {
 function FootMenu({ onCreateType, disabled }: FootMenuProps) {
   const { colors } = useTheme();
   const [open, setOpen] = useState(false);
-  const ref = useRef<ViewType>(null);
-  // All workTree-creatable non-file types gated by the active variant's capabilities,
-  // so the visibility selector is reachable only for types the variant enables.
   const secondaryTypes = useCreatableTypes();
 
   return (
     <>
-      <View ref={ref} collapsable={false}>
-        <IconButton
-          name="dots"
-          size={16}
-          color={colors.inkMuted}
-          onPress={() => setOpen(true)}
-          tooltip="More ways to create"
-          accessibilityLabel="More ways to create"
-        />
-      </View>
+      <IconButton
+        name="dots"
+        size={16}
+        color={colors.inkMuted}
+        onPress={() => setOpen(true)}
+        tooltip="More ways to create"
+        accessibilityLabel="More ways to create"
+      />
       <CreateTypeMenu
         visible={open}
         onClose={() => setOpen(false)}
-        anchorRef={ref}
         onCreate={(type, access) => { setOpen(false); onCreateType(type, access); }}
         disabled={disabled}
         types={secondaryTypes}

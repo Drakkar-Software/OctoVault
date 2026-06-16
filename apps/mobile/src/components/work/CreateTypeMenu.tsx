@@ -1,114 +1,330 @@
 import { useEffect, useState } from 'react';
-import type { RefObject } from 'react';
-import type { View as ViewType } from 'react-native';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
+import Animated from 'react-native-reanimated';
 
-import { layout, spacing } from '@/theme';
+import { opacity, radii, spacing } from '@/theme';
 import type { CreatableTypeEntry } from '@drakkar.software/octovault-sdk';
 import { useTypeRegistry } from '@/lib/type-registry-context';
-import { useResponsive } from '@/lib/use-responsive';
 import { useBrand } from '@/lib/brand-context';
+import { useHover } from '@/lib/use-hover';
+import { useScalePress } from '@/lib/use-scale-press';
+import { useTheme } from '@/lib/use-theme';
 import type { ObjectType } from '@drakkar.software/octovault-sdk';
-import { Menu, MenuItem } from '@/components/ui/Menu';
-import { Popover } from '@/components/ui/Popover';
-import { Segmented, type SegmentedOption } from '@/components/ui/Segmented';
+import { Icon, type IconName } from '@/components/ui/Icon';
 import { Sheet } from '@/components/ui/Sheet';
 import { Txt } from '@/components/ui/Txt';
 
 export type VisibilityAccess = 'space' | 'invite' | 'public';
 
-const VISIBILITY_OPTIONS: SegmentedOption<VisibilityAccess>[] = [
-  { value: 'space',  label: 'Space' },
-  { value: 'invite', label: 'Invite' },
-  { value: 'public', label: 'Public', disabled: true, hint: 'Coming soon — public objects will appear in Search.' },
+interface VisibilityOption {
+  value: VisibilityAccess;
+  label: string;
+  description: string;
+  icon: IconName;
+  disabled?: boolean;
+  soon?: boolean;
+}
+
+const VISIBILITY_OPTIONS: VisibilityOption[] = [
+  {
+    value: 'space',
+    label: 'Space',
+    description: 'Visible to all space members',
+    icon: 'people',
+  },
+  {
+    value: 'invite',
+    label: 'Invite only',
+    description: 'Title hidden from shared index · encrypted for members',
+    icon: 'lock',
+  },
+  {
+    value: 'public',
+    label: 'Public',
+    description: 'Visible to anyone · not encrypted',
+    icon: 'unlock',
+    disabled: true,
+    soon: true,
+  },
 ];
+
+const TYPE_DESCRIPTIONS: Record<string, string> = {
+  page: 'Nested blocks, rich text, inline media',
+  board: 'Kanban columns and task cards',
+};
 
 interface CreateTypeMenuProps {
   visible: boolean;
   onClose: () => void;
-  anchorRef: RefObject<ViewType | null>;
+  anchorRef?: React.RefObject<any>;
   onCreate: (type: ObjectType, access: VisibilityAccess) => void;
   disabled?: boolean;
-  /** Defaults to creatableTypes() with editor !== 'file' (file/image need a picker). */
   types?: CreatableTypeEntry[];
-  /** Sheet header on narrow screens. */
   title?: string;
-  /** When true, the visibility selector is hidden (e.g. secondary-type sub-menus). */
   hideVisibility?: boolean;
 }
 
-/**
- * Adaptive create-type picker — Popover on wide screens, Sheet on narrow.
- * Defaults to the workTree-creatable types from the registry (page + board
- * for now; any future creatable type drops in automatically once declared).
- * File/image types are excluded until Phase E wires up the file picker.
- */
 export function CreateTypeMenu({
   visible,
   onClose,
-  anchorRef,
   onCreate,
   disabled,
   types,
   title = 'Create',
   hideVisibility = false,
 }: CreateTypeMenuProps) {
-  const { isWide } = useResponsive();
   const registry = useTypeRegistry();
   const { has } = useBrand();
-  const items = types ?? registry.creatableTypes().filter((d) => d.workTree && d.editor !== 'file' && (!d.capability || has(d.capability)));
+  const { colors } = useTheme();
+
+  const items = types ?? registry.creatableTypes().filter(
+    (d) => d.workTree && d.editor !== 'file' && (!d.capability || has(d.capability)),
+  );
   const [access, setAccess] = useState<VisibilityAccess>('space');
-  // Reset to space-default when closed so a dismissed "Invite" selection doesn't
-  // persist to the next open (security: users expect the control to start neutral).
+
+  // Reset to space-default when dismissed so a chosen 'Invite' doesn't persist
+  // to the next open (security: the control should start neutral each time).
   useEffect(() => { if (!visible) setAccess('space'); }, [visible]);
 
-  const body = (
-    <View>
-      {!hideVisibility ? (
-        <View style={styles.visibility}>
-          <Txt variant="micro" weight="bold" mono uppercase tone="inkFaint">Visibility</Txt>
-          <Segmented<VisibilityAccess>
-            options={VISIBILITY_OPTIONS}
-            value={access}
-            onChange={setAccess}
-          />
-          <Txt variant="caption" tone="inkFaint">
-            {access === 'invite'
-              ? 'Title hidden from shared index — still encrypted for all members.'
-              : access === 'public'
-              ? 'Visible to anyone — appears in the public directory. Not encrypted.'
-              : 'Visible to all space members.'}
-          </Txt>
-        </View>
-      ) : null}
-      <Menu>
-        {items.map((d) => (
-          <MenuItem
-            key={d.label}
-            icon={d.icon}
-            label={d.label}
-            disabled={disabled}
-            onPress={() => { onClose(); onCreate(d.type, access); }}
-          />
-        ))}
-      </Menu>
-    </View>
-  );
-
-  if (isWide) {
-    return (
-      <Popover visible={visible} onClose={onClose} anchorRef={anchorRef} placement="top-start" width={layout.popoverWidth}>
-        {body}
-      </Popover>
-    );
-  }
   return (
     <Sheet visible={visible} onClose={onClose} title={title}>
-      {body}
+      <View style={styles.root}>
+        {!hideVisibility && (
+          <View style={styles.section}>
+            <Txt variant="micro" weight="bold" mono uppercase tone="inkFaint" style={styles.label}>
+              Visibility
+            </Txt>
+            <View style={[styles.card, { borderColor: colors.lineSoft, backgroundColor: colors.paper }]}>
+              {VISIBILITY_OPTIONS.map((opt, i) => (
+                <View key={opt.value}>
+                  {i > 0 && <View style={[styles.divider, { backgroundColor: colors.lineFaint }]} />}
+                  <VisibilityRow opt={opt} selected={access === opt.value} onSelect={setAccess} />
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
+
+        <View style={styles.section}>
+          <Txt variant="micro" weight="bold" mono uppercase tone="inkFaint" style={styles.label}>
+            Type
+          </Txt>
+          <View style={styles.typeList}>
+            {items.map((d) => (
+              <TypeTile
+                key={d.label}
+                entry={d}
+                disabled={disabled}
+                onPress={() => { onClose(); onCreate(d.type, access); }}
+              />
+            ))}
+          </View>
+        </View>
+      </View>
     </Sheet>
   );
 }
 
+// ── VisibilityRow ────────────────────────────────────────────────────────────
+
+function VisibilityRow({
+  opt,
+  selected,
+  onSelect,
+}: {
+  opt: VisibilityOption;
+  selected: boolean;
+  onSelect: (v: VisibilityAccess) => void;
+}) {
+  const { colors } = useTheme();
+  const { hovered, hoverProps } = useHover();
+
+  return (
+    <Pressable
+      accessibilityRole="radio"
+      accessibilityState={{ checked: selected, disabled: opt.disabled }}
+      disabled={opt.disabled}
+      onPress={() => onSelect(opt.value)}
+      {...hoverProps}
+      style={({ pressed }) => [
+        styles.visRow,
+        {
+          backgroundColor: selected
+            ? colors.accentBg
+            : pressed && !opt.disabled
+            ? colors.pressed
+            : hovered && !opt.disabled
+            ? colors.hover
+            : 'transparent',
+          opacity: opt.disabled ? opacity.disabled : 1,
+        },
+      ]}
+    >
+      {/* Radio ring */}
+      <View
+        style={[
+          styles.radio,
+          {
+            borderColor: selected ? colors.accent : colors.lineSoft,
+            backgroundColor: selected ? colors.accent : 'transparent',
+          },
+        ]}
+      >
+        {selected && <View style={[styles.radioDot, { backgroundColor: colors.onAccent }]} />}
+      </View>
+
+      {/* Label + description */}
+      <View style={styles.visText}>
+        <View style={styles.visLabelRow}>
+          <Txt
+            variant="subhead"
+            weight={selected ? 'semibold' : 'regular'}
+            color={selected ? colors.accentInk : colors.ink}
+          >
+            {opt.label}
+          </Txt>
+          {opt.soon && (
+            <View style={[styles.soonPill, { backgroundColor: colors.fill, borderColor: colors.lineSoft }]}>
+              <Txt variant="micro" mono uppercase tone="inkMuted">Soon</Txt>
+            </View>
+          )}
+        </View>
+        <Txt variant="caption" tone="inkFaint">{opt.description}</Txt>
+      </View>
+
+      {/* Icon hint */}
+      <Icon name={opt.icon} size={15} color={selected ? colors.accent : colors.inkFaint} />
+    </Pressable>
+  );
+}
+
+// ── TypeTile ─────────────────────────────────────────────────────────────────
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
+function TypeTile({
+  entry,
+  onPress,
+  disabled,
+}: {
+  entry: CreatableTypeEntry;
+  onPress: () => void;
+  disabled?: boolean;
+}) {
+  const { colors } = useTheme();
+  const { hovered, hoverProps } = useHover();
+  const { animStyle, onPressIn, onPressOut } = useScalePress({ scaleTo: 0.97 });
+
+  const description = TYPE_DESCRIPTIONS[entry.type as string] ?? '';
+
+  return (
+    <AnimatedPressable
+      accessibilityRole="button"
+      accessibilityLabel={`Create ${entry.label}`}
+      disabled={disabled}
+      onPress={onPress}
+      onPressIn={onPressIn}
+      onPressOut={onPressOut}
+      {...hoverProps}
+      style={({ pressed }) => [
+        styles.typeTile,
+        {
+          backgroundColor: pressed
+            ? colors.accentBgStrong
+            : hovered
+            ? colors.accentBg
+            : colors.paperAlt,
+          borderColor: pressed || hovered ? colors.accentBorder : colors.lineSoft,
+          opacity: disabled ? opacity.disabled : 1,
+        },
+        animStyle,
+      ]}
+    >
+      {/* Icon square */}
+      <View
+        style={[
+          styles.typeIconWrap,
+          { backgroundColor: hovered ? colors.accentBgStrong : colors.accentBg },
+        ]}
+      >
+        <Icon name={entry.icon} size={22} color={colors.accent} />
+      </View>
+
+      {/* Name + description */}
+      <View style={styles.typeText}>
+        <Txt variant="heading">{entry.label}</Txt>
+        {description ? (
+          <Txt variant="caption" tone="inkFaint">{description}</Txt>
+        ) : null}
+      </View>
+
+      <Icon name="chev" size={16} color={colors.inkFaint} />
+    </AnimatedPressable>
+  );
+}
+
+// ── Styles ────────────────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
-  visibility: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm, gap: spacing.xs },
+  root: { gap: spacing.lg },
+
+  section: { gap: spacing.sm },
+  label: { paddingHorizontal: spacing.xs },
+
+  // Visibility card: a single rounded container holding the three radio rows
+  card: {
+    borderWidth: 1,
+    borderRadius: radii.lg,
+    overflow: 'hidden',
+  },
+  divider: { height: StyleSheet.hairlineWidth },
+  visRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+  },
+  radio: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  radioDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+  },
+  visText: { flex: 1, gap: 2 },
+  visLabelRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  soonPill: {
+    borderWidth: 1,
+    borderRadius: radii.pill,
+    paddingHorizontal: spacing.xs,
+    paddingVertical: 1,
+  },
+
+  // Type tiles: stacked full-width pressable cards
+  typeList: { gap: spacing.sm },
+  typeTile: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    borderWidth: 1,
+    borderRadius: radii.lg,
+    padding: spacing.md,
+  },
+  typeIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: radii.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  typeText: { flex: 1, gap: 2 },
 });
