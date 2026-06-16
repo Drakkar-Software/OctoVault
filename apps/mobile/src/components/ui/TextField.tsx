@@ -153,6 +153,10 @@ export function TextField({
             grownHeight !== undefined ? { height: grownHeight } : null,
             WEB_OUTLINE_RESET,
             { color: colors.ink },
+            // iOS UIKit defaults to a white background on TextInput when editing;
+            // in plain mode (doc surface / title editor) that white fill renders
+            // over the dark canvas in dark mode, making light ink invisible.
+            plain ? { backgroundColor: 'transparent' } : null,
           ]}
         />
       </View>
