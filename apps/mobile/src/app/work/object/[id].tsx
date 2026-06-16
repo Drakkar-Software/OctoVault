@@ -22,6 +22,9 @@ import { BoardView } from '@/components/work/BoardView';
 import { FileObjectView } from '@/components/work/FileObjectView';
 import { RecordView } from '@/components/work/RecordView';
 import { TaskPropsStrip } from '@/components/work/TaskPropsStrip';
+import { CalendarView } from '@/components/work/CalendarView';
+import { FormView } from '@/components/work/FormView';
+import { FeedbackView } from '@/components/work/FeedbackView';
 
 /** Generic object viewer — resolves the editor from the object's type descriptor.
  *  Single route for all object types (page, board, task, file, custom). */
@@ -60,6 +63,8 @@ export default function WorkObjectScreen() {
   // (the planned follow-up) this guard can be removed or repurposed.
   const isCrossSpacePublic = loaded && !node;
   const [toolbar, setToolbar] = useState<ReactNode>(null);
+  // Editors that own their own internal ScrollView — the outer StackScreen must not scroll.
+  const selfScrolling = editor === 'board' || editor === 'calendar' || editor === 'form' || editor === 'feedback';
 
   const goBack = () => (router.canGoBack() ? router.back() : router.replace('/(tabs)/work'));
   const openCrumb = (nid: string) =>
@@ -99,6 +104,24 @@ export default function WorkObjectScreen() {
           focusTitle={focusTitle === '1'}
         />
       </ErrorBoundary>
+    ) : editor === 'calendar' ? (
+      <Stage maxWidth={layout.editorMaxWidth} style={styles.stage}>
+        <ErrorBoundary label="Calendar">
+          <CalendarView spaceId={spaceId} objectId={id} />
+        </ErrorBoundary>
+      </Stage>
+    ) : editor === 'form' ? (
+      <Stage maxWidth={layout.editorMaxWidth} style={styles.stage}>
+        <ErrorBoundary label="Form">
+          <FormView spaceId={spaceId} objectId={id} />
+        </ErrorBoundary>
+      </Stage>
+    ) : editor === 'feedback' ? (
+      <Stage maxWidth={layout.editorMaxWidth} style={styles.stage}>
+        <ErrorBoundary label="Feedback">
+          <FeedbackView spaceId={spaceId} objectId={id} />
+        </ErrorBoundary>
+      </Stage>
     ) : (
       <Stage maxWidth={layout.editorMaxWidth} style={styles.stage}>
         {node?.type === 'task' ? (
@@ -141,9 +164,9 @@ export default function WorkObjectScreen() {
 
   return (
     <StackScreen
-      scroll={editor !== 'board'}
-      contentStyle={editor !== 'board' ? styles.content : undefined}
-      footer={editor !== 'board' ? toolbar : undefined}
+      scroll={!selfScrolling}
+      contentStyle={!selfScrolling ? styles.content : undefined}
+      footer={!selfScrolling ? toolbar : undefined}
       header={
         <AppBar
           title={node?.title || label || 'Object'}

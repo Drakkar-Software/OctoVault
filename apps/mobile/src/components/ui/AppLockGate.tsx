@@ -1,6 +1,7 @@
 import { StyleSheet, View } from 'react-native';
 
 import { spacing } from '@/theme';
+import { activeVariant } from '@/lib/variants';
 import { useAppLockGate } from '@/lib/use-app-lock-gate';
 import { useTheme } from '@/lib/use-theme';
 import { HeroMark } from '@/components/brand/HeroMark';
@@ -26,7 +27,7 @@ export function AppLockGate() {
         <HeroMark size={132} />
         <View style={styles.copy}>
           <Txt variant="title" weight="bold" center>
-            OctoVault is locked
+            {activeVariant.appName} is locked
           </Txt>
           <Txt variant="caption" mono uppercase tone="inkMuted" center>
             Authenticate to continue

@@ -12,6 +12,7 @@ import {
   enableBiometricLock,
   isBiometricLockEnabled,
 } from './app-lock';
+import { activeVariant } from './variants';
 // Type-only import: erased at build time, so Metro never resolves it back to this
 // native file (no runtime cycle); tsc resolves it to the web file's declaration.
 import type { AppLockControl } from './use-app-lock';
@@ -68,7 +69,7 @@ export function useAppLock(): AppLockControl {
     error,
     iconName: 'lock',
     title: `Require ${cap}`,
-    detail: `Unlock OctoVault with ${label} every time you open it.`,
+    detail: `Unlock ${activeVariant.appName} with ${label} every time you open it.`,
     toggle,
   };
 }

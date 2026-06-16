@@ -6,6 +6,8 @@ import { useProfileAutosave } from '@/lib/use-profile-autosave';
 import { useInShell } from '@/lib/use-responsive';
 import { useSession } from '@/lib/session-context';
 import { useTheme } from '@/lib/use-theme';
+import { useBrand } from '@/lib/brand-context';
+import { VARIANTS, type VariantId } from '@/lib/variants';
 import { AccountSwitcher } from '@/components/account/AccountSwitcher';
 import { AppLockRow } from '@/components/settings/AppLockRow';
 import { AiSettingsCard } from '@/components/settings/AiSettingsCard';
@@ -24,6 +26,37 @@ import { Row } from '@/components/ui/Row';
 import { SignInPrompt } from '@/components/ui/SignInPrompt';
 import { StackScreen } from '@/components/ui/StackScreen';
 import { Txt } from '@/components/ui/Txt';
+
+const VARIANT_IDS = Object.keys(VARIANTS) as VariantId[];
+
+/** Card letting the user switch the active sub-app variant (OctoVault, OctoNotes, …). */
+function AppVariantCard() {
+  const { colors } = useTheme();
+  const { variant, setVariant } = useBrand();
+  return (
+    <Card title="APP">
+      {VARIANT_IDS.map((id, i) => {
+        const v = VARIANTS[id];
+        const active = variant.id === id;
+        return (
+          <View key={id}>
+            {i > 0 ? <Divider style={styles.divider} /> : null}
+            <Row
+              title={v.appName}
+              detail={v.features.join(', ')}
+              right={
+                active ? (
+                  <Icon name="check" size={16} color={colors.accent} />
+                ) : undefined
+              }
+              onPress={active ? undefined : () => setVariant(id)}
+            />
+          </View>
+        );
+      })}
+    </Card>
+  );
+}
 
 /**
  * Account settings, grouped into three sections (Identity / Preferences / This
@@ -182,6 +215,7 @@ export default function YouScreen() {
       <SettingsSection title="Preferences">
         <AiSettingsCard />
         <NotificationSettingsCard />
+        <AppVariantCard />
       </SettingsSection>
 
       {/* ── This device ───────────────────────────────────────── */}

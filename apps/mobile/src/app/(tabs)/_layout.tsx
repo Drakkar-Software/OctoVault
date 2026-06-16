@@ -7,6 +7,8 @@ import { StyleSheet, View, type ColorValue } from 'react-native';
 import { fonts, glowShadow, radii, spacing, type } from '@/theme';
 import { useResponsive } from '@/lib/use-responsive';
 import { useTheme } from '@/lib/use-theme';
+import { useBrand } from '@/lib/brand-context';
+import type { Capability } from '@drakkar.software/octovault-sdk';
 import { Icon, type IconName } from '@/components/ui/Icon';
 import { DesktopUpdateBanner } from '@/components/ui/DesktopUpdateBanner';
 
@@ -33,6 +35,9 @@ const tabIcon = (name: IconName) => {
 export default function TabsLayout() {
   const { colors } = useTheme();
   const { isWide } = useResponsive();
+  const { has } = useBrand();
+  const hasNotes = has('notes');
+  const hasVault = (['pages', 'calendar', 'forms', 'feedback', 'boards'] as Capability[]).some(has);
   return (
     <Tabs
       screenOptions={{
@@ -58,9 +63,9 @@ export default function TabsLayout() {
     >
       {/* OctoVault's tabs: Vault (workspace) · Agents (active space automations) ·
           Notes (personal magic space) · Search (global). */}
-      <Tabs.Screen name="work"     options={{ title: 'Vault',    tabBarIcon: tabIcon('work')    }} />
+      {hasVault && <Tabs.Screen name="work"   options={{ title: 'Vault',  tabBarIcon: tabIcon('work')   }} />}
       <Tabs.Screen name="agents"   options={{ title: 'Agents',   tabBarIcon: tabIcon('agents')  }} />
-      <Tabs.Screen name="notes"    options={{ title: 'Notes',    tabBarIcon: tabIcon('book')    }} />
+      {hasNotes && <Tabs.Screen name="notes"  options={{ title: 'Notes',  tabBarIcon: tabIcon('book')   }} />}
       <Tabs.Screen name="search"   options={{ title: 'Search',   tabBarIcon: tabIcon('search')  }} />
     </Tabs>
   );

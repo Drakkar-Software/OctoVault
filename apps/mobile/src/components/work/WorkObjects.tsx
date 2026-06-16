@@ -8,6 +8,8 @@ import { layout, opacity, radii, spacing } from '@/theme';
 import { copyText } from '@/lib/clipboard';
 import { objectLink, routeForNode } from '@drakkar.software/octovault-sdk';
 import { useTypeRegistry } from '@/lib/type-registry-context';
+import { useCreatableTypes } from '@/lib/use-creatable-types';
+import { useBrand } from '@/lib/brand-context';
 import type { ObjectType } from '@drakkar.software/octovault-sdk';
 import { relativeTime } from '@drakkar.software/octovault-sdk';
 import { useSpaceObjects } from '@/lib/space-objects-context';
@@ -50,6 +52,7 @@ export function WorkObjects({ spaceId, hero, selectedId }: WorkObjectsProps) {
   const router = useRouter();
   const toast = useToast();
   const registry = useTypeRegistry();
+  const { has } = useBrand();
   const { objects } = useSpaceObjects();
   const { nodes, allNodes, create, createWithAccess, reorder, move, rename, archive, restore, ready, loaded } = objects;
 
@@ -222,8 +225,8 @@ export function WorkObjects({ spaceId, hero, selectedId }: WorkObjectsProps) {
         <SectionLabel>Pages &amp; boards</SectionLabel>
         {list}
         <View style={styles.creates}>
-          <CreateControl label="New page" iconName="file" onPress={() => newPage()} disabled={!ready} />
-          <CreateControl label="New board" iconName="layers" onPress={() => newBoard()} disabled={!ready} />
+          {has('pages') && <CreateControl label="New page" iconName="file" onPress={() => newPage()} disabled={!ready} />}
+          {has('boards') && <CreateControl label="New board" iconName="layers" onPress={() => newBoard()} disabled={!ready} />}
         </View>
         {agentsRow}
         {archivedRow}
@@ -339,13 +342,11 @@ interface FootMenuProps {
  *  driven by the registry so any future creatable type drops in automatically. */
 function FootMenu({ onCreateType, disabled }: FootMenuProps) {
   const { colors } = useTheme();
-  const registry = useTypeRegistry();
   const [open, setOpen] = useState(false);
   const ref = useRef<ViewType>(null);
-  // All workTree-creatable non-file types, including page — so the visibility
-  // selector in the FootMenu is reachable for pages too. The primary "+ New page"
-  // button remains for quick space-visible creation without opening the menu.
-  const secondaryTypes = registry.creatableTypes().filter((d) => d.workTree && d.editor !== 'file');
+  // All workTree-creatable non-file types gated by the active variant's capabilities,
+  // so the visibility selector is reachable only for types the variant enables.
+  const secondaryTypes = useCreatableTypes();
 
   return (
     <>

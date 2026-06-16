@@ -12,10 +12,11 @@
 import type { IconName } from './icon-name';
 import type { ObjectContentKind, ObjectNode, ObjectType, PropValue } from './types';
 import type { TypeDef } from '../starfish/object-types-store';
+import type { Capability } from './capabilities';
 
 /** The fixed renderer a type reuses — a closed set of editors the app ships.
  *  Data can declare new types but cannot ship new renderers without a code change. */
-export type EditorKind = 'page' | 'board' | 'file' | 'record' | 'none';
+export type EditorKind = 'page' | 'board' | 'file' | 'record' | 'calendar' | 'form' | 'feedback' | 'none';
 
 export type PropKind = 'text' | 'number' | 'select' | 'date' | 'checkbox' | 'url' | 'relation';
 
@@ -52,6 +53,8 @@ export interface TypeDescriptor {
   defaultTitle?: string;
   /** Theme color swatch for the type pill (undefined = default accent). */
   color?: string;
+  /** Which app capability this type belongs to. */
+  capability?: Capability;
 }
 
 /** @deprecated Use {@link TypeDescriptor} — kept for legacy call sites reading only icon/label/contentKind. */
@@ -79,16 +82,25 @@ const BLOB_PROPS: PropField[] = [
   { key: 'name', label: 'Filename', kind: 'text' },
 ];
 
+const NOTE_PROPS: PropField[] = [
+  { key: 'tags', label: 'Tags', kind: 'text' },
+];
+
 const BUILTIN_DESCRIPTORS: Record<string, TypeDescriptor> = {
   // OctoVault primary types
   folder:   { contentKind: 'none',   icon: 'folder', label: 'Folder',   editor: 'none',   props: [],         creatable: true,  workTree: false, findable: false },
-  page:     { contentKind: 'append', icon: 'file',   label: 'Page',     editor: 'page',   props: [],         creatable: true,  workTree: true,  findable: true,  defaultTitle: 'Untitled' },
-  board:    { contentKind: 'append', icon: 'work',   label: 'Board',    editor: 'board',  props: [],         creatable: true,  workTree: true,  findable: true,  defaultTitle: 'Untitled Board' },
+  page:     { contentKind: 'append', icon: 'file',   label: 'Page',     editor: 'page',   props: [],         creatable: true,  workTree: true,  findable: true,  defaultTitle: 'Untitled',          capability: 'pages' as Capability },
+  board:    { contentKind: 'append', icon: 'work',   label: 'Board',    editor: 'board',  props: [],         creatable: true,  workTree: true,  findable: true,  defaultTitle: 'Untitled Board',    capability: 'boards' as Capability },
   task:     { contentKind: 'append', icon: 'check',  label: 'Task',     editor: 'page',   props: TASK_PROPS, creatable: false, workTree: false, findable: false },
   file:     { contentKind: 'none',   icon: 'file',   label: 'File',     editor: 'file',   props: BLOB_PROPS, creatable: true,  workTree: false, findable: false, defaultTitle: 'Untitled File' },
   image:    { contentKind: 'none',   icon: 'image',  label: 'Image',    editor: 'file',   props: BLOB_PROPS, creatable: true,  workTree: false, findable: false, defaultTitle: 'Untitled Image' },
   // Automation: stream-bot integration node; not yet creatable from the UI.
   automation: { contentKind: 'none', icon: 'stream', label: 'Automation', editor: 'none', props: [], creatable: false, workTree: false, findable: false },
+  // Sub-app variant types
+  note:     { contentKind: 'append', icon: 'file',   label: 'Note',     editor: 'page',     props: NOTE_PROPS, creatable: false, workTree: false, findable: true,  defaultTitle: 'Untitled Note',     capability: 'notes' as Capability },
+  calendar: { contentKind: 'append', icon: 'clock',  label: 'Calendar', editor: 'calendar', props: [],         creatable: true,  workTree: true,  findable: true,  defaultTitle: 'Untitled Calendar', capability: 'calendar' as Capability },
+  form:     { contentKind: 'append', icon: 'layers', label: 'Form',     editor: 'form',     props: [],         creatable: true,  workTree: true,  findable: true,  defaultTitle: 'Untitled Form',     capability: 'forms' as Capability },
+  feedback: { contentKind: 'append', icon: 'check',  label: 'Feedback', editor: 'feedback', props: [],         creatable: true,  workTree: true,  findable: true,  defaultTitle: 'Untitled Feedback', capability: 'feedback' as Capability },
   // Removed types — tombstones so legacy nodes in existing spaces stay hidden (workTree: false)
   // rather than falling through to the generic descriptor (workTree: true). Not creatable.
   room:     { contentKind: 'none', icon: 'layers', label: 'Channel',  editor: 'none', props: [], creatable: false, workTree: false, findable: false },

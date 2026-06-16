@@ -7,6 +7,7 @@ import { layout, spacing } from '@/theme';
 import type { CreatableTypeEntry } from '@drakkar.software/octovault-sdk';
 import { useTypeRegistry } from '@/lib/type-registry-context';
 import { useResponsive } from '@/lib/use-responsive';
+import { useBrand } from '@/lib/brand-context';
 import type { ObjectType } from '@drakkar.software/octovault-sdk';
 import { Menu, MenuItem } from '@/components/ui/Menu';
 import { Popover } from '@/components/ui/Popover';
@@ -54,7 +55,8 @@ export function CreateTypeMenu({
 }: CreateTypeMenuProps) {
   const { isWide } = useResponsive();
   const registry = useTypeRegistry();
-  const items = types ?? registry.creatableTypes().filter((d) => d.workTree && d.editor !== 'file');
+  const { has } = useBrand();
+  const items = types ?? registry.creatableTypes().filter((d) => d.workTree && d.editor !== 'file' && (!d.capability || has(d.capability)));
   const [access, setAccess] = useState<VisibilityAccess>('space');
   // Reset to space-default when closed so a dismissed "Invite" selection doesn't
   // persist to the next open (security: users expect the control to start neutral).

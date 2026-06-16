@@ -75,15 +75,69 @@ export const BOARD_SCHEMA: ContentSchema = {
   ],
 };
 
+export const CALENDAR_SCHEMA: ContentSchema = {
+  collections: [
+    {
+      listKey: 'events',
+      fields: [
+        { key: 'etitle',  kind: 'charRga' },
+        { key: 'estart',  kind: 'lww' },
+        { key: 'eend',    kind: 'lww' },
+        { key: 'eallDay', kind: 'lww' },
+        { key: 'ecolor',  kind: 'lww' },
+        { key: 'edesc',   kind: 'lww' },
+      ],
+    },
+  ],
+};
+
+export const FORM_SCHEMA: ContentSchema = {
+  collections: [
+    {
+      listKey: 'fields',
+      fields: [
+        { key: 'flabel',    kind: 'charRga' },
+        { key: 'fkind',     kind: 'lww' },
+        { key: 'frequired', kind: 'lww' },
+        { key: 'foptions',  kind: 'lww' },
+      ],
+    },
+    {
+      listKey: 'responses',
+      fields: [
+        { key: 'rsubmittedAt', kind: 'lww' },
+        { key: 'rsubmitter',   kind: 'lww' },
+        { key: 'rdata',        kind: 'lww' },
+      ],
+    },
+  ],
+};
+
+export const FEEDBACK_SCHEMA: ContentSchema = {
+  collections: [
+    {
+      listKey: 'items',
+      fields: [
+        { key: 'ititle',  kind: 'charRga' },
+        { key: 'istatus', kind: 'lww' },
+        { key: 'idesc',   kind: 'lww' },
+        // Per-voter add-wins registers: `ivote:{itemId}:{userId}` (boolean true).
+        // Concurrent votes from different devices commute — no LWW clobber race.
+        { key: 'ivote',   kind: 'lww' },
+      ],
+    },
+  ],
+};
+
 /** Resolve the schema for an object's content kind.
  *  Returns null for `'none'` (no content doc). */
 export function schemaFor(editorKind: string): ContentSchema | null {
   switch (editorKind) {
-    case 'page':
-      return PAGE_SCHEMA;
-    case 'board':
-      return BOARD_SCHEMA;
-    default:
-      return null;
+    case 'page':     return PAGE_SCHEMA;
+    case 'board':    return BOARD_SCHEMA;
+    case 'calendar': return CALENDAR_SCHEMA;
+    case 'form':     return FORM_SCHEMA;
+    case 'feedback': return FEEDBACK_SCHEMA;
+    default:         return null;
   }
 }

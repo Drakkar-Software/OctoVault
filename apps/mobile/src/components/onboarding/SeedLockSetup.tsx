@@ -6,6 +6,7 @@ import { humanizeError } from '@drakkar.software/octovault-sdk';
 import { usePinKeys } from '@/lib/use-pin-keys';
 import { enrollPasskey } from '@drakkar.software/octovault-sdk/platform';
 import type { SeedLock } from '@drakkar.software/octovault-sdk';
+import { activeVariant } from '@/lib/variants';
 import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Callout';
 import { Txt } from '@/components/ui/Txt';
@@ -59,7 +60,7 @@ export function SeedLockSetup({ passkeyAvailable, onSubmit, onDone }: SeedLockSe
     setBusy(true);
     setError(null);
     try {
-      const passkey = await enrollPasskey('OctoVault');
+      const passkey = await enrollPasskey(activeVariant.appName);
       await submit({ pin, passkey }); // submit owns its own error/busy handling
     } catch (e) {
       setError(humanizeError(e, 'Couldn’t add the passkey. Try again or use PIN only.'));
@@ -144,7 +145,7 @@ export function SeedLockSetup({ passkeyAvailable, onSubmit, onDone }: SeedLockSe
     <View style={styles.block}>
       <Callout tone="accent" iconName="shield">
         Your recovery seed is encrypted with this PIN before it&apos;s saved on this
-        device. You&apos;ll enter it each time you open OctoVault here.
+        device. You&apos;ll enter it each time you open {activeVariant.appName} here.
       </Callout>
 
       <View style={styles.pinBlock}>

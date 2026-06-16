@@ -2,6 +2,7 @@ import { useRouter } from 'expo-router';
 import { StyleSheet } from 'react-native';
 
 import { layout, spacing } from '@/theme';
+import { activeVariant } from '@/lib/variants';
 import { useQuickCreate } from '@/lib/use-quick-create';
 import { useInShell } from '@/lib/use-responsive';
 import { useSpaces } from '@/lib/use-spaces';
@@ -33,7 +34,7 @@ export default function WorkScreen() {
     return (
       <StackScreen
         inTabs
-        header={<AppBar title="OctoVault" titleNode={<SpaceSwitcher variant="appbar" />} />}
+        header={<AppBar title={activeVariant.appName} titleNode={<SpaceSwitcher variant="appbar" />} />}
         contentStyle={styles.content}
       >
         <WorkNoSpaces />

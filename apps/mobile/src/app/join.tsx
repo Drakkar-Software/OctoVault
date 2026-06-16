@@ -3,6 +3,7 @@ import { router, type Href } from 'expo-router';
 import { Platform, StyleSheet, View } from 'react-native';
 
 import { layout, spacing } from '@/theme';
+import { activeVariant } from '@/lib/variants';
 import { humanizeError } from '@drakkar.software/octovault-sdk';
 import { previewInvite, type InvitePreview } from '@drakkar.software/octovault-sdk';
 import { acceptSpaceInvite, joinSpaceByLink, joinNodeByLink, makeJoinRequest } from '@drakkar.software/octovault-sdk';
@@ -239,7 +240,7 @@ export default function JoinScreen() {
             Send your join request to the space's owner — it holds your public keys, nothing secret.
           </Txt>
         </View>
-        <CopyField value={myRequest} copyLabel="Copy join request" share shareTitle="My OctoVault join request" />
+        <CopyField value={myRequest} copyLabel="Copy join request" share shareTitle={`My ${activeVariant.appName} join request`} />
         {Platform.OS !== 'web' ? (
           // In-person exchange: the owner can scan this instead of receiving a paste.
           <View style={styles.qrWrap}>

@@ -1,36 +1,84 @@
 {
-  "cli": {
-    "version": ">= 18.11.0",
-    "appVersionSource": "remote"
-  },
+  "cli": { "version": ">= 18.11.0", "appVersionSource": "remote" },
   "build": {
     "development": {
-      "developmentClient": true,
-      "distribution": "internal",
-      "channel": "development",
-      "env": {
-        "EXPO_PUBLIC_WEB_URL": "https://oc.drakkar.software"
-      }
+      "developmentClient": true, "distribution": "internal", "channel": "development",
+      "env": { "EXPO_PUBLIC_WEB_URL": "https://oc.drakkar.software", "EXPO_PUBLIC_VARIANT": "octovault" }
     },
     "preview": {
-      "distribution": "internal",
-      "channel": "preview",
-      "android": {
-        "buildType": "apk"
-      },
-      "env": {
-        "EXPO_PUBLIC_WEB_URL": "https://oc.drakkar.software"
-      }
+      "distribution": "internal", "channel": "preview",
+      "android": { "buildType": "apk" },
+      "env": { "EXPO_PUBLIC_WEB_URL": "https://oc.drakkar.software", "EXPO_PUBLIC_VARIANT": "octovault" }
     },
     "production": {
-      "autoIncrement": true,
-      "channel": "production",
-      "env": {
-        "EXPO_PUBLIC_WEB_URL": "https://oc.drakkar.software"
-      }
+      "autoIncrement": true, "channel": "production",
+      "env": { "EXPO_PUBLIC_WEB_URL": "https://oc.drakkar.software", "EXPO_PUBLIC_VARIANT": "octovault" }
+    },
+    "octonotes-development": {
+      "developmentClient": true, "distribution": "internal", "channel": "octonotes-development",
+      "env": { "EXPO_PUBLIC_VARIANT": "octonotes" }
+    },
+    "octonotes-preview": {
+      "distribution": "internal", "channel": "octonotes-preview",
+      "android": { "buildType": "apk" },
+      "env": { "EXPO_PUBLIC_VARIANT": "octonotes" }
+    },
+    "octonotes-production": {
+      "autoIncrement": true, "channel": "octonotes-production",
+      "env": { "EXPO_PUBLIC_VARIANT": "octonotes" }
+    },
+    "octoboard-development": {
+      "developmentClient": true, "distribution": "internal", "channel": "octoboard-development",
+      "env": { "EXPO_PUBLIC_VARIANT": "octoboard" }
+    },
+    "octoboard-preview": {
+      "distribution": "internal", "channel": "octoboard-preview",
+      "android": { "buildType": "apk" },
+      "env": { "EXPO_PUBLIC_VARIANT": "octoboard" }
+    },
+    "octoboard-production": {
+      "autoIncrement": true, "channel": "octoboard-production",
+      "env": { "EXPO_PUBLIC_VARIANT": "octoboard" }
+    },
+    "octocalendar-development": {
+      "developmentClient": true, "distribution": "internal", "channel": "octocalendar-development",
+      "env": { "EXPO_PUBLIC_VARIANT": "octocalendar" }
+    },
+    "octocalendar-preview": {
+      "distribution": "internal", "channel": "octocalendar-preview",
+      "android": { "buildType": "apk" },
+      "env": { "EXPO_PUBLIC_VARIANT": "octocalendar" }
+    },
+    "octocalendar-production": {
+      "autoIncrement": true, "channel": "octocalendar-production",
+      "env": { "EXPO_PUBLIC_VARIANT": "octocalendar" }
+    },
+    "octoforms-development": {
+      "developmentClient": true, "distribution": "internal", "channel": "octoforms-development",
+      "env": { "EXPO_PUBLIC_VARIANT": "octoforms" }
+    },
+    "octoforms-preview": {
+      "distribution": "internal", "channel": "octoforms-preview",
+      "android": { "buildType": "apk" },
+      "env": { "EXPO_PUBLIC_VARIANT": "octoforms" }
+    },
+    "octoforms-production": {
+      "autoIncrement": true, "channel": "octoforms-production",
+      "env": { "EXPO_PUBLIC_VARIANT": "octoforms" }
+    },
+    "octofeedback-development": {
+      "developmentClient": true, "distribution": "internal", "channel": "octofeedback-development",
+      "env": { "EXPO_PUBLIC_VARIANT": "octofeedback" }
+    },
+    "octofeedback-preview": {
+      "distribution": "internal", "channel": "octofeedback-preview",
+      "android": { "buildType": "apk" },
+      "env": { "EXPO_PUBLIC_VARIANT": "octofeedback" }
+    },
+    "octofeedback-production": {
+      "autoIncrement": true, "channel": "octofeedback-production",
+      "env": { "EXPO_PUBLIC_VARIANT": "octofeedback" }
     }
   },
-  "submit": {
-    "production": {}
-  }
+  "submit": { "production": {} }
 }

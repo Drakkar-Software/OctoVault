@@ -5,6 +5,8 @@ import { NativeTabs } from 'expo-router/unstable-native-tabs';
 import { fonts } from '@/theme';
 import { useResponsive } from '@/lib/use-responsive';
 import { useTheme } from '@/lib/use-theme';
+import { useBrand } from '@/lib/brand-context';
+import type { Capability } from '@drakkar.software/octovault-sdk';
 
 /**
  * Native (iOS / Android) bottom tabs. Renders the real platform tab bar via Expo
@@ -15,6 +17,9 @@ import { useTheme } from '@/lib/use-theme';
 export default function NativeTabsLayout() {
   const { colors } = useTheme();
   const { isWide } = useResponsive();
+  const { has } = useBrand();
+  const hasNotes = has('notes');
+  const hasVault = (['pages', 'calendar', 'forms', 'feedback', 'boards'] as Capability[]).some(has);
   return (
     <NativeTabs
       // On wide native layouts the AppFrame desktop sidebar replaces the bottom bar.
@@ -27,18 +32,22 @@ export default function NativeTabsLayout() {
         selected: { fontFamily: fonts.bodyMedium, color: colors.accent },
       }}
     >
-      <NativeTabs.Trigger name="work">
-        <NativeTabs.Trigger.Label>Vault</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon src={<NativeTabs.Trigger.VectorIcon family={Feather} name="briefcase" />} />
-      </NativeTabs.Trigger>
+      {hasVault && (
+        <NativeTabs.Trigger name="work">
+          <NativeTabs.Trigger.Label>Vault</NativeTabs.Trigger.Label>
+          <NativeTabs.Trigger.Icon src={<NativeTabs.Trigger.VectorIcon family={Feather} name="briefcase" />} />
+        </NativeTabs.Trigger>
+      )}
       <NativeTabs.Trigger name="agents">
         <NativeTabs.Trigger.Label>Agents</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon src={<NativeTabs.Trigger.VectorIcon family={Ionicons} name="sparkles-outline" />} />
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="notes">
-        <NativeTabs.Trigger.Label>Notes</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon src={<NativeTabs.Trigger.VectorIcon family={Feather} name="book-open" />} />
-      </NativeTabs.Trigger>
+      {hasNotes && (
+        <NativeTabs.Trigger name="notes">
+          <NativeTabs.Trigger.Label>Notes</NativeTabs.Trigger.Label>
+          <NativeTabs.Trigger.Icon src={<NativeTabs.Trigger.VectorIcon family={Feather} name="book-open" />} />
+        </NativeTabs.Trigger>
+      )}
       <NativeTabs.Trigger name="search" role="search">
         <NativeTabs.Trigger.Label>Search</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon src={<NativeTabs.Trigger.VectorIcon family={Feather} name="search" />} />

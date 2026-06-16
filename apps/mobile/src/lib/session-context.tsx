@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { activeVariant } from './variants';
 
 import type { BootstrapOrigin, RootIdentity } from '@drakkar.software/starfish-identities';
 
@@ -527,7 +528,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       passkeyEnrolled,
       enablePasskey: async () => {
         // Enroll on the live gesture, then wrap the unlocked VMK under its PRF secret.
-        const passkey = await enrollPasskey('OctoVault');
+        const passkey = await enrollPasskey(activeVariant.appName);
         await addPasskeyToVault(passkey);
         setPasskeyEnrolled(true);
       },

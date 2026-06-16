@@ -4,6 +4,7 @@ import '@/lib/octovault-init'; // SDK DI seam: configures sync URL + KV before p
 import { configureStarfishPlatform } from '@drakkar.software/octovault-sdk/platform';
 import { registerServiceWorker } from '@/lib/pwa';
 import { AiSettingsProvider } from '@/lib/ai-settings-context';
+import { BrandProvider } from '@/lib/brand-context';
 import { NotificationSettingsProvider } from '@/lib/notification-settings-context';
 import { ProfileProvider } from '@/lib/profile-context';
 import { SpaceRegistryProvider } from '@/lib/space-registry-context';
@@ -50,6 +51,7 @@ export default function RootLayout() {
 
   return (
     <OctoSpacesThemeProvider theme={resolveOctoSpacesTheme(scheme)}>
+    <BrandProvider>
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <KeyboardProvider statusBarTranslucent navigationBarTranslucent>
@@ -86,6 +88,7 @@ export default function RootLayout() {
         </KeyboardProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
+    </BrandProvider>
     </OctoSpacesThemeProvider>
   );
 }

@@ -5,6 +5,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { layout, radii, spacing } from '@/theme';
 import { focusRingStyle, useFocusRing } from '@/lib/focus';
 import { useTypeRegistry } from '@/lib/type-registry-context';
+import { useCreatableTypes } from '@/lib/use-creatable-types';
 import { useHover } from '@/lib/use-hover';
 import { useQuickCreate } from '@/lib/use-quick-create';
 import { useRecents } from '@/lib/use-recents';
@@ -33,6 +34,7 @@ const MAX_RECENTS = 6;
 export function WorkHome({ spaceId }: { spaceId: string | null }) {
   const router = useRouter();
   const registry = useTypeRegistry();
+  const creatableTypes = useCreatableTypes();
   const { objects } = useSpaceObjects();
   const { recents } = useRecents();
   const { createObject, ready } = useQuickCreate();
@@ -106,7 +108,7 @@ export function WorkHome({ spaceId }: { spaceId: string | null }) {
         <Txt variant="micro" mono uppercase weight="bold" tone="inkFaint" style={styles.label}>
           Start
         </Txt>
-        {registry.creatableTypes().filter((d) => d.workTree && d.editor !== 'file').map((d) => (
+        {creatableTypes.map((d) => (
           <HomeRow key={d.type} icon={d.icon} label={`New ${d.label.toLowerCase()}`} disabled={!ready} onPress={() => createObject(d.type)} />
         ))}
       </View>

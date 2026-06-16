@@ -4,6 +4,7 @@ import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { layout, radii, spacing } from '@/theme';
+import { activeVariant } from '@/lib/variants';
 import { useTheme } from '@/lib/use-theme';
 import type { LegalDoc } from '@drakkar.software/octovault-sdk';
 import { IconButton } from '@/components/ui/IconButton';
@@ -94,7 +95,7 @@ export function LegalPage({ doc }: LegalPageProps) {
         {/* Back link */}
         <View style={[styles.backRow, { borderTopColor: colors.lineFaint }]}>
           <Txt variant="callout" color={colors.accent} onPress={handleBack}>
-            ← Back to OctoVault
+            ← Back to {activeVariant.appName}
           </Txt>
         </View>
       </View>

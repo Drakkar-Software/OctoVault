@@ -3,6 +3,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { layout, motion, radii, spacing } from '@/theme';
+import { activeVariant } from '@/lib/variants';
 import { leaveSpace } from '@drakkar.software/octovault-sdk';
 import { useConfirm } from '@/lib/use-confirm';
 import { useSession } from '@/lib/session-context';
@@ -310,7 +311,7 @@ export default function SpaceDetailsScreen() {
               label="Invite cap"
               copyLabel="Copy invite"
               share
-              shareTitle={`Join ${spaceName} on OctoVault`}
+              shareTitle={`Join ${spaceName} on ${activeVariant.appName}`}
             />
           ) : null}
           {invite.error ? (

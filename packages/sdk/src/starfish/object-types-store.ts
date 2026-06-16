@@ -9,7 +9,7 @@
 import { randomId } from '../domain/ids';
 
 export type PropKind = 'text' | 'number' | 'select' | 'date' | 'checkbox' | 'url' | 'relation';
-export type EditorKind = 'page' | 'board' | 'file' | 'record' | 'none';
+export type EditorKind = 'page' | 'board' | 'file' | 'record' | 'calendar' | 'form' | 'feedback' | 'none';
 export type ContentKind = 'append' | 'merge' | 'none';
 
 export interface SelectOption {

@@ -2,7 +2,7 @@ import { useRouter } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 
 import { spacing } from '@/theme';
-import { creatableTypes } from '@drakkar.software/octovault-sdk';
+import { useCreatableTypes } from '@/lib/use-creatable-types';
 import type { ObjectType } from '@drakkar.software/octovault-sdk';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -13,7 +13,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
  * the type registry so any new creatable workTree type appears automatically.
  */
 export function WorkEmpty({ onCreate, disabled }: { onCreate: (type: ObjectType) => void; disabled?: boolean }) {
-  const workTreeTypes = creatableTypes().filter((d) => d.workTree && d.editor !== 'file');
+  const workTreeTypes = useCreatableTypes();
   return (
     <View style={styles.floor}>
       <EmptyState

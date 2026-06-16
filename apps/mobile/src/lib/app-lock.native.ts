@@ -11,6 +11,7 @@
 import { Platform } from 'react-native';
 import * as LocalAuthentication from 'expo-local-authentication';
 import * as SecureStore from 'expo-secure-store';
+import { activeVariant } from './variants';
 
 const FLAG_KEY = 'octovault_applock_biometric_v1';
 
@@ -49,7 +50,7 @@ export async function isBiometricLockEnabled(): Promise<boolean> {
 export async function authenticateBiometric(): Promise<boolean> {
   try {
     const res = await LocalAuthentication.authenticateAsync({
-      promptMessage: 'Unlock OctoVault',
+      promptMessage: `Unlock ${activeVariant.appName}`,
       cancelLabel: 'Cancel',
       // Allow the device passcode as a fallback so a flaky/again-prompted biometric can
       // still let the owner in — and so removing biometrics at the OS level can't fully

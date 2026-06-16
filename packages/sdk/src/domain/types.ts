@@ -106,9 +106,13 @@ export type BuiltinObjectType =
   | 'task'
   | 'file'
   | 'image'
-  | 'automation';
+  | 'automation'
+  | 'note'
+  | 'calendar'
+  | 'form'
+  | 'feedback';
 
 /** Runtime set of builtin type strings — use to branch "do we ship a renderer?". */
 export const BUILTIN_OBJECT_TYPES: readonly BuiltinObjectType[] = [
-  'folder', 'page', 'board', 'task', 'file', 'image', 'automation',
+  'folder', 'page', 'board', 'task', 'file', 'image', 'automation', 'note', 'calendar', 'form', 'feedback',
 ];

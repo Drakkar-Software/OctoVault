@@ -13,6 +13,7 @@ export * from './config/kv';
 export type { IconName } from './domain/icon-name';
 export type { TextVariant } from './domain/text-variant';
 export * from './domain/types';
+export * from './domain/capabilities';
 // domain/object-types: re-export everything EXCEPT PropKind/EditorKind which
 // conflict with the same names in starfish/object-types-store. Consumers that
 // need both can import directly from the sub-modules.
@@ -57,6 +58,24 @@ export * from './page-content';
 export * from './comments-content';
 export * from './board-content';
 export * from './task-model';
+export * from './calendar-content';
+// form-content: addField/patchField/deleteField conflict with the same names in
+// starfish/object-types-store; re-export under form-scoped aliases.
+export type {
+  FormFieldKind,
+  FormFieldOption,
+  FormField,
+  FormResponse,
+} from './form-content';
+export {
+  readFields, readResponses,
+  addField as addFormField,
+  deleteField as deleteFormField,
+  moveField as moveFormField,
+  patchField as patchFormField,
+  addResponse,
+} from './form-content';
+export * from './feedback-content';
 
 // ── Starfish sync layer ───────────────────────────────────────────────────────
 
