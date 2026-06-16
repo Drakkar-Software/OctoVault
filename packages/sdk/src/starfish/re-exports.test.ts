@@ -9,6 +9,7 @@
 import { describe, expect, it } from 'vitest';
 
 // ── account-seal ──────────────────────────────────────────────────────────────
+// account-seal.ts is kept as a file (imported by stream-bots.ts)
 import * as accountSeal from './account-seal';
 import * as sdkAccountSeal from '@drakkar.software/octospaces-sdk';
 
@@ -27,7 +28,8 @@ describe('account-seal re-exports', () => {
 });
 
 // ── pairing ───────────────────────────────────────────────────────────────────
-import { PAIR_PREFIX } from './pairing';
+// pairing.ts deleted — import directly from octospaces-sdk
+import { PAIR_PREFIX } from '@drakkar.software/octospaces-sdk';
 
 describe('pairing re-exports', () => {
   it('PAIR_PREFIX equals "octospaces-pair:" (migrated from octovault-pair:)', () => {
@@ -41,6 +43,7 @@ describe('pairing re-exports', () => {
 });
 
 // ── identity ──────────────────────────────────────────────────────────────────
+// identity.ts is kept as a file (imported by stream-bots.ts)
 import * as identity from './identity';
 
 describe('identity re-exports', () => {
@@ -62,41 +65,53 @@ describe('identity re-exports', () => {
 });
 
 // ── space-encryptor ───────────────────────────────────────────────────────────
-import * as spaceEncryptor from './space-encryptor';
+// space-encryptor.ts deleted — import directly from octospaces-sdk
+import {
+  getNodeAccess,
+  buildNodeAccess,
+  clearNodeAccessCache,
+  getSpaceClient,
+  openEncryptor,
+  buildEncryptor,
+  ownerEnsureKeyring,
+  SpaceAccessError,
+} from '@drakkar.software/octospaces-sdk';
 
 describe('space-encryptor re-exports', () => {
   it('exports the node-access resolver functions', () => {
-    expect(typeof spaceEncryptor.getNodeAccess).toBe('function');
-    expect(typeof spaceEncryptor.buildNodeAccess).toBe('function');
-    expect(typeof spaceEncryptor.clearNodeAccessCache).toBe('function');
-    expect(typeof spaceEncryptor.getSpaceClient).toBe('function');
-    expect(typeof spaceEncryptor.openEncryptor).toBe('function');
-    expect(typeof spaceEncryptor.buildEncryptor).toBe('function');
-    expect(typeof spaceEncryptor.ownerEnsureKeyring).toBe('function');
+    expect(typeof getNodeAccess).toBe('function');
+    expect(typeof buildNodeAccess).toBe('function');
+    expect(typeof clearNodeAccessCache).toBe('function');
+    expect(typeof getSpaceClient).toBe('function');
+    expect(typeof openEncryptor).toBe('function');
+    expect(typeof buildEncryptor).toBe('function');
+    expect(typeof ownerEnsureKeyring).toBe('function');
   });
 
   it('SpaceAccessError is parity with SDK', () => {
-    expect(spaceEncryptor.SpaceAccessError).toBe(sdkAccountSeal.SpaceAccessError);
+    expect(SpaceAccessError).toBe(sdkAccountSeal.SpaceAccessError);
   });
 });
 
 // ── pull-cache ────────────────────────────────────────────────────────────────
-import * as pullCache from './pull-cache';
+// pull-cache.ts deleted — import directly from octospaces-sdk
+import { pullCache, PULL_CACHE_MAX_AGE_MS } from '@drakkar.software/octospaces-sdk';
 
 describe('pull-cache re-exports', () => {
   it('exports pullCache function and PULL_CACHE_MAX_AGE_MS', () => {
-    expect(typeof pullCache.pullCache).toBe('function');
-    expect(typeof pullCache.PULL_CACHE_MAX_AGE_MS).toBe('number');
-    expect(pullCache.PULL_CACHE_MAX_AGE_MS).toBeGreaterThan(0);
+    expect(typeof pullCache).toBe('function');
+    expect(typeof PULL_CACHE_MAX_AGE_MS).toBe('number');
+    expect(PULL_CACHE_MAX_AGE_MS).toBeGreaterThan(0);
   });
 });
 
 // ── profile-cache ─────────────────────────────────────────────────────────────
-import * as profileCache from './profile-cache';
+// profile-cache.ts deleted — import directly from octospaces-sdk
+import { cacheProfile, loadCachedProfile } from '@drakkar.software/octospaces-sdk';
 
 describe('profile-cache re-exports', () => {
   it('exports cacheProfile and loadCachedProfile', () => {
-    expect(typeof profileCache.cacheProfile).toBe('function');
-    expect(typeof profileCache.loadCachedProfile).toBe('function');
+    expect(typeof cacheProfile).toBe('function');
+    expect(typeof loadCachedProfile).toBe('function');
   });
 });

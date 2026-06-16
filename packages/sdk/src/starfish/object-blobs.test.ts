@@ -5,7 +5,7 @@ import {
   uploadObjectBlob,
   loadObjectBlob,
   type ObjectBlobRef,
-} from './object-blobs';
+} from '@drakkar.software/octospaces-sdk';
 import type { ByteSealer } from './attachments';
 
 function makeFakeClient() {

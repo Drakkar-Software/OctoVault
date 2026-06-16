@@ -14,7 +14,7 @@
  * until the next successful pull heals it.
  */
 import type { Session } from './starfish/identity';
-import { updateQuickReactionsDoc } from './starfish/registry';
+import { updateQuickReactionsDoc } from '@drakkar.software/octospaces-sdk';
 
 /** How many emojis the quick-reaction palette holds — a fixed six slots. */
 export const QUICK_REACTION_COUNT = 6;
