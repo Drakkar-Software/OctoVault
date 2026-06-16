@@ -16,9 +16,11 @@ const ITEMS = 'items';
 const titleList  = (id: string) => `ititle:${id}`;
 const statusReg  = (id: string) => `istatus:${id}`;
 const descReg    = (id: string) => `idesc:${id}`;
-// Per-voter add-wins register: `ivote:{itemId}:{userId}`.
-// Each voter owns their own key, so concurrent votes from different devices
-// commute — no LWW-clobber race. Replaces the old single `ivoters:{id}` LWW array.
+// Per-voter LWW toggle register: `ivote:{itemId}:{userId}`.
+// Each voter owns their own key, so concurrent votes from *different* users
+// commute (no cross-voter LWW-clobber race). For the *same* user, vote
+// (setField→true) vs unvote (deleteField) on the same key is plain LWW —
+// the higher-clock op wins. Replaces the old single `ivoters:{id}` LWW array.
 const voteKey    = (itemId: string, userId: string) => `ivote:${itemId}:${userId}`;
 // Prefix used to scan all votes for an item.
 const votePrefix = (itemId: string) => `ivote:${itemId}:`;
@@ -56,7 +58,9 @@ export function readItems(doc: WalDocument): FeedbackItem[] {
       voters: readVoters(state, raw),
     });
   }
-  return items.sort((a, b) => b.voters.length - a.voters.length);
+  // Sort by vote count descending, with an explicit id tiebreak for a deterministic
+  // order that doesn't rely on Array.sort stability — mirrors task-model.ts:59.
+  return items.sort((a, b) => (b.voters.length - a.voters.length) || (a.id < b.id ? -1 : 1));
 }
 
 export function addItem(doc: WalDocument, title: string): string {
@@ -91,12 +95,12 @@ export function patchItem(doc: WalDocument, id: string, patch: Partial<Omit<Feed
   if (patch.title !== undefined) doc.setText(titleList(id), patch.title);
 }
 
-export function vote(doc: WalDocument, id: string, userId: string, currentVoters: string[]): void {
-  if (currentVoters.includes(userId)) return;
+export function vote(doc: WalDocument, id: string, userId: string): void {
+  // setField is idempotent — re-voting after a remote unvote is safe and correct.
   doc.setField(voteKey(id, userId), true);
 }
 
-export function unvote(doc: WalDocument, id: string, userId: string, currentVoters: string[]): void {
-  if (!currentVoters.includes(userId)) return;
+export function unvote(doc: WalDocument, id: string, userId: string): void {
+  // deleteField is idempotent — unvoting when already absent is a no-op.
   doc.deleteField(voteKey(id, userId));
 }

@@ -55,6 +55,8 @@ export interface TypeDescriptor {
   color?: string;
   /** Which app capability this type belongs to. */
   capability?: Capability;
+  /** Whether the editor owns its own internal ScrollView (outer StackScreen must not add one). */
+  ownsScroll?: boolean;
 }
 
 /** @deprecated Use {@link TypeDescriptor} — kept for legacy call sites reading only icon/label/contentKind. */
@@ -89,18 +91,18 @@ const NOTE_PROPS: PropField[] = [
 const BUILTIN_DESCRIPTORS: Record<string, TypeDescriptor> = {
   // OctoVault primary types
   folder:   { contentKind: 'none',   icon: 'folder', label: 'Folder',   editor: 'none',   props: [],         creatable: true,  workTree: false, findable: false },
-  page:     { contentKind: 'append', icon: 'file',   label: 'Page',     editor: 'page',   props: [],         creatable: true,  workTree: true,  findable: true,  defaultTitle: 'Untitled',          capability: 'pages' as Capability },
-  board:    { contentKind: 'append', icon: 'work',   label: 'Board',    editor: 'board',  props: [],         creatable: true,  workTree: true,  findable: true,  defaultTitle: 'Untitled Board',    capability: 'boards' as Capability },
+  page:     { contentKind: 'append', icon: 'file',   label: 'Page',     editor: 'page',   props: [],         creatable: true,  workTree: true,  findable: true,  defaultTitle: 'Untitled',          capability: 'pages' },
+  board:    { contentKind: 'append', icon: 'work',   label: 'Board',    editor: 'board',  props: [],         creatable: true,  workTree: true,  findable: true,  defaultTitle: 'Untitled Board',    capability: 'boards',   ownsScroll: true },
   task:     { contentKind: 'append', icon: 'check',  label: 'Task',     editor: 'page',   props: TASK_PROPS, creatable: false, workTree: false, findable: false },
   file:     { contentKind: 'none',   icon: 'file',   label: 'File',     editor: 'file',   props: BLOB_PROPS, creatable: true,  workTree: false, findable: false, defaultTitle: 'Untitled File' },
   image:    { contentKind: 'none',   icon: 'image',  label: 'Image',    editor: 'file',   props: BLOB_PROPS, creatable: true,  workTree: false, findable: false, defaultTitle: 'Untitled Image' },
   // Automation: stream-bot integration node; not yet creatable from the UI.
   automation: { contentKind: 'none', icon: 'stream', label: 'Automation', editor: 'none', props: [], creatable: false, workTree: false, findable: false },
   // Sub-app variant types
-  note:     { contentKind: 'append', icon: 'file',   label: 'Note',     editor: 'page',     props: NOTE_PROPS, creatable: false, workTree: false, findable: true,  defaultTitle: 'Untitled Note',     capability: 'notes' as Capability },
-  calendar: { contentKind: 'append', icon: 'clock',  label: 'Calendar', editor: 'calendar', props: [],         creatable: true,  workTree: true,  findable: true,  defaultTitle: 'Untitled Calendar', capability: 'calendar' as Capability },
-  form:     { contentKind: 'append', icon: 'layers', label: 'Form',     editor: 'form',     props: [],         creatable: true,  workTree: true,  findable: true,  defaultTitle: 'Untitled Form',     capability: 'forms' as Capability },
-  feedback: { contentKind: 'append', icon: 'check',  label: 'Feedback', editor: 'feedback', props: [],         creatable: true,  workTree: true,  findable: true,  defaultTitle: 'Untitled Feedback', capability: 'feedback' as Capability },
+  note:     { contentKind: 'append', icon: 'file',   label: 'Note',     editor: 'page',     props: NOTE_PROPS, creatable: false, workTree: false, findable: true,  defaultTitle: 'Untitled Note',     capability: 'notes' },
+  calendar: { contentKind: 'append', icon: 'clock',  label: 'Calendar', editor: 'calendar', props: [],         creatable: true,  workTree: true,  findable: true,  defaultTitle: 'Untitled Calendar', capability: 'calendar',  ownsScroll: true },
+  form:     { contentKind: 'append', icon: 'layers', label: 'Form',     editor: 'form',     props: [],         creatable: true,  workTree: true,  findable: true,  defaultTitle: 'Untitled Form',     capability: 'forms',     ownsScroll: true },
+  feedback: { contentKind: 'append', icon: 'check',  label: 'Feedback', editor: 'feedback', props: [],         creatable: true,  workTree: true,  findable: true,  defaultTitle: 'Untitled Feedback', capability: 'feedback',  ownsScroll: true },
   // Removed types — tombstones so legacy nodes in existing spaces stay hidden (workTree: false)
   // rather than falling through to the generic descriptor (workTree: true). Not creatable.
   room:     { contentKind: 'none', icon: 'layers', label: 'Channel',  editor: 'none', props: [], creatable: false, workTree: false, findable: false },

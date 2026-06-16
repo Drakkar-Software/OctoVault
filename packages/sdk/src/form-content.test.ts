@@ -9,6 +9,7 @@ import {
 import { ed25519Suite } from '@drakkar.software/starfish-protocol';
 
 import * as c from './form-content';
+import { FORM_SCHEMA } from './object-content-model';
 
 /** A minimal in-memory append log shared by every doc opened against it — lets two
  *  replicas exchange ops (commit → pull) so convergence is exercised end-to-end. */
@@ -91,6 +92,15 @@ describe('patchField', () => {
     const fields = c.readFields(doc);
     expect(fields[0]).toMatchObject({ kind: 'select', required: true, options: opts });
   });
+
+  it('safeParseJson falls back to [] for malformed options JSON', async () => {
+    const doc = await openDoc(memTransport());
+    const id = c.addField(doc, { kind: 'select', label: 'Bad opts' });
+    // Directly write malformed JSON into the options register to exercise safeParseJson's catch branch
+    doc.setField(`foptions:${id}`, '{not valid json[[[');
+    const fields = c.readFields(doc);
+    expect(fields[0]!.options).toEqual([]);
+  });
 });
 
 describe('addResponse / readResponses', () => {
@@ -101,6 +111,14 @@ describe('addResponse / readResponses', () => {
     const responses = c.readResponses(doc);
     expect(responses).toHaveLength(1);
     expect(responses[0]).toMatchObject({ id, submitter: 'user-a', submittedAt: 5000, data });
+  });
+
+  it('safeParseJson falls back to {} for malformed response data', async () => {
+    const doc = await openDoc(memTransport());
+    const id = c.addResponse(doc, 'user-b', {}, 1000);
+    doc.setField(`rdata:${id}`, 'not-json');
+    const responses = c.readResponses(doc);
+    expect(responses[0]!.data).toEqual({});
   });
 });
 
@@ -121,5 +139,70 @@ describe('convergence across two replicas', () => {
     const labelsB = c.readFields(b).map((f) => f.label).sort();
     expect(labelsA).toEqual(['From A', 'From B']);
     expect(labelsB).toEqual(['From A', 'From B']);
+  });
+
+  it('concurrent moveField on two replicas converges to a deterministic order', async () => {
+    const transport = memTransport();
+    const docA = await openDoc(transport);
+    const docB = await openDoc(transport);
+
+    // A sets up fields [X, Y, Z] and both sync
+    const x = c.addField(docA, { label: 'X' });
+    const y = c.addField(docA, { label: 'Y' });
+    const z = c.addField(docA, { label: 'Z' });
+    await docA.commit();
+    await docB.pull();
+
+    // A moves Z to front (index 0); B moves X to end (index 2)
+    c.moveField(docA, z, 0); // [Z, X, Y]
+    c.moveField(docB, x, 2); // [Y, Z, X]
+    await docA.commit();
+    await docB.commit();
+    await docA.pull();
+    await docB.pull();
+
+    // Both replicas must agree on the same order (LWW on the list key)
+    const idsA = c.readFields(docA).map((f) => f.id);
+    const idsB = c.readFields(docB).map((f) => f.id);
+    expect(idsA).toEqual(idsB);
+    // All three fields still present
+    expect(idsA).toContain(x);
+    expect(idsA).toContain(y);
+    expect(idsA).toContain(z);
+  });
+
+  it('merges responses added concurrently from two replicas', async () => {
+    const transport = memTransport();
+    const docA = await openDoc(transport);
+    const docB = await openDoc(transport);
+
+    c.addResponse(docA, 'alice', { q1: 'yes' }, 1000);
+    c.addResponse(docB, 'bob', { q1: 'no' }, 2000);
+    await docA.commit();
+    await docB.commit();
+    await docA.pull();
+    await docB.pull();
+
+    const submittersA = c.readResponses(docA).map((r) => r.submitter).sort();
+    const submittersB = c.readResponses(docB).map((r) => r.submitter).sort();
+    expect(submittersA).toEqual(['alice', 'bob']);
+    expect(submittersB).toEqual(['alice', 'bob']);
+  });
+});
+
+describe('schema guard — FORM_SCHEMA field keys match actual writes', () => {
+  it('all keys written by addField/patchField/addResponse match FORM_SCHEMA prefixes', async () => {
+    const doc = await openDoc(memTransport());
+    const fid = c.addField(doc, { kind: 'select', label: 'Color', required: true, options: [{ id: 'r', label: 'Red' }] });
+    c.patchField(doc, fid, { kind: 'email' });
+    c.addResponse(doc, 'user-x', { q: 1 }, 9999);
+    const state = doc.materialize() as Record<string, unknown>;
+    const listKeys = new Set(FORM_SCHEMA.collections.map((col) => col.listKey));
+    const fieldPrefixes = FORM_SCHEMA.collections.flatMap((col) => col.fields.map((f) => f.key));
+    const dataKeys = Object.keys(state).filter((k) => !listKeys.has(k));
+    for (const key of dataKeys) {
+      const matched = fieldPrefixes.some((p) => key.startsWith(p + ':') || key === p);
+      expect(matched, `key "${key}" not in FORM_SCHEMA`).toBe(true);
+    }
   });
 });

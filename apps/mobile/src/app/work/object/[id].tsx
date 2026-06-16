@@ -63,8 +63,9 @@ export default function WorkObjectScreen() {
   // (the planned follow-up) this guard can be removed or repurposed.
   const isCrossSpacePublic = loaded && !node;
   const [toolbar, setToolbar] = useState<ReactNode>(null);
-  // Editors that own their own internal ScrollView — the outer StackScreen must not scroll.
-  const selfScrolling = editor === 'board' || editor === 'calendar' || editor === 'form' || editor === 'feedback';
+  // Editors that own their own internal ScrollView — read from the type descriptor so
+  // new types are automatically handled without touching this file.
+  const selfScrolling = !!(node && registry.descriptor(node.type).ownsScroll);
 
   const goBack = () => (router.canGoBack() ? router.back() : router.replace('/(tabs)/work'));
   const openCrumb = (nid: string) =>

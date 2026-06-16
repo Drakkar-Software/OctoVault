@@ -121,8 +121,8 @@ export const FEEDBACK_SCHEMA: ContentSchema = {
         { key: 'ititle',  kind: 'charRga' },
         { key: 'istatus', kind: 'lww' },
         { key: 'idesc',   kind: 'lww' },
-        // Per-voter add-wins registers: `ivote:{itemId}:{userId}` (boolean true).
-        // Concurrent votes from different devices commute — no LWW clobber race.
+        // Per-voter LWW toggle registers: `ivote:{itemId}:{userId}` (boolean true).
+        // Cross-voter concurrent votes commute; same-voter vote vs unvote is LWW.
         { key: 'ivote',   kind: 'lww' },
       ],
     },

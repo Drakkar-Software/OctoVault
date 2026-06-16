@@ -644,6 +644,10 @@ export const layout = {
   /** Placeholder height before the intrinsic aspect ratio is measured, so the
    *  block never collapses to 0 height while the image is loading. */
   inlineImageMinHeight: 200,
+  /** Touch target size for a vote/reaction button (square). */
+  voteControlSize: 36,
+  /** Minimum height for an "empty" section placeholder within a form/list editor. */
+  emptySectionMinHeight: 180,
 } as const;
 
 // ── Semantic helpers ───────────────────────────────────────────────────────
