@@ -28,8 +28,8 @@ describe('account-seal re-exports', () => {
 });
 
 // ── pairing ───────────────────────────────────────────────────────────────────
-// pairing.ts deleted — import directly from octospaces-sdk
-import { PAIR_PREFIX } from '@drakkar.software/octospaces-sdk';
+// pairing.ts deleted — hoisted into barrel; import from barrel to guard re-export coverage
+import { PAIR_PREFIX } from '../index';
 
 describe('pairing re-exports', () => {
   it('PAIR_PREFIX equals "octospaces-pair:" (migrated from octovault-pair:)', () => {
@@ -65,7 +65,7 @@ describe('identity re-exports', () => {
 });
 
 // ── space-encryptor ───────────────────────────────────────────────────────────
-// space-encryptor.ts deleted — import directly from octospaces-sdk
+// space-encryptor.ts deleted — hoisted into barrel; import from barrel to guard re-export coverage
 import {
   getNodeAccess,
   buildNodeAccess,
@@ -75,7 +75,7 @@ import {
   buildEncryptor,
   ownerEnsureKeyring,
   SpaceAccessError,
-} from '@drakkar.software/octospaces-sdk';
+} from '../index';
 
 describe('space-encryptor re-exports', () => {
   it('exports the node-access resolver functions', () => {
@@ -94,8 +94,8 @@ describe('space-encryptor re-exports', () => {
 });
 
 // ── pull-cache ────────────────────────────────────────────────────────────────
-// pull-cache.ts deleted — import directly from octospaces-sdk
-import { pullCache, PULL_CACHE_MAX_AGE_MS } from '@drakkar.software/octospaces-sdk';
+// pull-cache.ts deleted — hoisted into barrel; import from barrel to guard re-export coverage
+import { pullCache, PULL_CACHE_MAX_AGE_MS } from '../index';
 
 describe('pull-cache re-exports', () => {
   it('exports pullCache function and PULL_CACHE_MAX_AGE_MS', () => {
@@ -106,8 +106,8 @@ describe('pull-cache re-exports', () => {
 });
 
 // ── profile-cache ─────────────────────────────────────────────────────────────
-// profile-cache.ts deleted — import directly from octospaces-sdk
-import { cacheProfile, loadCachedProfile } from '@drakkar.software/octospaces-sdk';
+// profile-cache.ts deleted — hoisted into barrel; import from barrel to guard re-export coverage
+import { cacheProfile, loadCachedProfile } from '../index';
 
 describe('profile-cache re-exports', () => {
   it('exports cacheProfile and loadCachedProfile', () => {
