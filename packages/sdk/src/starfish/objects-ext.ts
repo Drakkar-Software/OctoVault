@@ -31,7 +31,7 @@ export function automationOf(node: ObjectNode): AutomationMeta | null {
 }
 
 /** Vault-specific new-node input (adds `props` and `automation` fields). */
-export interface VaultNewObjectInput {
+interface VaultNewObjectInput {
   type: string;
   parentId?: string | null;
   title: string;

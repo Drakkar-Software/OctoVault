@@ -54,7 +54,6 @@ export interface Palette {
   lineFaint: string;
   /** Translucent dividers for use over arbitrary backgrounds. */
   rule: string;
-  ruleSoft: string;
   /** "Lit from above" top-edge highlight on raised surfaces (the inner light
    *  that gives cards/sheets depth — dark mode's stand-in for a drop shadow). */
   hairlineHi: string;
@@ -67,8 +66,6 @@ export interface Palette {
   pressed: string;
   /** Persistent fill under a selected/active nav or tree row (distinct from hover). */
   selected: string;
-  /** Hover wash for already-selected (accentSoft) rows. */
-  accentSoftHover: string;
   /** White brightening wash layered over a solid/gradient fill on hover. */
   brightWash: string;
   /** Keyboard focus ring (web `:focus-visible`) — applied via
@@ -79,7 +76,6 @@ export interface Palette {
 
   // ── Indigo accent system ─────────────────────────────────────────────────
   accent: string;
-  accentStrong: string;
   /** Gradient stops for primary fills (buttons, brand disc): top → bottom. */
   accentGradTop: string;
   accentGradBottom: string;
@@ -95,7 +91,6 @@ export interface Palette {
   accentBg: string;
   accentBgStrong: string;
   accentBorder: string;
-  accentBorderStrong: string;
 
   // ── Status ───────────────────────────────────────────────────────────────
   unread: string;
@@ -110,7 +105,6 @@ export interface Palette {
   successBorder: string;
   warning: string;
   warningBg: string;
-  warningBorder: string;
 
   // ── Sticky-note (sparingly, e.g. security callouts) ──────────────────────
   note: string;
@@ -155,19 +149,16 @@ const light: Palette = {
   lineSoft: '#d9d3c6',
   lineFaint: '#e9e4d8',
   rule: 'rgba(27,26,23,0.10)',
-  ruleSoft: 'rgba(27,26,23,0.06)',
   hairlineHi: 'rgba(255,255,255,0.9)',
 
   hover: 'rgba(27,26,23,0.045)',
   pressed: 'rgba(27,26,23,0.08)',
   selected: 'rgba(88,71,201,0.10)',
-  accentSoftHover: 'rgba(88,71,201,0.18)',
   brightWash: 'rgba(255,255,255,0.14)',
   focusRing: 'rgba(88,71,201,0.55)',
   dropTarget: 'rgba(88,71,201,0.10)',
 
   accent: '#5847c9',
-  accentStrong: '#473aa6',
   accentGradTop: '#6a59d8',
   accentGradBottom: '#473aa6',
   glow: '#5847c9',
@@ -177,7 +168,6 @@ const light: Palette = {
   accentBg: 'rgba(88,71,201,0.10)',
   accentBgStrong: 'rgba(88,71,201,0.16)',
   accentBorder: 'rgba(88,71,201,0.32)',
-  accentBorderStrong: 'rgba(88,71,201,0.50)',
 
   unread: '#5847c9',
   mention: '#c2410c',
@@ -190,7 +180,6 @@ const light: Palette = {
   successBorder: 'rgba(47,143,91,0.35)',
   warning: '#b07a1e',
   warningBg: 'rgba(176,122,30,0.12)',
-  warningBorder: 'rgba(176,122,30,0.32)',
 
   note: '#fff2b0',
   noteInk: '#4a3a10',
@@ -226,19 +215,16 @@ const dark: Palette = {
   lineSoft: '#332f27',
   lineFaint: '#272420',
   rule: 'rgba(244,241,234,0.10)',
-  ruleSoft: 'rgba(244,241,234,0.06)',
   hairlineHi: 'rgba(236,232,223,0.08)',
 
   hover: 'rgba(244,241,234,0.06)',
   pressed: 'rgba(244,241,234,0.10)',
   selected: 'rgba(139,124,240,0.16)',
-  accentSoftHover: 'rgba(139,124,240,0.18)',
   brightWash: 'rgba(255,255,255,0.12)',
   focusRing: 'rgba(139,124,240,0.60)',
   dropTarget: 'rgba(139,124,240,0.14)',
 
   accent: '#8b7cf0',
-  accentStrong: '#a499f5',
   accentGradTop: '#7e6fe0',
   accentGradBottom: '#5a4cc0',
   glow: '#7d6ee0',
@@ -248,7 +234,6 @@ const dark: Palette = {
   accentBg: 'rgba(139,124,240,0.14)',
   accentBgStrong: 'rgba(139,124,240,0.22)',
   accentBorder: 'rgba(139,124,240,0.34)',
-  accentBorderStrong: 'rgba(139,124,240,0.55)',
 
   unread: '#8b7cf0',
   mention: '#e08a5a',
@@ -261,7 +246,6 @@ const dark: Palette = {
   successBorder: 'rgba(95,200,138,0.36)',
   warning: '#d6a23f',
   warningBg: 'rgba(214,162,63,0.14)',
-  warningBorder: 'rgba(214,162,63,0.34)',
 
   note: '#3a3416',
   noteInk: '#e9d98a',
@@ -435,26 +419,6 @@ export const shadows = {
 } as const;
 
 /**
- * Scheme-aware drop shadow — use in dynamic (inline) styles where you have access
- * to the active palette. Pass `colors.shadow` from `useTheme()`.
- */
-export function dropShadow(
-  color: string,
-  opacity: number,
-  radius: number,
-  yOffset: number,
-  elevation: number,
-) {
-  return {
-    shadowColor: color,
-    shadowOpacity: opacity,
-    shadowRadius: radius,
-    shadowOffset: { width: 0, height: yOffset },
-    elevation,
-  } as const;
-}
-
-/**
  * Accent-tinted glow keyed to the active scheme's `glow` color. Dark surfaces
  * swallow near-black drop shadows, so primary moments (buttons, the brand disc,
  * focused inputs) lean on a colored bloom instead. Pass `colors.glow`.
@@ -564,29 +528,19 @@ export const layout = {
   sidebarCollapsedWidth: 0,
   /** Fixed width of a kanban column. */
   boardColumnWidth: 236,
-  /** Width of the task detail pane shown beside the board on wide screens. */
-  boardDetailPaneWidth: 360,
   /** Object tree (sidebar + Work): per-depth indent step and disclosure row height. */
   objectTreeIndent: 16,
   objectTreeRowHeight: 34,
   /** Hover-revealed add/handle button size on a tree/block row. */
   rowAddButton: 20,
-  /** Emoji glyph size in a Work doc/board hero header (larger than the title text). */
-  objectHeroEmoji: 38,
   /** Notion/Anytype-style large object icon, shown ABOVE the title in a doc/board hero. */
   objectIconLg: 60,
-  /** Rounded tile holding the large hero icon (icon sits centered inside). */
-  objectIconTile: 78,
-  /** Optional cover band height above a doc/board hero (Notion-style). */
-  coverHeight: 184,
   /** Editorial reading column for a workspace list landing (Vault home, search). */
   listMaxWidth: 760,
   /** Shared column for onboarding/auth screens (welcome, seed, lock, pair…). */
   authColumnWidth: 460,
   /** Reading column for settings surfaces (/you, /space/[id]). */
   settingsColumnWidth: 640,
-  /** Side panel for an opened board task on wide screens (replaces the bottom sheet). */
-  taskPanelWidth: 380,
   /** Right-docked side-peek pane (board task detail on wide screens). */
   peekPaneWidth: 380,
   /** Block editor: left gutter that holds the hover "+" / drag handle. */
@@ -607,8 +561,6 @@ export const layout = {
    *  whole doc) — generous so an empty/short doc still fills the page as a tap target,
    *  the way a Notion page does; the field auto-grows past this with content. */
   docEditorMinHeight: 320,
-  /** Min height of the multiline content field in the task detail sheet/pane. */
-  taskContentMinHeight: 120,
   /** Top toolbar above the main pane on desktop. */
   desktopTopbarHeight: 52,
   /** Max width of a breadcrumb crumb label before it truncates. */
@@ -670,34 +622,6 @@ export function presenceColor(p: Palette, status: PresenceStatus): string {
       return p.danger;
     case 'offline':
       return p.inkFaint;
-  }
-}
-
-export function verificationColor(p: Palette, level: VerificationLevel): string {
-  switch (level) {
-    case 'verified':
-      return p.success;
-    case 'pending':
-      return p.warning;
-    case 'unverified':
-      return p.danger;
-    case 'none':
-    default:
-      return p.inkFaint;
-  }
-}
-
-/** Kanban task lifecycle → color. `doing` is the (previously unreachable) middle state. */
-export type TaskStatus = 'todo' | 'doing' | 'done';
-
-export function statusColor(p: Palette, status: TaskStatus): string {
-  switch (status) {
-    case 'todo':
-      return p.inkFaint;
-    case 'doing':
-      return p.warning;
-    case 'done':
-      return p.success;
   }
 }
 

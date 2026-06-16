@@ -76,7 +76,4 @@ export function getEventsUrl(): string {
   return _config.eventsUrl;
 }
 
-/** Public origin of the web app, for invite link generation. */
-export function getWebBase(): string {
-  return _config.webBase;
-}
+

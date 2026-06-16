@@ -10,8 +10,9 @@ backend**: it syncs against a **Starfish** server (default `http://localhost:878
 override with `EXPO_PUBLIC_STARFISH_URL`) over REST + SSE, with real end-to-end
 encryption — onboarding derives a BIP-39 seed into Ed25519/Kyber keys (persisted via
 `expo-secure-store`) and page/board content is sealed per-space with space keyrings.
-All sync/crypto logic lives under `src/lib/starfish/*`; consume it through the
-`use-*` hooks and context providers.
+All sync/crypto logic lives in the **`@drakkar.software/octovault-sdk`** package
+(`packages/sdk`); consume it through the `use-*` hooks and context providers in
+`src/lib/`.
 
 ## Design rules — ALWAYS respect
 
@@ -42,34 +43,37 @@ Non-negotiable. Follow these for every change:
 - `src/components/` — `ui/` primitives (`Txt`, `Button`, `IconButton`, `Card`,
   `Pill`, `Badge`, `Avatar`, `Icon`, `Divider`, `Row`, `Callout`, `AppBar`,
   `Screen`, `StackScreen`, `EmptyState`, `TextField`, `AutosaveField`), `brand/`
-  (`Octopus`, `Wordmark`, `HeroMark`), `work/` (the editors: `PageView`,
+  (`Wordmark`, `HeroMark`), `work/` (the editors: `PageView`,
   `BoardView`, `BlockTypeMenu`, `ObjectHero`, `WorkObjects`, `WorkspaceNav`,
   `TaskDetailSheet`), `objects/` (`ObjectTree`, `Breadcrumbs`, `ObjectActions`),
   `onboarding/`, `account/`, `settings/`.
 - `src/lib/` — hooks, helpers and platform branches. Object tree + content:
   `use-objects` + `space-objects-context` (ONE shared index store per active space),
-  `use-page`/`use-board`/`use-wal-doc` (WAL content), `page-model`/`board-model`,
-  `blocks` (block-type presentation table), `object-types`. Spaces:
-  `spaces-context`/`use-spaces`, `use-space-details`/`use-space-members`/
-  `use-space-invite`. Session/state: `session-context`, `room-events-bus`. UI helpers:
-  `use-theme`, `use-responsive`, `use-hover`, `use-app-fonts`, `haptics`, `types`.
-- `src/lib/starfish/` — the encrypted sync layer: `client` + `config` (server URL,
-  auth signing), `identity`/`pairing` (seed → keys, device pairing), keyring +
-  `members` (E2EE, per-node access), `registry`/`paths`, the
-  `wal/*` adapters, `storage` (secure-store).
+  `use-object-content` (WAL/plaintext routing), `use-page`/`use-board`/`use-wal-doc`
+  (WAL content hooks), `object-types`. Spaces: `spaces-context`/`use-spaces`,
+  `use-space-details`/`use-space-members`/`use-space-invite`. Session/state:
+  `session-context`, `room-events-bus`. UI helpers: `use-theme`, `use-responsive`,
+  `use-hover`, `use-app-fonts`, `haptics`, `types`.
+  Note: content models (`page-content`, `board-content`, etc.) and all WAL/crypto
+  wiring live in **`packages/sdk`** (`@drakkar.software/octovault-sdk`), not in
+  `src/lib/`.
 - `src/theme.ts` — design tokens (the single source of truth).
 
 ## The WAL/CRDT data layer
 
-- `src/lib/starfish/wal/*` — live wiring of `starfish-wal`'s injected interfaces
-  onto OctoVault's stack (transport over `StarfishClient.append`, space-keyring
-  encryptor, device Ed25519 signer, sibling `__snapshot` LWW doc).
-- `src/lib/page-model.ts` / `board-model.ts` — pure projections + mutations over a
-  `WalDocument` (blocks via RGA `order` + per-block char-RGA text + LWW registers;
-  boards via column/task lists + per-task registers).
-- `src/lib/use-page.ts` / `use-board.ts` — hooks owning the open→pull→commit cycle.
+All WAL wiring and content models live in **`packages/sdk`** (`@drakkar.software/octovault-sdk`);
+the app consumes them through hooks in `src/lib/`.
+
+- `packages/sdk/src/*-content.ts` — pure projections + mutations over a `WalDocument`
+  (e.g. `page-content`, `board-content`, `calendar-content`, `comments-content`).
+- `src/lib/use-wal-doc.ts` — opens and manages a single WAL doc lifecycle.
+- `src/lib/use-object-content.ts` — routes between E2EE WAL (`objLog`) and plaintext
+  merge-doc paths (`objPub`/`objInv`) based on node access flags. Also exports the
+  shared `useWalMutator` helper and `classifyNodeAccess` used by all content hooks.
+- `src/lib/use-page.ts` / `use-board.ts` / `use-calendar.ts` etc. — thin hooks
+  composing `useObjectContent` with model-specific read/mutate ops.
 - The object **tree** stays on the union-merge engine (`use-objects`); WAL backs
-  page/board **content**.
+  page/board/calendar/form/feedback **content**.
 
 ## Conventions
 

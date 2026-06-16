@@ -1,6 +1,6 @@
-import { useCallback, useMemo } from 'react';
+import { useMemo } from 'react';
 
-import { useObjectContent } from './use-object-content';
+import { useObjectContent, useWalMutator } from './use-object-content';
 import { useSpaceObjects } from './space-objects-context';
 import * as boardContent from '@drakkar.software/octovault-sdk';
 import * as taskModel from '@drakkar.software/octovault-sdk';
@@ -78,15 +78,7 @@ export function useBoard(spaceId: string, boardId: string, opts: { enabled?: boo
     [columns, tasksByColumn, done, total],
   );
 
-  const walMut = useCallback(
-    <T,>(fn: (d: NonNullable<typeof doc>) => T): T | undefined => {
-      if (!doc) return undefined;
-      const r = fn(doc);
-      touch();
-      return r;
-    },
-    [doc, touch],
-  );
+  const walMut = useWalMutator(doc, touch);
 
   return {
     board,

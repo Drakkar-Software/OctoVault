@@ -52,11 +52,6 @@ export function isMacDesktop(): boolean {
   return isDesktop() && globalThis.window?.octovault?.platform === 'darwin';
 }
 
-/** Bring the desktop window to the front (restores if minimized). No-op elsewhere. */
-export function focusDesktopWindow(): void {
-  globalThis.window?.octovault?.focusWindow?.();
-}
-
 /**
  * Reflect the unread total on the dock / taskbar icon. No-op off-desktop.
  *

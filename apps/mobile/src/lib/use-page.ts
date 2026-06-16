@@ -1,6 +1,6 @@
-import { useCallback, useMemo } from 'react';
+import { useMemo } from 'react';
 
-import { useObjectContent } from './use-object-content';
+import { useObjectContent, useWalMutator } from './use-object-content';
 import * as page from '@drakkar.software/octovault-sdk';
 import type { Block, BlockType, BookmarkMeta, NewBlock } from '@drakkar.software/octovault-sdk';
 
@@ -56,15 +56,7 @@ export function usePage(spaceId: string, pageId: string, opts: { enabled?: boole
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const blocks = useMemo<Block[]>(() => (doc ? page.readBlocks(doc) : []), [doc, version]);
 
-  const mut = useCallback(
-    <T,>(fn: (d: NonNullable<typeof doc>) => T): T | undefined => {
-      if (!doc) return undefined;
-      const r = fn(doc);
-      touch();
-      return r;
-    },
-    [doc, touch],
-  );
+  const mut = useWalMutator(doc, touch);
 
   return {
     blocks,

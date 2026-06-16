@@ -12,7 +12,6 @@ export interface VariantConfig {
   easProjectId: string;
   appName: string;
   wordmarkSuffix: string;
-  accentToken: 'accent';
   features: Capability[];
 }
 
@@ -27,7 +26,7 @@ export const VARIANTS: Record<VariantId, VariantConfig> = {
     easProjectId: 'd948d498-d957-4ae6-abe8-4b2487dec9f5',
     appName: 'OctoVault',
     wordmarkSuffix: 'Vault',
-    accentToken: 'accent',
+
     features: ['pages', 'notes', 'calendar', 'forms', 'feedback'],
   },
   octonotes: {
@@ -40,7 +39,7 @@ export const VARIANTS: Record<VariantId, VariantConfig> = {
     easProjectId: 'OCTONOTES_EAS_PROJECT_ID',
     appName: 'OctoNotes',
     wordmarkSuffix: 'Notes',
-    accentToken: 'accent',
+
     features: ['notes'],
   },
   octoboard: {
@@ -53,7 +52,7 @@ export const VARIANTS: Record<VariantId, VariantConfig> = {
     easProjectId: 'OCTOBOARD_EAS_PROJECT_ID',
     appName: 'OctoBoard',
     wordmarkSuffix: 'Board',
-    accentToken: 'accent',
+
     features: ['boards'],
   },
   octocalendar: {
@@ -66,7 +65,7 @@ export const VARIANTS: Record<VariantId, VariantConfig> = {
     easProjectId: 'OCTOCALENDAR_EAS_PROJECT_ID',
     appName: 'OctoCalendar',
     wordmarkSuffix: 'Calendar',
-    accentToken: 'accent',
+
     features: ['calendar'],
   },
   octoforms: {
@@ -79,7 +78,7 @@ export const VARIANTS: Record<VariantId, VariantConfig> = {
     easProjectId: 'OCTOFORMS_EAS_PROJECT_ID',
     appName: 'OctoForms',
     wordmarkSuffix: 'Forms',
-    accentToken: 'accent',
+
     features: ['forms'],
   },
   octofeedback: {
@@ -92,7 +91,7 @@ export const VARIANTS: Record<VariantId, VariantConfig> = {
     easProjectId: 'OCTOFEEDBACK_EAS_PROJECT_ID',
     appName: 'OctoFeedback',
     wordmarkSuffix: 'Feedback',
-    accentToken: 'accent',
+
     features: ['feedback'],
   },
 };

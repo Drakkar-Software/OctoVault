@@ -29,18 +29,22 @@ deps (`3.0.0-alpha.26` — the line that ships `starfish-wal`).
 
 ## The WAL/CRDT data layer
 
-- `src/lib/starfish/wal/` — the live wiring of `starfish-wal`'s injected
-  interfaces onto OctoVault's stack: `transport.ts` (over `StarfishClient.append`
-  + `AppendLogCursor`), `encryptor.ts` (space keyring), `signer.ts` (device
-  Ed25519), `snapshot-store.ts` (sibling `__snapshot` LWW doc), and
-  `createWalDocument`.
-- `src/lib/page-model.ts` / `board-model.ts` — pure projections + mutations over a
-  `WalDocument` (blocks via an RGA `order` + per-block char-RGA text + LWW prop
-  registers; boards via column/task lists + per-task registers).
-- `src/lib/use-wal-doc.ts` / `use-page.ts` / `use-board.ts` — React hooks owning
-  the open→pull→commit lifecycle (the WAL counterpart of `use-merge-doc`).
-- The object **tree** (`use-objects`, `starfish/objects.ts`, `objindex`) stays on
-  the proven union-merge engine; WAL backs page/board **content**.
+The WAL engine and its wiring live in **`packages/sdk`** (`@drakkar.software/octovault-sdk`);
+`apps/mobile/src/lib/` only consumes it through hooks.
+
+- `packages/sdk/src/*-content.ts` (`page-content`, `board-content`, `calendar-content`,
+  `form-content`, `feedback-content`, `comments-content`) and `task-model.ts` — pure
+  projections + mutations over a `WalDocument` (blocks via RGA `order` + per-block
+  char-RGA text + LWW prop registers; boards via column/task lists + per-task registers).
+- `apps/mobile/src/lib/use-wal-doc.ts` — opens and owns a single WAL doc lifecycle
+  (pull → commit, open error, version bumps).
+- `apps/mobile/src/lib/use-object-content.ts` — routes between the E2EE WAL path
+  (`objLog`) and the plaintext merge-doc paths (`objPub`/`objInv`) based on node
+  access flags.
+- `apps/mobile/src/lib/use-{page,board,calendar,form,feedback}.ts` — thin hooks
+  composing `useObjectContent` + the SDK content model ops.
+- The object **tree** (`use-objects`, `space-objects-context`) stays on the
+  union-merge engine; WAL backs page/board/calendar/form/feedback **content**.
 
 ## Commands
 

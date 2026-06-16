@@ -1,6 +1,6 @@
-import { useCallback, useMemo } from 'react';
+import { useMemo } from 'react';
 
-import { useObjectContent } from './use-object-content';
+import { useObjectContent, useWalMutator } from './use-object-content';
 import {
   readEvents,
   addEvent,
@@ -34,15 +34,7 @@ export function useCalendar(spaceId: string, objectId: string, opts: { enabled?:
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const events = useMemo<CalendarEvent[]>(() => (doc ? readEvents(doc) : []), [doc, version]);
 
-  const mut = useCallback(
-    <T,>(fn: (d: NonNullable<typeof doc>) => T): T | undefined => {
-      if (!doc) return undefined;
-      const r = fn(doc);
-      touch();
-      return r;
-    },
-    [doc, touch],
-  );
+  const mut = useWalMutator(doc, touch);
 
   return {
     events,

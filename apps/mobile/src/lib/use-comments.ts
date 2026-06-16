@@ -1,5 +1,4 @@
 import { useCallback, useMemo, useSyncExternalStore } from 'react';
-import type { WalDocument } from '@drakkar.software/starfish-wal';
 
 import * as discussion from '@drakkar.software/octovault-sdk';
 import {
@@ -8,6 +7,7 @@ import {
 } from '@drakkar.software/octovault-sdk';
 import type { DiscussionThread, NodeAccess } from '@drakkar.software/octovault-sdk';
 
+import { classifyNodeAccess, useWalMutator } from './use-object-content';
 import { useSession } from './session-context';
 import { useSpaceObjects } from './space-objects-context';
 import { useSpaceOpen } from './use-room-open-flow';
@@ -65,9 +65,7 @@ export function usePageComments(spaceId: string, pageId: string, opts: { enabled
 
   // Comments live in the same E2EE/space keyring as the page. Public/invite-plaintext
   // pages aren't supported in v1 (they'd need the plaintext merge-doc path).
-  const isPublicPlaintext = node?.access === 'public';
-  const isInvitePlaintext = node?.access === 'invite' && !node.enc;
-  const isPlaintext = isPublicPlaintext || isInvitePlaintext;
+  const { isPlaintext } = classifyNodeAccess(node);
   const supported = !!node && !isPlaintext;
   const enabled = (opts.enabled ?? true) && !!spaceId && !!pageId && supported;
 
@@ -113,15 +111,7 @@ export function usePageComments(spaceId: string, pageId: string, opts: { enabled
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [threads, reads, notif.enabled, userId, pageId]);
 
-  const mut = useCallback(
-    <T,>(fn: (d: WalDocument) => T): T | undefined => {
-      if (!doc) return undefined;
-      const r = fn(doc);
-      touch();
-      return r;
-    },
-    [doc, touch],
-  );
+  const mut = useWalMutator(doc, touch);
 
   const markThreadRead = useCallback(
     (blockId: string) => {

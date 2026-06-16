@@ -22,6 +22,43 @@ import { useDocLiveSync } from './use-doc-live-sync';
 import { useWalDoc } from './use-wal-doc';
 import { useSpaceObjects } from './space-objects-context';
 
+// ── Shared helpers ─────────────────────────────────────────────────────────────
+
+/**
+ * Derive the three plaintext-routing flags from a node's access/enc fields.
+ * Used by `useObjectContent` and any hook that needs to branch on the same
+ * access-routing logic (e.g. `usePageComments`).
+ */
+export function classifyNodeAccess(node: { access?: string | null; enc?: boolean | null } | null | undefined) {
+  const isPublicPlaintext = node?.access === 'public';
+  const isInvitePlaintext = node?.access === 'invite' && !node.enc;
+  const isPlaintext = isPublicPlaintext || isInvitePlaintext;
+  return { isPublicPlaintext, isInvitePlaintext, isPlaintext };
+}
+
+/**
+ * Shared WAL mutation helper. Returns a `mut` function that:
+ * 1. Guards against `doc` being null (returns `undefined` when the WAL doc
+ *    isn't open yet).
+ * 2. Calls `touch()` after each write to bump the version and schedule a commit.
+ *
+ * Use in any hook that composes `useObjectContent`:
+ *   const mut = useWalMutator(doc, touch);
+ */
+export function useWalMutator(doc: WalDocument | null, touch: () => void) {
+  return useCallback(
+    <T,>(fn: (d: WalDocument) => T): T | undefined => {
+      if (!doc) return undefined;
+      const r = fn(doc);
+      touch();
+      return r;
+    },
+    [doc, touch],
+  );
+}
+
+// ── Types ──────────────────────────────────────────────────────────────────────
+
 export interface ObjectContentHandle {
   /** WAL document — non-null once open (contentKind === 'append', default E2EE path). */
   walDoc: WalDocument | null;
@@ -38,6 +75,8 @@ export interface ObjectContentHandle {
   offline: boolean;
   reload: () => void;
 }
+
+// ── Hook ───────────────────────────────────────────────────────────────────────
 
 /**
  * Open a single object's content doc, expose the shared lifecycle state,
@@ -57,9 +96,7 @@ export function useObjectContent(
 
   const base = (opts.enabled ?? true) && !!spaceId && !!objectId;
 
-  const isPublicPlaintext = node?.access === 'public';
-  const isInvitePlaintext = node?.access === 'invite' && !node.enc;
-  const isPlaintext = isPublicPlaintext || isInvitePlaintext;
+  const { isPublicPlaintext, isInvitePlaintext, isPlaintext } = classifyNodeAccess(node);
 
   const walEnabled = base && !isPlaintext && contentKind === 'append';
 
