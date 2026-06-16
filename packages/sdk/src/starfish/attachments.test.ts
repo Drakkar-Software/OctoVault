@@ -1,5 +1,5 @@
 /**
- * Tests for OctoVault's uploadAttachment / loadAttachment (always-enc, E2EE only).
+ * Tests for OctoVault's uploadAttachment / loadAttachment (objblob-backed, E2EE).
  * Pins behavior and guards against regressions when the attachment pipeline changes.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -82,14 +82,15 @@ describe('attachmentKind', () => {
 // ── uploadAttachment ──────────────────────────────────────────────────────────
 
 describe('uploadAttachment', () => {
-  it('seals the blob before storing (stored bytes differ from plaintext)', async () => {
+  it('seals the blob before storing, pushes to objblob path (spaces/{spaceId}/objects/blobs/{blobId})', async () => {
     const client = makeFakeClient();
     const ref: AttachmentRef = await uploadAttachment(
-      client as never, fakeSealer, 'room-1', BYTES, 'test.png', 'image/png',
+      client as never, fakeSealer, 'sp-1', BYTES, 'test.png', 'image/png',
     );
     expect(fakeSealer.sealBytes).toHaveBeenCalledOnce();
     // The bytes on the server must be the SEALED form, not the plaintext.
     const storedPath = [...client.blobs.keys()][0]!;
+    expect(storedPath).toContain('sp-1/objects/blobs/');
     expect(client.blobs.get(storedPath)).toEqual(SEALED);
     expect(ref.name).toBe('test.png');
     expect(ref.mime).toBe('image/png');
@@ -100,7 +101,7 @@ describe('uploadAttachment', () => {
   it('returns the correct AttachmentRef fields', async () => {
     const client = makeFakeClient();
     const ref = await uploadAttachment(
-      client as never, fakeSealer, 'room-1', BYTES, 'doc.pdf', 'application/pdf',
+      client as never, fakeSealer, 'sp-1', BYTES, 'doc.pdf', 'application/pdf',
     );
     expect(ref.kind).toBe('file');
     expect(ref.blobId).toMatch(/^[0-9a-f]{32}$/);
@@ -114,10 +115,13 @@ describe('loadAttachment', () => {
   it('round-trips: upload then load returns original plaintext bytes', async () => {
     const client = makeFakeClient();
     const ref = await uploadAttachment(
-      client as never, fakeSealer, 'room-1', BYTES, 'test.txt', 'text/plain',
+      client as never, fakeSealer, 'sp-1', BYTES, 'test.txt', 'text/plain',
     );
     clearAttachmentCache(); // force a cold load
-    const loaded = await loadAttachment(client as never, fakeSealer, 'room-1', ref);
+    // Expose push path as pull path for round-trip.
+    const pushPath = [...client.blobs.keys()][0]!;
+    client.blobs.set(pushPath.replace('/push/', '/pull/'), client.blobs.get(pushPath)!);
+    const loaded = await loadAttachment(client as never, fakeSealer, 'sp-1', ref);
     expect(loaded).toEqual(BYTES);
     expect(fakeSealer.openBytes).toHaveBeenCalledOnce();
   });
@@ -125,23 +129,22 @@ describe('loadAttachment', () => {
   it('serves from in-memory cache on the second call (no network pull)', async () => {
     const client = makeFakeClient();
     const ref = await uploadAttachment(
-      client as never, fakeSealer, 'room-1', BYTES, 'a.png', 'image/png',
+      client as never, fakeSealer, 'sp-1', BYTES, 'a.png', 'image/png',
     );
-    const first = await loadAttachment(client as never, fakeSealer, 'room-1', ref);
-    const second = await loadAttachment(client as never, fakeSealer, 'room-1', ref);
+    const first = await loadAttachment(client as never, fakeSealer, 'sp-1', ref);
+    const second = await loadAttachment(client as never, fakeSealer, 'sp-1', ref);
     expect(first).toEqual(BYTES);
     expect(second).toEqual(BYTES);
-    // pullBlob never needed — upload seeded in-memory cache; second load is a hit.
     expect(client.pullBlob).not.toHaveBeenCalled();
   });
 
   it('falls back to KV persistence on cache miss (no network pull)', async () => {
     const client = makeFakeClient();
     const ref = await uploadAttachment(
-      client as never, fakeSealer, 'room-2', BYTES, 'b.txt', 'text/plain',
+      client as never, fakeSealer, 'sp-2', BYTES, 'b.txt', 'text/plain',
     );
     clearAttachmentCache(); // evict the sender's own in-memory entry
-    const loaded = await loadAttachment(client as never, fakeSealer, 'room-2', ref);
+    const loaded = await loadAttachment(client as never, fakeSealer, 'sp-2', ref);
     // Served from KV — no network pull required.
     expect(client.pullBlob).not.toHaveBeenCalled();
     expect(loaded).toEqual(BYTES);
@@ -149,15 +152,13 @@ describe('loadAttachment', () => {
 
   it('falls back to network pull when both cache and KV miss', async () => {
     const client = makeFakeClient();
-    // Pre-seed the "server" with a sealed blob (simulate: another device uploaded it,
-    // so this client's KV and in-memory cache are both cold). The pull path is what
-    // loadAttachment requests; we seed it directly so pullBlob can return it.
+    // Pre-seed the "server" with a sealed blob (simulate: another device uploaded it).
     const blobId = 'deadbeefcafebabe0123456789abcdef';
-    const pullPath = `/pull/spaces/room-3/attachments/room-3/${blobId}`;
+    const pullPath = `/pull/spaces/sp-3/objects/blobs/${blobId}`;
     client.blobs.set(pullPath, SEALED);
 
     const ref: AttachmentRef = { blobId, name: 'c.png', mime: 'image/png', size: 5, kind: 'image' };
-    const loaded = await loadAttachment(client as never, fakeSealer, 'room-3', ref);
+    const loaded = await loadAttachment(client as never, fakeSealer, 'sp-3', ref);
     expect(client.pullBlob).toHaveBeenCalledOnce();
     expect(loaded).toEqual(BYTES);
   });
@@ -166,14 +167,14 @@ describe('loadAttachment', () => {
 // ── AAD binding ───────────────────────────────────────────────────────────────
 
 describe('AAD binding', () => {
-  it('sealBytes is called with the attachment storage path as AAD', async () => {
+  it('sealBytes is called with the objblob storage path as AAD', async () => {
     const client = makeFakeClient();
     const ref = await uploadAttachment(
-      client as never, fakeSealer, 'sp-abc-room1', BYTES, 'f.bin', 'application/octet-stream',
+      client as never, fakeSealer, 'sp-abc', BYTES, 'f.bin', 'application/octet-stream',
     );
     const [[, aad]] = vi.mocked(fakeSealer.sealBytes).mock.calls;
-    // The AAD should be the attachment storage path (bound into the seal).
     expect(aad).toContain('sp-abc');
     expect(aad).toContain(ref.blobId);
+    expect(aad).toContain('objects/blobs');
   });
 });
