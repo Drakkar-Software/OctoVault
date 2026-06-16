@@ -43,7 +43,7 @@ importers:
         version: 6.0.3
       vitest:
         specifier: ^4.1.7
-        version: 4.1.8(@types/node@22.19.20)(vite@8.0.16(@types/node@22.19.20)(esbuild@0.28.0)(jiti@2.7.0)(terser@5.48.0)(tsx@4.22.4)(yaml@2.9.0))
+        version: 4.1.8(@types/node@22.19.20)(vite@8.0.16(@types/node@22.19.20)(esbuild@0.27.7)(jiti@2.7.0)(terser@5.48.0)(tsx@4.22.4)(yaml@2.9.0))
       wait-on:
         specifier: ^9.0.10
         version: 9.0.10
@@ -51,8 +51,8 @@ importers:
   apps/mobile:
     dependencies:
       '@drakkar.software/octospaces-ui':
-        specifier: 0.4.2
-        version: 0.4.2(react-native@0.85.3(@babel/core@7.29.7)(@react-native/metro-config@0.85.3(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.3))(react@19.2.3)
+        specifier: 0.4.4
+        version: 0.4.4(react-native@0.85.3(@babel/core@7.29.7)(@react-native/metro-config@0.85.3(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.3))(react@19.2.3)
       '@drakkar.software/octovault-sdk':
         specifier: workspace:*
         version: link:../../packages/sdk
@@ -385,7 +385,7 @@ importers:
         version: 6.0.3
       vitest:
         specifier: ^4.1.7
-        version: 4.1.8(@types/node@22.19.20)(vite@8.0.16(@types/node@22.19.20)(esbuild@0.27.7)(jiti@2.7.0)(terser@5.48.0)(tsx@4.22.4)(yaml@2.9.0))
+        version: 4.1.8(@types/node@22.19.20)(vite@8.0.16(@types/node@22.19.20)(esbuild@0.28.0)(jiti@2.7.0)(terser@5.48.0)(tsx@4.22.4)(yaml@2.9.0))
 
   packages/tsconfig: {}
 
@@ -820,8 +820,8 @@ packages:
       '@drakkar.software/starfish-wal':
         optional: true
 
-  '@drakkar.software/octospaces-ui@0.4.2':
-    resolution: {integrity: sha512-25ewb/syB7yzK6qBNpGPr/hQJT4FQR4bsf6bri0RNACccWPxXOMPdeUAHu/McdM0GAZHe7bnB3rXS88uwBoQAg==}
+  '@drakkar.software/octospaces-ui@0.4.4':
+    resolution: {integrity: sha512-Fmcvx8GY2T2Zv+OdoDkc3HW4Fu1UAGU/Cy5s4qEUhGkhEyGl+eKM3nFbzqvZtsI2DoOCZCbDWsvRuOgLB1Ls8Q==}
     peerDependencies:
       react: '>=18'
       react-native: '>=0.75'
@@ -6753,7 +6753,7 @@ snapshots:
     optionalDependencies:
       '@drakkar.software/starfish-wal': 3.0.0-alpha.27
 
-  '@drakkar.software/octospaces-ui@0.4.2(react-native@0.85.3(@babel/core@7.29.7)(@react-native/metro-config@0.85.3(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.3))(react@19.2.3)':
+  '@drakkar.software/octospaces-ui@0.4.4(react-native@0.85.3(@babel/core@7.29.7)(@react-native/metro-config@0.85.3(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.3))(react@19.2.3)':
     dependencies:
       react: 19.2.3
       react-native: 0.85.3(@babel/core@7.29.7)(@react-native/metro-config@0.85.3(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.3)
@@ -8376,9 +8376,7 @@ snapshots:
       metro-runtime: 0.84.4
     transitivePeerDependencies:
       - '@babel/core'
-      - bufferutil
       - supports-color
-      - utf-8-validate
 
   '@react-native/normalize-colors@0.74.89': {}
 

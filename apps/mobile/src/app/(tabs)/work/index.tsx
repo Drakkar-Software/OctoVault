@@ -7,7 +7,6 @@ import { useInShell } from '@/lib/use-responsive';
 import { useSpaces } from '@/lib/use-spaces';
 import { AppBar } from '@/components/ui/AppBar';
 import { IconButton } from '@/components/ui/IconButton';
-import { ProfileButton } from '@/components/ui/ProfileButton';
 import { Stage } from '@/components/ui/Stage';
 import { StackScreen } from '@/components/ui/StackScreen';
 import { SpaceSwitcher } from '@/components/work/SpaceSwitcher';
@@ -32,7 +31,11 @@ export default function WorkScreen() {
 
   if (!loading && spaces.length === 0) {
     return (
-      <StackScreen inTabs header={<AppBar title="OctoVault" />} contentStyle={styles.content}>
+      <StackScreen
+        inTabs
+        header={<AppBar title="OctoVault" titleNode={<SpaceSwitcher variant="appbar" />} />}
+        contentStyle={styles.content}
+      >
         <WorkNoSpaces />
       </StackScreen>
     );
@@ -47,10 +50,7 @@ export default function WorkScreen() {
           title={space?.name ?? 'Vault'}
           titleNode={<SpaceSwitcher variant="appbar" />}
           right={
-            <>
-              <IconButton name="plus" onPress={newPage} tooltip="New page" accessibilityLabel="New page" />
-              <ProfileButton ring />
-            </>
+            <IconButton name="plus" onPress={newPage} tooltip="New page" accessibilityLabel="New page" />
           }
         />
       }

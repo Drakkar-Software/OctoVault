@@ -15,7 +15,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@drakkar.software/octospaces-ui": "0.4.2",
+    "@drakkar.software/octospaces-ui": "0.4.4",
     "@drakkar.software/octovault-sdk": "workspace:*",
     "@drakkar.software/starfish-client": "3.0.0-alpha.27",
     "@drakkar.software/starfish-identities": "3.0.0-alpha.27",

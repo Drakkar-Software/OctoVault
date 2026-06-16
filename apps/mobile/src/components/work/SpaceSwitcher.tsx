@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { useRouter } from 'expo-router';
 import { Pressable, StyleSheet } from 'react-native';
 
@@ -7,28 +6,37 @@ import { focusRingStyle, useFocusRing } from '@/lib/focus';
 import { useHover } from '@/lib/use-hover';
 import { useSpaces } from '@/lib/use-spaces';
 import { useTheme } from '@/lib/use-theme';
-import type { Space } from '@drakkar.software/octovault-sdk';
+import { SpaceSwitcher as PkgSpaceSwitcher } from '@drakkar.software/octospaces-ui';
+import type { SwitcherIconName } from '@drakkar.software/octospaces-ui';
 import { AccountSwitcher } from '@/components/account/AccountSwitcher';
 import { Avatar } from '@/components/ui/Avatar';
 import { Icon } from '@/components/ui/Icon';
-import { Menu, MenuItem, MenuLabel, MenuSeparator } from '@/components/ui/Menu';
+import type { IconName } from '@/components/ui/Icon';
 import { Sheet } from '@/components/ui/Sheet';
 import { Txt } from '@/components/ui/Txt';
-import { SpaceListRow } from '@/components/work/SpaceListRow';
 
 /** Space monogram fallback when no image is set. */
-const monogram = (s: Space) => (s.short || s.name.slice(0, 2)).toUpperCase();
+const monogram = (s: { short?: string; name: string }) =>
+  (s.short || s.name.slice(0, 2)).toUpperCase();
 
-/** Maximum number of spaces shown inline in the mobile sheet before adding "See all". */
-const SPACE_LIST_CAP = 5;
+// Maps the package's SwitcherIconName to OctoVault's icon set.
+const SWITCHER_ICON: Record<SwitcherIconName, IconName> = {
+  'chevron-down': 'chevron-down',
+  'chevron-right': 'chev-right',
+  check: 'check',
+  plus: 'plus',
+  gear: 'gear',
+  globe: 'globe',
+};
 
 interface SpaceSwitcherProps {
   /**
    * `sidebar` — the desktop sidebar header: name + avatar, press navigates to
    * the active space's settings page. No dropdown on desktop — switching spaces
    * is handled by the SpacesRail.
-   * `appbar` — the phone Vault tab's AppBar title: same trigger shape opening a
-   * bottom {@link Sheet} with the full space list + account switcher.
+   * `appbar` — the phone Vault tab's AppBar title: delegates to the shared
+   * package switcher, opening a bottom {@link Sheet} with the full space list
+   * + account switcher. When no space exists, the trigger shows "Create a space".
    */
   variant: 'sidebar' | 'appbar';
 }
@@ -40,11 +48,11 @@ interface SpaceSwitcherProps {
  * `/space/[id]` (the space settings / details screen). Space switching is
  * handled by the SpacesRail, so there is no dropdown here.
  *
- * **Mobile (`appbar`):** same trigger shape opens a bottom {@link Sheet} with
- * the full menu — space list (avatar, check on active), "Join or create",
- * "Space settings", and the full account section ({@link AccountSwitcher}).
- * When there are more than {@link SPACE_LIST_CAP} spaces, the list is capped
- * and a "See all" row navigates to `/spaces`.
+ * **Mobile (`appbar`):** delegates to the shared `SpaceSwitcher` from
+ * `@drakkar.software/octospaces-ui`, opening a bottom {@link Sheet} with
+ * the full menu — space list, "Join or create", "Space settings", and the
+ * full account section ({@link AccountSwitcher}). When no space exists the
+ * trigger shows "Create a space" as an entry point to `/join`.
  */
 export function SpaceSwitcher({ variant }: SpaceSwitcherProps) {
   const router = useRouter();
@@ -52,15 +60,8 @@ export function SpaceSwitcher({ variant }: SpaceSwitcherProps) {
   const { spaces, activeId, switchSpace } = useSpaces();
   const { hovered, hoverProps } = useHover();
   const { focused, focusProps } = useFocusRing();
-  const [open, setOpen] = useState(false);
 
   const active = spaces.find((s) => s.id === activeId) ?? spaces[0] ?? null;
-  const close = () => setOpen(false);
-
-  const onSelect = (id: string) => {
-    close();
-    if (id !== activeId) switchSpace(id);
-  };
 
   // ── Desktop sidebar: navigate straight to space details ────────────────────
   if (variant === 'sidebar') {
@@ -92,81 +93,54 @@ export function SpaceSwitcher({ variant }: SpaceSwitcherProps) {
     );
   }
 
-  // ── Mobile appbar: full sheet menu ────────────────────────────────────────
-  // Cap the inline space list to SPACE_LIST_CAP; always show the active space.
-  const otherSpaces = spaces.filter((s) => s.id !== active?.id);
-  const cappedSpaces =
-    spaces.length > SPACE_LIST_CAP
-      ? [...(active ? [active] : []), ...otherSpaces.slice(0, SPACE_LIST_CAP - (active ? 1 : 0))]
-      : spaces;
-  const hasSeeAll = spaces.length > SPACE_LIST_CAP;
-
-  const menu = (
-    <Menu>
-      {spaces.length > 0 ? <MenuLabel>Spaces</MenuLabel> : null}
-      {cappedSpaces.map((s) => (
-        <SpaceListRow key={s.id} space={s} active={s.id === active?.id} onPress={() => onSelect(s.id)} />
-      ))}
-      {hasSeeAll ? (
-        <MenuItem
-          icon="chev-right"
-          label={`See all (${spaces.length})`}
-          onPress={() => {
-            close();
-            router.push('/spaces');
-          }}
-        />
-      ) : null}
-      <MenuItem
-        icon="plus"
-        label={spaces.length > 0 ? 'Join or create a space' : 'Create your first space'}
-        onPress={() => {
-          close();
-          router.push('/join');
-        }}
-      />
-      {active ? (
-        <MenuItem
-          icon="gear"
-          label="Space settings"
-          onPress={() => {
-            close();
-            router.push({ pathname: '/space/[id]', params: { id: active.id } });
-          }}
-        />
-      ) : null}
-      <MenuSeparator />
-      <MenuLabel>Account</MenuLabel>
-      <AccountSwitcher onRequestClose={close} onViewProfile={() => router.push('/you')} />
-    </Menu>
-  );
+  // ── Mobile appbar: shared package switcher with bottom Sheet ──────────────
+  const switcherSpaces = spaces.map((s) => ({
+    id: s.id,
+    name: s.name,
+    short: s.short,
+    image: s.image,
+    unread: s.unread,
+  }));
 
   return (
-    <>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={active ? `${active.name} — switch space` : 'Switch space'}
-        accessibilityState={{ expanded: open }}
-        hitSlop={6}
-        onPress={() => setOpen(true)}
-        {...hoverProps}
-        {...focusProps}
-        style={({ pressed }) => [
-          styles.triggerAppbar,
-          pressed ? { backgroundColor: colors.pressed } : hovered ? { backgroundColor: colors.hover } : null,
-          focused && focusRingStyle(colors),
-        ]}
-      >
-        {active ? <Avatar label={monogram(active)} image={active.image} size={22} /> : null}
-        <Txt variant="heading" weight="semibold" numberOfLines={1} style={styles.triggerName}>
-          {active?.name ?? 'OctoVault'}
-        </Txt>
-        <Icon name="chev-down" size={14} color={colors.inkMuted} />
-      </Pressable>
-      <Sheet visible={open} onClose={close} presentation="sheet">
-        {menu}
-      </Sheet>
-    </>
+    <PkgSpaceSwitcher
+      spaces={switcherSpaces}
+      activeId={activeId}
+      onSelect={(id) => { if (id !== activeId) switchSpace(id); }}
+      onAdd={() => router.push('/join')}
+      onSettings={
+        active
+          ? () => router.push({ pathname: '/space/[id]', params: { id: active.id } })
+          : undefined
+      }
+      maxVisible={5}
+      onSeeAll={() => router.push('/spaces')}
+      variant="appbar"
+      emptyLabel="Create a space"
+      renderTriggerAvatar={(space, size) =>
+        space ? <Avatar label={monogram(space)} image={space.image} size={size} /> : null
+      }
+      renderSpaceAvatar={(space, size) => (
+        <Avatar label={monogram(space)} image={space.image} size={size} />
+      )}
+      renderIcon={(name, size, color) => (
+        <Icon name={SWITCHER_ICON[name]} size={size} color={color} />
+      )}
+      renderContainer={({ isOpen, onClose, children }) => (
+        <Sheet visible={isOpen} onClose={onClose} presentation="sheet">
+          {children}
+        </Sheet>
+      )}
+      footerSlot={(close) => (
+        <AccountSwitcher
+          onRequestClose={close}
+          onViewProfile={() => {
+            close();
+            router.push('/you');
+          }}
+        />
+      )}
+    />
   );
 }
 
@@ -180,16 +154,6 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs + 2,
-    borderRadius: radii.md,
-  },
-  /** AppBar title slot: centered within the flexible middle region. */
-  triggerAppbar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
     borderRadius: radii.md,
   },
   triggerName: { flexShrink: 1, minWidth: 0 },

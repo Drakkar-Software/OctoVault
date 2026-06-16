@@ -5,7 +5,6 @@ import { useSession } from '@/lib/session-context';
 import { useSpaces } from '@/lib/use-spaces';
 import { AppBar } from '@/components/ui/AppBar';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { ProfileButton } from '@/components/ui/ProfileButton';
 import { SignInPrompt } from '@/components/ui/SignInPrompt';
 import { StackScreen } from '@/components/ui/StackScreen';
 import { SpaceSwitcher } from '@/components/work/SpaceSwitcher';
@@ -28,7 +27,7 @@ export default function AgentsScreen() {
         <AppBar
           title="Agents"
           titleNode={<SpaceSwitcher variant="appbar" />}
-          right={session ? <ProfileButton ring /> : undefined}
+          right={undefined}
         />
       }
       contentStyle={styles.content}
