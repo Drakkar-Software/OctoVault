@@ -1,7 +1,22 @@
-import { useState } from 'react';
+/**
+ * CalendarView — editorial "almanac/ledger" calendar for OctoVault.
+ *
+ * Two views toggled via Segmented:
+ *   Month — the signature view: hairline-ruled grid, Newsreader serif
+ *           numerals, today's inked indigo disc, swatch event chips.
+ *   Agenda — a time-sorted list of all events with tap-to-edit.
+ *
+ * Built on the `MonthGrid` headless component from `@drakkar.software/octospaces-ui`
+ * (pure month math + theme-driven layout) wired to `useCalendar` (WAL-backed
+ * CRDT events). `DateTimeField` replaces the previous raw-text date inputs.
+ */
+import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
-import { SWATCH_NAMES, swatches, radii, spacing } from '@/theme';
+import { MonthGrid, bucketEventsByDay, matrixDayKey } from '@drakkar.software/octospaces-ui';
+import type { MatrixDay } from '@drakkar.software/octospaces-ui';
+
+import { SWATCH_NAMES, radii, spacing, swatches } from '@/theme';
 import type { SwatchName } from '@/theme';
 import { relativeTime } from '@drakkar.software/octovault-sdk';
 import { useCalendar, type CalendarEvent } from '@/lib/use-calendar';
@@ -9,10 +24,12 @@ import { useConfirm } from '@/lib/use-confirm';
 import { useTheme } from '@/lib/use-theme';
 import { AutosaveField } from '@/components/ui/AutosaveField';
 import { Button } from '@/components/ui/Button';
+import { DateTimeField } from '@/components/ui/DateTimeField';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { IconButton } from '@/components/ui/IconButton';
+import { Segmented } from '@/components/ui/Segmented';
 import { Sheet } from '@/components/ui/Sheet';
-import { TextField } from '@/components/ui/TextField';
+import { Skeleton } from '@/components/ui/Skeleton';
 import { ToggleRow } from '@/components/ui/ToggleRow';
 import { Txt } from '@/components/ui/Txt';
 
@@ -21,7 +38,12 @@ interface CalendarViewProps {
   objectId: string;
 }
 
-// ── Date helpers ──────────────────────────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+const MONTH_NAMES = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+] as const;
 
 function formatEventDate(start: number, end: number, allDay: boolean): string {
   if (allDay) {
@@ -39,33 +61,13 @@ function formatEventDate(start: number, end: number, allDay: boolean): string {
   return dateStr;
 }
 
-function pad(n: number) { return String(n).padStart(2, '0'); }
-
-function tsToEditString(ts: number, allDay: boolean): string {
-  const d = new Date(ts);
-  const date = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-  if (allDay) return date;
-  return `${date}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
-
-function parseEditString(str: string): number | null {
-  const d = new Date(str);
-  return isNaN(d.getTime()) ? null : d.getTime();
-}
-
 // ── Color picker ──────────────────────────────────────────────────────────────
 
-function ColorPicker({
-  value,
-  onChange,
-}: {
-  value: string | null;
-  onChange: (c: string | null) => void;
-}) {
+function ColorPicker({ value, onChange }: { value: string | null; onChange: (c: string | null) => void }) {
   const { colors, scheme } = useTheme();
   return (
     <View style={styles.colorRow}>
-      {/* "none" option */}
+      {/* "no color" option */}
       <Pressable
         accessibilityRole="radio"
         accessibilityLabel="No color"
@@ -97,39 +99,20 @@ function ColorPicker({
   );
 }
 
-// ── Date row ──────────────────────────────────────────────────────────────────
+// ── Event chip (shown inside the MonthGrid day cells) ─────────────────────────
 
-function DateRow({
-  label,
-  ts,
-  allDay,
-  onCommit,
-}: {
-  label: string;
-  ts: number;
-  allDay: boolean;
-  onCommit: (ts: number) => void;
-}) {
-  const [draft, setDraft] = useState<string | null>(null);
-
-  function handleBlur() {
-    if (draft !== null) {
-      const parsed = parseEditString(draft);
-      if (parsed !== null) onCommit(parsed);
-      setDraft(null);
-    }
-  }
-
+function EventChip({ event }: { event: CalendarEvent }) {
+  const { scheme } = useTheme();
+  const swatchKey: SwatchName = event.color && SWATCH_NAMES.includes(event.color as SwatchName)
+    ? (event.color as SwatchName)
+    : 'gray';
+  const sw = swatches[scheme][swatchKey];
   return (
-    <View style={styles.dateRow}>
-      <Txt variant="callout" tone="inkMuted" style={styles.dateLabel}>{label}</Txt>
-      <TextField
-        value={draft ?? tsToEditString(ts, allDay)}
-        onChangeText={setDraft}
-        onBlur={handleBlur}
-        placeholder={allDay ? 'YYYY-MM-DD' : 'YYYY-MM-DDTHH:MM'}
-        containerStyle={styles.dateField}
-      />
+    <View style={[styles.eventChip, { backgroundColor: sw.bg }]}>
+      <View style={[styles.eventChipDot, { backgroundColor: sw.solid }]} />
+      <Txt variant="micro" style={[styles.eventChipLabel, { color: sw.text }]} numberOfLines={1}>
+        {event.title || '·'}
+      </Txt>
     </View>
   );
 }
@@ -170,15 +153,12 @@ function EventEditSheet({ visible, event, onClose, onPatch, onDelete }: EventEdi
         />
 
         {/* Description */}
-        <TextField
-          defaultValue={event.desc ?? ''}
+        <AutosaveField
+          initialText={event.desc ?? ''}
           multiline
           plain
           placeholder="Add description…"
-          onBlur={(e) => {
-            const text = (e.nativeEvent as unknown as { text: string }).text;
-            if (text !== undefined) onPatch(event.id, { desc: text || null });
-          }}
+          onCommit={(text) => onPatch(event.id, { desc: text || null })}
         />
 
         {/* Color */}
@@ -190,7 +170,7 @@ function EventEditSheet({ visible, event, onClose, onPatch, onDelete }: EventEdi
           />
         </View>
 
-        {/* All day + dates */}
+        {/* All-day + date pickers */}
         <View style={styles.editSection}>
           <Txt variant="micro" weight="bold" mono uppercase tone="inkFaint">Time</Txt>
           <ToggleRow
@@ -198,17 +178,17 @@ function EventEditSheet({ visible, event, onClose, onPatch, onDelete }: EventEdi
             value={event.allDay}
             onValueChange={(v) => onPatch(event.id, { allDay: v })}
           />
-          <DateRow
+          <DateTimeField
             label="Start"
-            ts={event.start}
+            value={event.start}
             allDay={event.allDay}
-            onCommit={(ts) => onPatch(event.id, { start: ts, end: Math.max(ts, event.end) })}
+            onChange={(ms) => onPatch(event.id, { start: ms, end: Math.max(ms, event.end) })}
           />
-          <DateRow
+          <DateTimeField
             label="End"
-            ts={event.end}
+            value={event.end}
             allDay={event.allDay}
-            onCommit={(ts) => onPatch(event.id, { end: Math.max(ts, event.start) })}
+            onChange={(ms) => onPatch(event.id, { end: Math.max(ms, event.start) })}
           />
         </View>
 
@@ -225,19 +205,22 @@ function EventEditSheet({ visible, event, onClose, onPatch, onDelete }: EventEdi
   );
 }
 
-// ── Event row ─────────────────────────────────────────────────────────────────
+// ── Agenda event row ──────────────────────────────────────────────────────────
 
-interface EventRowProps {
+function EventRow({
+  event,
+  index,
+  onEdit,
+  onDelete,
+}: {
   event: CalendarEvent;
   index: number;
   onEdit: () => void;
   onDelete: () => void;
-}
-
-function EventRow({ event, index, onEdit, onDelete }: EventRowProps) {
+}) {
   const { colors, scheme } = useTheme();
   const confirm = useConfirm();
-  const swatchKey = event.color && SWATCH_NAMES.includes(event.color as SwatchName)
+  const swatchKey: SwatchName = event.color && SWATCH_NAMES.includes(event.color as SwatchName)
     ? (event.color as SwatchName)
     : SWATCH_NAMES[index % SWATCH_NAMES.length];
   const dotColor = swatches[scheme][swatchKey].solid;
@@ -283,54 +266,166 @@ export function CalendarView({ spaceId, objectId }: CalendarViewProps) {
   const { colors } = useTheme();
   const calendar = useCalendar(spaceId, objectId);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'month' | 'agenda'>('month');
 
-  const editingEvent = editingId ? calendar.events.find((e) => e.id === editingId) ?? null : null;
+  // Month navigation
+  const today = new Date();
+  const [viewYear, setViewYear] = useState(today.getFullYear());
+  const [viewMonth, setViewMonth] = useState(today.getMonth());
 
-  function addQuickEvent() {
-    const now = Date.now();
-    const id = calendar.addEvent({
-      start: now,
-      end: now + 3600_000,
-      title: '',
-    });
+  const editingEvent = editingId
+    ? calendar.events.find((e) => e.id === editingId) ?? null
+    : null;
+
+  // Pre-bucket events for the MonthGrid render-prop
+  const eventBucket = useMemo(() => bucketEventsByDay(calendar.events), [calendar.events]);
+
+  function addEventOnDay(day: MatrixDay) {
+    // Noon on the tapped day
+    const start = new Date(day.year, day.month, day.day, 12, 0, 0).getTime();
+    const id = calendar.addEvent({ start, end: start + 3600_000, title: '' });
     if (id) setEditingId(id);
   }
 
+  function addQuickEvent() {
+    const now = Date.now();
+    const id = calendar.addEvent({ start: now, end: now + 3600_000, title: '' });
+    if (id) setEditingId(id);
+  }
+
+  function stepMonth(delta: number) {
+    let m = viewMonth + delta;
+    let y = viewYear;
+    if (m < 0) { m = 11; y -= 1; }
+    if (m > 11) { m = 0; y += 1; }
+    setViewMonth(m);
+    setViewYear(y);
+  }
+
   return (
-    <View style={[styles.container, { backgroundColor: colors.paper }]}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Txt variant="heading" weight="bold">Events</Txt>
-        <IconButton
-          name="plus"
-          tooltip="Add event"
-          accessibilityLabel="Add event"
-          onPress={addQuickEvent}
-        />
+    <View style={[styles.container, { backgroundColor: colors.editorCanvas }]}>
+      {/* ── Header ──────────────────────────────────────────────────── */}
+      <View style={[styles.header, { borderBottomColor: colors.lineFaint }]}>
+        {viewMode === 'month' ? (
+          <>
+            {/* Month nav: ‹ Month Year › */}
+            <View style={styles.monthNav}>
+              <IconButton
+                name="arrow-l"
+                size={18}
+                accessibilityLabel="Previous month"
+                onPress={() => stepMonth(-1)}
+              />
+              <Txt variant="subhead" weight="semibold" style={styles.monthLabel}>
+                {MONTH_NAMES[viewMonth]} {viewYear}
+              </Txt>
+              <IconButton
+                name="chev-right"
+                size={18}
+                accessibilityLabel="Next month"
+                onPress={() => stepMonth(1)}
+              />
+            </View>
+          </>
+        ) : (
+          <Txt variant="heading" weight="bold">Agenda</Txt>
+        )}
+
+        <View style={styles.headerRight}>
+          <Segmented
+            options={[
+              { label: 'Month', value: 'month' },
+              { label: 'Agenda', value: 'agenda' },
+            ]}
+            value={viewMode}
+            onChange={(v) => setViewMode(v as 'month' | 'agenda')}
+          />
+          <IconButton
+            name="plus"
+            tooltip="Add event"
+            accessibilityLabel="Add event"
+            onPress={addQuickEvent}
+          />
+        </View>
       </View>
 
-      {/* Content */}
-      {calendar.events.length === 0 ? (
-        <EmptyState
-          iconName="clock"
-          title="No events yet"
-          subtitle="Tap + to add an event."
-        />
-      ) : (
-        <ScrollView style={styles.list} contentContainerStyle={styles.listContent}>
-          {calendar.events.map((event, i) => (
-            <EventRow
-              key={event.id}
-              event={event}
-              index={i}
-              onEdit={() => setEditingId(event.id)}
-              onDelete={() => calendar.deleteEvent(event.id)}
+      {/* ── Body ────────────────────────────────────────────────────── */}
+      {viewMode === 'month' ? (
+        /* ── Month grid ── */
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={[
+            styles.monthContent,
+            { paddingHorizontal: spacing.screenX, paddingBottom: spacing.xxxl },
+          ]}
+          showsVerticalScrollIndicator={false}
+        >
+          {calendar.opening ? (
+            /* Loading skeleton mirrors the grid shape */
+            <Skeleton width="100%" height={320} radius={radii.md} />
+          ) : (
+            <MonthGrid
+              year={viewYear}
+              month={viewMonth}
+              weekStart={1}
+              todayTimestamp={Date.now()}
+              onDayPress={(day) => {
+                if (!day.inMonth) return;
+                const key = matrixDayKey(day);
+                const dayEvents = eventBucket.get(key) ?? [];
+                if (dayEvents.length === 1) {
+                  // Tap single event → edit it
+                  setEditingId(dayEvents[0].id);
+                } else {
+                  // Empty day or multi-event → add new event on this day
+                  addEventOnDay(day);
+                }
+              }}
+              renderDayEvents={(day) => {
+                if (!day.inMonth) return null;
+                const key = matrixDayKey(day);
+                const dayEvents = eventBucket.get(key);
+                if (!dayEvents || dayEvents.length === 0) return null;
+                return (
+                  <>
+                    {dayEvents.slice(0, 2).map((e) => (
+                      <EventChip key={e.id} event={e} />
+                    ))}
+                    {dayEvents.length > 2 && (
+                      <Txt variant="micro" tone="inkFaint" style={styles.moreLabel}>
+                        +{dayEvents.length - 2} more
+                      </Txt>
+                    )}
+                  </>
+                );
+              }}
             />
-          ))}
+          )}
         </ScrollView>
+      ) : (
+        /* ── Agenda list ── */
+        calendar.events.length === 0 ? (
+          <EmptyState
+            iconName="clock"
+            title="No events yet"
+            subtitle="Switch to Month view and tap a day, or tap + to add an event."
+          />
+        ) : (
+          <ScrollView style={styles.scroll} contentContainerStyle={styles.agendaContent}>
+            {calendar.events.map((event, i) => (
+              <EventRow
+                key={event.id}
+                event={event}
+                index={i}
+                onEdit={() => setEditingId(event.id)}
+                onDelete={() => calendar.deleteEvent(event.id)}
+              />
+            ))}
+          </ScrollView>
+        )
       )}
 
-      {/* Edit sheet */}
+      {/* ── Edit sheet ────────────────────────────────────────────── */}
       <EventEditSheet
         visible={editingId !== null}
         event={editingEvent}
@@ -346,15 +441,42 @@ export function CalendarView({ spaceId, objectId }: CalendarViewProps) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+
+  // Header
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  list: { flex: 1 },
-  listContent: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xxxl },
+  monthNav: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  monthLabel: {
+    minWidth: 140,
+    textAlign: 'center',
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+
+  // Month grid
+  scroll: { flex: 1 },
+  monthContent: {
+    paddingTop: spacing.sm,
+  },
+
+  // Agenda
+  agendaContent: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.xxxl,
+  },
   eventRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -371,6 +493,30 @@ const styles = StyleSheet.create({
   },
   eventText: { flex: 1, gap: 2 },
 
+  // Month grid event chips
+  eventChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    borderRadius: radii.xs,
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+    marginBottom: 1,
+  },
+  eventChipDot: {
+    width: 5,
+    height: 5,
+    borderRadius: radii.pill,
+    flexShrink: 0,
+  },
+  eventChipLabel: {
+    flex: 1,
+    flexShrink: 1,
+  },
+  moreLabel: {
+    paddingHorizontal: 4,
+  },
+
   // Edit sheet
   editRoot: { gap: spacing.lg },
   editSection: { gap: spacing.sm },
@@ -385,12 +531,4 @@ const styles = StyleSheet.create({
     height: 28,
     borderRadius: radii.pill,
   },
-
-  dateRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  dateLabel: { width: 40 },
-  dateField: { flex: 1 },
 });

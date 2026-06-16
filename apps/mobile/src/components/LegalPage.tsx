@@ -3,7 +3,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { layout, radii, spacing } from '@/theme';
+import { labelTracking, labelTrackingLoose, layout, radii, spacing } from '@/theme';
 import { activeVariant } from '@/lib/variants';
 import { useTheme } from '@/lib/use-theme';
 import type { LegalDoc } from '@drakkar.software/octovault-sdk';
@@ -139,7 +139,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     gap: spacing.sm,
   },
-  eyebrow: { letterSpacing: 2 },
+  eyebrow: { letterSpacing: labelTrackingLoose },
   heroTitle: { marginTop: spacing.xs },
   heroSub: { maxWidth: 540 },
   updated: { marginTop: spacing.xs },
@@ -161,7 +161,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     marginBottom: spacing.md,
   },
-  sectionNum: { letterSpacing: 1 },
+  sectionNum: { letterSpacing: labelTracking },
   sectionRule: {
     flex: 1,
     height: 1,

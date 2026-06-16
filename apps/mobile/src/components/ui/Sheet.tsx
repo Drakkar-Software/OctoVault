@@ -4,7 +4,7 @@ import { Dimensions, Modal, Platform, Pressable, ScrollView, StyleSheet, View } 
 import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { layers, layout, motion, paperBorder, radii, shadows, spacing } from '@/theme';
+import { dropShadow, layers, layout, motion, paperBorder, radii, shadows, spacing } from '@/theme';
 import { useResponsive } from '@/lib/use-responsive';
 import { useTheme } from '@/lib/use-theme';
 
@@ -147,7 +147,7 @@ export function Sheet({ visible, onClose, title, onBack, presentation = 'auto', 
           }}
           style={[
             styles.card,
-            shadows.lg,
+            dropShadow(colors.shadow, 'lg'),
             mode === 'sheet' && [
               styles.cardSheet,
               paperBorder(colors),

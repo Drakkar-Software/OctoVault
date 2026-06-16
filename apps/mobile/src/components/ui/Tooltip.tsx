@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import type { View as ViewType, ViewProps, ViewStyle } from 'react-native';
 import { Dimensions, Platform, StyleSheet, View } from 'react-native';
 
-import { layers, motion, opacity, radii, shadows, spacing } from '@/theme';
+import { dropShadow, layers, motion, opacity, radii, shadows, spacing } from '@/theme';
 import { useTheme } from '@/lib/use-theme';
 
 import { Txt } from './Txt';
@@ -105,7 +105,7 @@ function WebTooltip({ label, shortcut, children }: TooltipProps) {
             const { width: w, height: h } = e.nativeEvent.layout;
             setChip((prev) => (prev && prev.w === w && prev.h === h ? prev : { w, h }));
           }}
-          style={[styles.chip, WEB_FIXED, shadows.md, { backgroundColor: colors.tooltipBg, zIndex: layers.tooltip }, position, chip ? null : styles.measuring]}
+          style={[styles.chip, WEB_FIXED, dropShadow(colors.shadow, 'md'), { backgroundColor: colors.tooltipBg, zIndex: layers.tooltip }, position, chip ? null : styles.measuring]}
         >
           <Txt variant="caption" weight="medium" color={colors.onTooltip} numberOfLines={1}>
             {label}

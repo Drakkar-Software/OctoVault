@@ -3,7 +3,7 @@ import type { RefObject } from 'react';
 import type { View as ViewType, ViewProps } from 'react-native';
 import { Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
-import { layers, layout, paperBorder, radii, shadows, spacing } from '@/theme';
+import { dropShadow, layers, layout, paperBorder, radii, shadows, spacing } from '@/theme';
 import { BLOCK_SECTIONS, BLOCK_TYPES, REF_BLOCK_TYPES, type BlockTypeDef } from '@drakkar.software/octovault-sdk';
 import { useHover } from '@/lib/use-hover';
 import { useResponsive } from '@/lib/use-responsive';
@@ -170,7 +170,7 @@ export function SlashMenu({ visible, items, activeIndex, top, onSelect, onClose 
       style={[
         styles.slashCard,
         paperBorder(colors),
-        shadows.md,
+        dropShadow(colors.shadow, 'md'),
         { top, maxHeight: Math.round(height * 0.4) },
       ]}
     >

@@ -3,7 +3,7 @@ import { Animated, Image, Linking, Platform, ScrollView, StyleSheet, View, useWi
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 
-import { fonts, radii, shadows, spacing } from '@/theme';
+import { fonts, radii, shadows, spacing, type } from '@/theme';
 import { useTheme } from '@/lib/use-theme';
 import { DepthBackdrop } from '@/components/ui/DepthBackdrop';
 import { Button } from '@/components/ui/Button';
@@ -376,15 +376,15 @@ const styles = StyleSheet.create({
   },
   heroTitle: {
     fontFamily: fonts.display,
-    fontSize: 64,
-    lineHeight: 68,
-    letterSpacing: -2,
+    fontSize: type.hero.fontSize,
+    lineHeight: type.hero.lineHeight,
+    letterSpacing: type.hero.letterSpacing,
     includeFontPadding: false,
   },
   heroTitleDesktop: {
-    fontSize: 96,
-    lineHeight: 100,
-    letterSpacing: -3,
+    fontSize: type.mega.fontSize,
+    lineHeight: type.mega.lineHeight,
+    letterSpacing: type.mega.letterSpacing,
   },
 
   tagline: {

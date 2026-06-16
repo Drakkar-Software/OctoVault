@@ -342,10 +342,23 @@ export const type = {
   footnote: { fontSize: 12, lineHeight: 16 },
   caption: { fontSize: 11, lineHeight: 14 },
   micro: { fontSize: 10, lineHeight: 13 },
+  /** Marketing-scale hero headline (landing page, onboarding cover).
+   *  Negative tracking tightens the Newsreader display at large sizes. */
+  hero: { fontSize: 64, lineHeight: 68, letterSpacing: -2 },
+  /** Maximum editorial display size (desktop landing, brand-mark context).
+   *  Step up from `hero` for the largest viewport widths only. */
+  mega: { fontSize: 96, lineHeight: 100, letterSpacing: -3 },
 } as const;
 
 /** Uppercase mono labels share this tracking ("ENTER PIN", "SECURITY"…). */
 export const labelTracking = 0.8;
+
+/**
+ * Wider letter-spacing for large-scale uppercase eyebrow labels (page titles,
+ * legal headers). Distinct from `labelTracking` which targets small-size
+ * labels; at display sizes the eye needs more air between capitals.
+ */
+export const labelTrackingLoose = 2;
 
 /** 4px spacing scale + semantic aliases. */
 export const spacing = {
@@ -380,8 +393,9 @@ export const radii = {
  * Cross-platform elevation presets (react-native-web maps these to boxShadow).
  *
  * These are LIGHT-SCHEME static constants — safe for use in `StyleSheet.create()`
- * which requires compile-time values. For scheme-aware inline styles, use
- * `dropShadow(colors.shadow, …)` instead. The `resolveOctoSpacesTheme` adapter
+ * which requires compile-time values. For scheme-aware inline styles that must
+ * update in dark mode, use `dropShadow(colors.shadow, …)` from
+ * `@drakkar.software/octospaces-ui` instead. The `resolveOctoSpacesTheme` adapter
  * overrides `shadowColor` per-scheme so shared UI components always pick up the
  * correct tint.
  */
@@ -612,6 +626,13 @@ export const layout = {
 import type { PresenceStatus, VerificationLevel } from '@drakkar.software/octovault-sdk';
 export type { PresenceStatus, VerificationLevel };
 
+// dropShadow — scheme-aware drop-shadow helper from octospaces-ui.
+// Re-exported here so components can import it from '@/theme' alongside the
+// static `shadows` presets without needing a separate octospaces-ui import.
+// Use it for inline styles on elevated surfaces that must pick up dark-mode tint:
+//   style={[styles.card, dropShadow(colors.shadow, 'md')]}
+export { dropShadow } from '@drakkar.software/octospaces-ui';
+
 export function presenceColor(p: Palette, status: PresenceStatus): string {
   switch (status) {
     case 'online':
@@ -738,6 +759,8 @@ export function resolveOctoSpacesTheme(scheme: ColorScheme): OctoSpacesTheme {
       footnote: { size: type.footnote.fontSize, lineHeight: type.footnote.lineHeight },
       caption: { size: type.caption.fontSize, lineHeight: type.caption.lineHeight },
       micro: { size: type.micro.fontSize, lineHeight: type.micro.lineHeight },
+      hero: { size: type.hero.fontSize, lineHeight: type.hero.lineHeight, letterSpacing: type.hero.letterSpacing },
+      mega: { size: type.mega.fontSize, lineHeight: type.mega.lineHeight, letterSpacing: type.mega.letterSpacing },
     },
 
     fonts: {
@@ -805,6 +828,6 @@ export function resolveOctoSpacesTheme(scheme: ColorScheme): OctoSpacesTheme {
       inOut: [0.4, 0, 0.2, 1],
     },
 
-    labelTracking: { mono: labelTracking },
+    labelTracking: { mono: labelTracking, loose: labelTrackingLoose },
   };
 }

@@ -2,6 +2,17 @@ import type { TextProps } from 'react-native';
 import { StyleSheet, Text } from 'react-native';
 
 import { fonts, labelTracking, type as typeScale } from '@/theme';
+
+/** Resolve the letter-spacing for a given variant. Variants that carry their
+ *  own `letterSpacing` token (hero, mega) use it; `pageTitle`/`display` get a
+ *  subtle tightening; uppercase labels use `labelTracking`; everything else = 0. */
+function resolveTracking(variant: Variant, uppercase: boolean): number {
+  if (uppercase) return labelTracking;
+  const step = typeScale[variant] as { fontSize: number; lineHeight: number; letterSpacing?: number };
+  if (step.letterSpacing !== undefined) return step.letterSpacing;
+  if (variant === 'pageTitle' || variant === 'display') return -0.4;
+  return 0;
+}
 import { useTheme, type Palette } from '@/lib/use-theme';
 
 type Variant = keyof typeof typeScale;
@@ -26,7 +37,7 @@ function family(variant: Variant, weight: Weight, mono: boolean): string {
     if (weight === 'medium') return fonts.monoMedium;
     return fonts.mono;
   }
-  if (variant === 'pageTitle' || variant === 'display') return fonts.display;
+  if (variant === 'hero' || variant === 'mega' || variant === 'pageTitle' || variant === 'display') return fonts.display;
   if (variant === 'title' || variant === 'heading') return fonts.heading;
   switch (weight) {
     case 'bold':
@@ -68,7 +79,7 @@ export function Txt({
           fontSize,
           lineHeight,
           color: resolved,
-          letterSpacing: uppercase ? labelTracking : variant === 'pageTitle' || variant === 'display' ? -0.4 : 0,
+          letterSpacing: resolveTracking(variant, uppercase),
           textTransform: uppercase ? 'uppercase' : 'none',
           textAlign: center ? 'center' : 'left',
         },

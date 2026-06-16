@@ -3,7 +3,7 @@ import type { ReactNode, RefObject } from 'react';
 import type { View as ViewType, ViewStyle } from 'react-native';
 import { Dimensions, Modal, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
-import { layers, layout, paperBorder, radii, shadows, spacing } from '@/theme';
+import { dropShadow, layers, layout, paperBorder, radii, shadows, spacing } from '@/theme';
 import { useTheme } from '@/lib/use-theme';
 
 export type PopoverPlacement = 'bottom-start' | 'bottom-end' | 'top-start' | 'right-start';
@@ -136,7 +136,7 @@ export function Popover({ visible, onClose, anchorRef, placement = 'bottom-start
         style={[
           styles.card,
           paperBorder(colors),
-          shadows.md,
+          dropShadow(colors.shadow, 'md'),
           position,
           width !== undefined ? { width } : null,
           { maxWidth: win.width - EDGE * 2 },

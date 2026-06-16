@@ -3,7 +3,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { layers, layout, motion, paperBorder, radii, shadows, spacing } from '@/theme';
+import { dropShadow, layers, layout, motion, paperBorder, radii, shadows, spacing } from '@/theme';
 import { useHover } from '@/lib/use-hover';
 import { useInShell } from '@/lib/use-responsive';
 import { useTheme } from '@/lib/use-theme';
@@ -176,7 +176,7 @@ function ToastItem({ toast, onDismiss }: ToastItemProps) {
         style={[
           styles.card,
           paperBorder(colors, danger ? colors.dangerBorder : undefined),
-          shadows.lg,
+          dropShadow(colors.shadow, 'lg'),
         ]}
       >
         {danger ? <Icon name="alert" size={16} color={colors.danger} /> : null}
