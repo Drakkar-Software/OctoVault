@@ -240,7 +240,7 @@ export function WorkObjects({ spaceId, hero, selectedId }: WorkObjectsProps) {
       {list}
       <View style={styles.footer}>
         <View style={styles.footRow}>
-          <CreateControl label="New page" iconName="plus" onPress={() => newPage()} disabled={!ready} grow />
+          {has('pages') && <CreateControl label="New page" iconName="plus" onPress={() => newPage()} disabled={!ready} grow />}
           <FootMenu onCreateType={(type, access) => createAndOpen(type, undefined, access)} disabled={!ready || creating} />
         </View>
         {agentsRow}
@@ -343,6 +343,8 @@ function FootMenu({ onCreateType, disabled }: FootMenuProps) {
   const { colors } = useTheme();
   const [open, setOpen] = useState(false);
   const secondaryTypes = useCreatableTypes();
+
+  if (secondaryTypes.length === 0) return null;
 
   return (
     <>

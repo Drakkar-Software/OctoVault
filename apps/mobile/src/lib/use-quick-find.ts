@@ -24,6 +24,7 @@ import { router } from 'expo-router';
 import type { IconName } from '@/components/ui/Icon';
 
 import { useTypeRegistry } from './type-registry-context';
+import { useBrand } from './brand-context';
 import { rankResults, type MatchRange } from '@drakkar.software/octovault-sdk';
 import { relativeTimeShort } from '@drakkar.software/octovault-sdk';
 import { recordVisit, useRecents } from './use-recents';
@@ -122,6 +123,7 @@ export function useQuickFind(opts: { limit?: number; onNavigate?: () => void } =
   onNavigateRef.current = opts.onNavigate;
 
   const registry = useTypeRegistry();
+  const { has } = useBrand();
   const { spaceId, objects } = useSpaceObjects();
   const { spaces, activeId, switchSpace } = useSpaces();
   const { recents } = useRecents();
@@ -187,7 +189,7 @@ export function useQuickFind(opts: { limit?: number; onNavigate?: () => void } =
       // No active space (zero-space identity) → no inert create rows; the
       // Vault's first-run CTA owns that moment.
       if (spaceId) {
-        const workTreeCreatable = registry.creatableTypes().filter((d) => d.workTree && d.findable && d.editor !== 'file');
+        const workTreeCreatable = registry.creatableTypes().filter((d) => d.workTree && d.findable && d.editor !== 'file' && (!d.capability || has(d.capability)));
         workTreeCreatable.forEach((d, i) => {
           out.push({
             kind: 'action',
@@ -219,8 +221,9 @@ export function useQuickFind(opts: { limit?: number; onNavigate?: () => void } =
       });
     }
 
-    // The escape hatch: never strand a search — the query becomes a page title.
-    if (spaceId) {
+    // The escape hatch: never strand a search — the query seeds the title of the
+    // first capable type (pages when available, otherwise the first capable type).
+    if (spaceId && has('pages')) {
       out.push({
         kind: 'action',
         key: 'action:create-from-query',
@@ -231,7 +234,7 @@ export function useQuickFind(opts: { limit?: number; onNavigate?: () => void } =
       });
     }
     return out;
-  }, [q, spaceId, objects, recents, spaces, activeId, switchSpace, limit, registry]);
+  }, [q, spaceId, objects, recents, spaces, activeId, switchSpace, limit, registry, has]);
 
   const noMatches = !!q && !items.some((i) => i.kind === 'node');
 
