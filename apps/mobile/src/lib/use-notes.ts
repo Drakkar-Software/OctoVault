@@ -4,7 +4,7 @@ import type { ObjectNode } from '@drakkar.software/octovault-sdk';
 import { useSpaceObjects } from './space-objects-context';
 import { useSpaces } from './use-spaces';
 
-export type NoteSort = 'updatedAt' | 'createdAt' | 'title';
+export type NoteSort = 'updatedAt' | 'title';
 
 export interface NoteEntry extends ObjectNode {
   tags: string[];
@@ -45,9 +45,6 @@ function compareNotes(a: NoteEntry, b: NoteEntry, sort: NoteSort): number {
   switch (sort) {
     case 'title':
       return a.title.localeCompare(b.title);
-    case 'createdAt':
-      // ObjectNode doesn't have createdAt; fall back to id lexical order as a proxy
-      return a.id < b.id ? 1 : a.id > b.id ? -1 : 0;
     case 'updatedAt':
     default:
       return b.updatedAt - a.updatedAt;

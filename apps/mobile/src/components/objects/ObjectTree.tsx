@@ -9,6 +9,7 @@ import { useHover, useRowHover } from '@/lib/use-hover';
 import { useInlineEdit, type InlineEdit } from '@/lib/use-inline-edit';
 import { useResponsive } from '@/lib/use-responsive';
 import { useTheme } from '@/lib/use-theme';
+import { useCreatableTypes } from '@/lib/use-creatable-types';
 import { useTypeRegistry } from '@/lib/type-registry-context';
 import type { ObjectTreeNode } from '@drakkar.software/octovault-sdk';
 import type { ID, ObjectType } from '@drakkar.software/octovault-sdk';
@@ -144,6 +145,8 @@ interface RowProps {
 function ObjectTreeRow({ node, isFirst, isLast, ctx }: RowProps) {
   const { colors } = useTheme();
   const registry = useTypeRegistry();
+  // Capability-gated creatable types for the current variant (same list as CreateTypeMenu).
+  const creatableTypes = useCreatableTypes();
   // Rows are plain Views (not Pressables, to keep text selection), so hover must use
   // onMouseEnter/onMouseLeave (useRowHover) — RN-web does NOT forward Pressable-style
   // onHoverIn on a View, which previously left rows un-hoverable and hid the add-child "+".
@@ -254,7 +257,7 @@ function ObjectTreeRow({ node, isFirst, isLast, ctx }: RowProps) {
         {controlsVisible ? (
           <View style={styles.controls}>
             {Platform.OS === 'web' ? (
-              <RowControl icon="plus" label={`Add a page inside ${node.title || 'Untitled'}`} tooltip="Add a page inside" onPress={() => actions!.addChild(node, registry.creatableTypes().find((d) => d.workTree)?.type ?? 'page')} />
+              <RowControl icon="plus" label={`Add a page inside ${node.title || 'Untitled'}`} tooltip="Add a page inside" onPress={() => actions!.addChild(node, creatableTypes[0]?.type ?? 'page')} />
             ) : null}
             <RowControl
               icon="dots"
@@ -299,7 +302,7 @@ function ObjectTreeRow({ node, isFirst, isLast, ctx }: RowProps) {
           ) : (
             <Menu>
               <MenuItem icon="edit" label="Rename" onPress={() => { setMenuOpen(false); ctx.edit.begin(node.id); }} />
-              {registry.creatableTypes().filter((d) => d.workTree && d.editor !== 'file').map((d) => (
+              {creatableTypes.map((d) => (
                 <MenuItem key={d.type} icon={d.icon} label={`Add sub-${d.label.toLowerCase()}`} onPress={() => { setMenuOpen(false); actions.addChild(node, d.type); }} />
               ))}
               <MenuSeparator />

@@ -4,8 +4,7 @@ import Animated from 'react-native-reanimated';
 
 import { opacity, radii, spacing } from '@/theme';
 import type { CreatableTypeEntry } from '@drakkar.software/octovault-sdk';
-import { useTypeRegistry } from '@/lib/type-registry-context';
-import { useBrand } from '@/lib/brand-context';
+import { useCreatableTypes } from '@/lib/use-creatable-types';
 import { useHover } from '@/lib/use-hover';
 import { useScalePress } from '@/lib/use-scale-press';
 import { useTheme } from '@/lib/use-theme';
@@ -73,13 +72,10 @@ export function CreateTypeMenu({
   title = 'Create',
   hideVisibility = false,
 }: CreateTypeMenuProps) {
-  const registry = useTypeRegistry();
-  const { has } = useBrand();
   const { colors } = useTheme();
+  const creatableTypes = useCreatableTypes();
 
-  const items = types ?? registry.creatableTypes().filter(
-    (d) => d.workTree && d.editor !== 'file' && (!d.capability || has(d.capability)),
-  );
+  const items = types ?? creatableTypes;
   const [access, setAccess] = useState<VisibilityAccess>('space');
 
   // Reset to space-default when dismissed so a chosen 'Invite' doesn't persist
