@@ -132,6 +132,7 @@ export function ObjectHero({
           onCommit={(t) => onChangeTitle!(t)}
           onClose={() => setEditing(false)}
           onSubmit={onSubmitTitle}
+          containerStyle={styles.titleEdit}
         />
       ) : canEditTitle ? (
         <Pressable
@@ -184,5 +185,10 @@ const styles = StyleSheet.create({
   // Negative margin so the press surface hugs the text without shifting the title's
   // optical left edge (the inline editor is flush, so they line up).
   titleHit: { alignSelf: 'flex-start', marginHorizontal: -spacing.sm, paddingHorizontal: spacing.sm, paddingVertical: 2, borderRadius: radii.sm },
+  // The hero container uses alignItems:'flex-start' so the emoji icon hugs its width.
+  // The title editor must stretch to the full hero width so the TextInput has room —
+  // without this the TextInput collapses to near-zero width and typed characters are
+  // clipped (invisible while typing, visible after blur when the Txt component takes over).
+  titleEdit: { alignSelf: 'stretch' },
   meta: { marginTop: spacing.xs },
 });
