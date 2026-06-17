@@ -59,10 +59,6 @@ export function TableBlock({ page, blockId }: TableBlockProps) {
   const colWidth = (col: { type: string; width?: number }) =>
     col.type === 'checkbox' ? layout.tableCheckboxColWidth : (col.width ?? layout.tableColDefaultWidth);
 
-  const totalContentWidth = layout.tableRowGutter +
-    table.columns.reduce((sum, c) => sum + colWidth(c), 0) +
-    layout.tableColDefaultWidth; // add-column button
-
   return (
     <View style={[styles.frame, paperBorder(colors), { borderRadius: radii.card }, shadows.sm]}>
       {/* ── Filter/sort bar ─────────────────────────────────────────── */}
@@ -137,12 +133,6 @@ export function TableBlock({ page, blockId }: TableBlockProps) {
               totalRows={table.rows.length}
             />
           ))}
-
-          {/* ── Add-row footer ─────────────────────────────────────── */}
-          <AddRowButton
-            onPress={() => table.addRow()}
-            width={totalContentWidth}
-          />
         </ScrollView>
 
         {/* Edge fades (web only) */}
@@ -165,6 +155,9 @@ export function TableBlock({ page, blockId }: TableBlockProps) {
           />
         )}
       </View>
+
+      {/* ── Add-row footer (outside scroll so always visible) ─────── */}
+      <AddRowButton onPress={() => table.addRow()} />
     </View>
   );
 }
@@ -255,7 +248,7 @@ function AddColumnButton({ onPress }: { onPress: () => void }) {
   );
 }
 
-function AddRowButton({ onPress, width }: { onPress: () => void; width: number }) {
+function AddRowButton({ onPress }: { onPress: () => void }) {
   const { colors } = useTheme();
   const { hovered, hoverProps } = useHover();
   return (
@@ -267,7 +260,6 @@ function AddRowButton({ onPress, width }: { onPress: () => void; width: number }
       style={[
         styles.addRow,
         {
-          width,
           backgroundColor: hovered ? colors.hover : undefined,
           borderTopColor: colors.lineSoft,
         },
