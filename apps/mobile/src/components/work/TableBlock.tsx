@@ -157,7 +157,11 @@ export function TableBlock({ page, blockId }: TableBlockProps) {
       </View>
 
       {/* ── Add-row footer (outside scroll so always visible) ─────── */}
-      <AddRowButton onPress={() => table.addRow()} />
+      <AddRowButton onPress={() => {
+        console.log('[TableBlock] addRow pressed, ready:', table.ready, 'rows:', table.rows.length);
+        table.addRow();
+        console.log('[TableBlock] addRow called, rows after:', table.rows.length);
+      }} />
     </View>
   );
 }
