@@ -51,8 +51,8 @@ importers:
   apps/mobile:
     dependencies:
       '@drakkar.software/octospaces-ui':
-        specifier: 0.6.0
-        version: 0.6.0(react-native@0.85.3(@babel/core@7.29.7)(@react-native/metro-config@0.85.3(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.3))(react@19.2.3)
+        specifier: file:/tmp/drakkar.software-octospaces-ui-0.7.0.tgz
+        version: file:../../../../../../tmp/drakkar.software-octospaces-ui-0.7.0.tgz(react-native@0.85.3(@babel/core@7.29.7)(@react-native/metro-config@0.85.3(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.3))(react@19.2.3)
       '@drakkar.software/octovault-sdk':
         specifier: workspace:*
         version: link:../../packages/sdk
@@ -814,8 +814,9 @@ packages:
       '@drakkar.software/starfish-wal':
         optional: true
 
-  '@drakkar.software/octospaces-ui@0.6.0':
-    resolution: {integrity: sha512-u0JI4UDxj2V2DAhy5Tq4DmCN6+5T6sII5d6okYAinsTb4j1tVM74CRlktJW1EdhxMM9+XLpd6tSbiETZOh7D5Q==}
+  '@drakkar.software/octospaces-ui@file:../../../../../../tmp/drakkar.software-octospaces-ui-0.7.0.tgz':
+    resolution: {integrity: sha512-63/+OwDg3aXXD8ClKMgGv21pm22t7sbLDmOjCyShs+V4+m9sIQ18lB1hSJ0N+Nl0rX/L1z034lpjfJ2QMUTBeg==, tarball: file:../../../../../../tmp/drakkar.software-octospaces-ui-0.7.0.tgz}
+    version: 0.7.0
     peerDependencies:
       react: '>=18'
       react-native: '>=0.75'
@@ -6749,7 +6750,7 @@ snapshots:
     optionalDependencies:
       '@drakkar.software/starfish-wal': 3.0.0-alpha.27
 
-  '@drakkar.software/octospaces-ui@0.6.0(react-native@0.85.3(@babel/core@7.29.7)(@react-native/metro-config@0.85.3(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.3))(react@19.2.3)':
+  '@drakkar.software/octospaces-ui@file:../../../../../../tmp/drakkar.software-octospaces-ui-0.7.0.tgz(react-native@0.85.3(@babel/core@7.29.7)(@react-native/metro-config@0.85.3(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.3))(react@19.2.3)':
     dependencies:
       react: 19.2.3
       react-native: 0.85.3(@babel/core@7.29.7)(@react-native/metro-config@0.85.3(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.3)

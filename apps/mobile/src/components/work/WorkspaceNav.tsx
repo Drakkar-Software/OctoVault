@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useRouter } from 'expo-router';
+import { useRouter, usePathname } from 'expo-router';
 import { Image } from 'expo-image';
 import { Pressable, StyleSheet, View } from 'react-native';
 
@@ -14,6 +14,7 @@ import { useSpaces } from '@/lib/use-spaces';
 import { initialsFor } from '@drakkar.software/octovault-sdk';
 import { Sidebar, SidebarHeader, SpacesRail } from '@drakkar.software/octospaces-ui';
 import type { RailIconName, RailSpace } from '@drakkar.software/octospaces-ui';
+import { useBrand } from '@/lib/brand-context';
 import { Avatar } from '@/components/ui/Avatar';
 import { Badge } from '@/components/ui/Badge';
 import { Icon } from '@/components/ui/Icon';
@@ -29,6 +30,7 @@ const RAIL_ICON: Record<RailIconName, IconName> = {
   lock: 'lock',
   mute: 'volume-off',
   add: 'plus',
+  notes: 'book',
 };
 
 /**
@@ -43,11 +45,15 @@ const RAIL_ICON: Record<RailIconName, IconName> = {
  */
 export function WorkspaceNav() {
   const router = useRouter();
+  const pathname = usePathname();
   const { profile } = useProfile();
   const { spaces, activeId, switchSpace } = useSpaces();
   const { newPage } = useQuickCreate();
+  const { has } = useBrand();
   const openObjectId = useOpenObjectId();
   const space = spaces.find((s) => s.id === activeId) ?? spaces[0];
+
+  const notesActive = pathname === '/notes';
 
   const railSpaces: RailSpace[] = spaces.map((s) => ({
     id: s.id,
@@ -64,6 +70,11 @@ export function WorkspaceNav() {
         onSelect={switchSpace}
         onAdd={() => router.push('/join')}
         addLabel="Join or create a space"
+        specialTiles={
+          has('notes')
+            ? [{ key: 'notes', icon: 'notes', active: notesActive, label: 'My Notes', onPress: () => router.navigate('/(tabs)/notes') }]
+            : undefined
+        }
         renderIcon={(name, size, color) => (
           <Icon name={RAIL_ICON[name]} size={size} color={color} />
         )}
