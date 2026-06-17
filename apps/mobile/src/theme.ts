@@ -615,11 +615,11 @@ export const layout = {
   /** Minimum height for an "empty" section placeholder within a form/list editor. */
   emptySectionMinHeight: 180,
   /** Inline table block: row handle/gutter column width. */
-  tableRowGutter: 28,
+  tableRowGutter: 32,
   /** Inline table block: column header row height. */
-  tableHeaderHeight: 34,
+  tableHeaderHeight: 40,
   /** Inline table block: data row height. */
-  tableRowHeight: 36,
+  tableRowHeight: 44,
   /** Inline table block: minimum column width. */
   tableColMinWidth: 100,
   /** Inline table block: default column width (used when no override is stored). */

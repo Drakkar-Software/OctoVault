@@ -61,6 +61,7 @@ export function TableHeaderCell({ column, table, sortActive, columnIndex, column
           styles.cell,
           { width: column.type === 'checkbox' ? layout.tableCheckboxColWidth : colWidth },
           bg ? { backgroundColor: bg } : null,
+          sortActive ? { borderTopWidth: 2, borderTopColor: colors.accent } : null,
         ]}
       >
         <Icon
@@ -176,7 +177,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-    paddingHorizontal: spacing.sm,
+    paddingHorizontal: spacing.md,
     borderRightWidth: StyleSheet.hairlineWidth,
   },
   title: { flex: 1 },

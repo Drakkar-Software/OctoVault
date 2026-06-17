@@ -162,7 +162,7 @@ const styles = StyleSheet.create({
   cell: {
     height: layout.tableRowHeight,
     justifyContent: 'center',
-    paddingHorizontal: spacing.sm,
+    paddingHorizontal: spacing.md,
     borderRightWidth: StyleSheet.hairlineWidth,
   },
   fieldContainer: { flex: 1 },

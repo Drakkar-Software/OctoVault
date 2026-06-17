@@ -24,6 +24,7 @@ import type { PageHook } from '@/lib/use-page';
 import { Icon } from '@/components/ui/Icon';
 import { Pill } from '@/components/ui/Pill';
 import { Txt } from '@/components/ui/Txt';
+
 import { AdaptiveMenu } from '@/components/ui/AdaptiveMenu';
 import { Menu, MenuItem } from '@/components/ui/Menu';
 import type { View as ViewType } from 'react-native';
@@ -63,7 +64,7 @@ export function TableBlock({ page, blockId }: TableBlockProps) {
     <View style={[styles.frame, paperBorder(colors), { borderRadius: radii.card }, shadows.sm]}>
       {/* ── Filter/sort bar ─────────────────────────────────────────── */}
       {hasActiveState && (
-        <View style={[styles.filterBar, { borderBottomColor: colors.lineSoft }]}>
+        <View style={[styles.filterBar, { borderBottomColor: colors.lineSoft, backgroundColor: colors.paperAlt }]}>
           {table.sort && (() => {
             const col = table.columns.find((c) => c.id === table.sort!.colId);
             return col ? (
@@ -108,7 +109,7 @@ export function TableBlock({ page, blockId }: TableBlockProps) {
           {/* lays header + body rows side-by-side on iOS instead of stacked.    */}
           <View style={styles.grid}>
             {/* ── Header row ───────────────────────────────────────── */}
-            <View style={[styles.headerRow, { borderBottomColor: colors.lineSoft }]}>
+            <View style={[styles.headerRow, { borderBottomColor: colors.lineSoft, backgroundColor: colors.paperAlt }]}>
               {/* Row-gutter spacer */}
               <View style={[styles.gutterHeader, { borderRightColor: colors.lineFaint }]} />
               {table.columns.map((col, idx) => (
@@ -191,9 +192,18 @@ function TableBodyRow({ rowId, rowIndex, table, activeSortColId, totalRows }: Ta
       ]}
       {...hoverProps}
     >
-      {/* Row handle */}
-      <View ref={anchorRef} style={[styles.gutter, { borderRightColor: colors.lineFaint }]}>
-        {hovered && (
+      {/* Row handle — row number on web (ledger reference), dots on hover or mobile */}
+      <View
+        ref={anchorRef}
+        style={[
+          styles.gutter,
+          { borderRightColor: colors.lineFaint },
+          hovered ? { backgroundColor: colors.hover } : undefined,
+        ]}
+      >
+        {Platform.OS === 'web' && !hovered ? (
+          <Txt variant="micro" mono color={colors.inkFaint}>{rowIndex + 1}</Txt>
+        ) : (
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Row actions"
