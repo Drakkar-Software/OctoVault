@@ -29,7 +29,7 @@
   },
   "pnpm": {
     "overrides": {
-      "@drakkar.software/octospaces-sdk": "0.12.8"
+      "@drakkar.software/octospaces-sdk": "0.12.9"
     }
   }
 }
