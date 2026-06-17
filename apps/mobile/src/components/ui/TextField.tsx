@@ -91,11 +91,16 @@ export function TextField({
   // A mono field keeps the mono family but adopts the variant's metrics — the doc
   // editor's code blocks render at `callout` size in read AND edit mode, so the
   // Txt ⇄ TextInput swap doesn't reflow.
+  // On iOS, omit lineHeight from the TextInput style: when lineHeight is present iOS
+  // builds a paragraph-style attributed string and drops the foreground color from the
+  // live typingAttributes, making newly-typed glyphs invisible until blur rebuilds the
+  // text. On web/Android lineHeight is needed (web: prevents textarea line-collapse;
+  // Android: metric parity). Rendered (non-editing) text is unaffected.
   const variantStyle = textVariant
     ? {
         ...(mono ? null : { fontFamily: familyForVariant(textVariant) }),
         fontSize: typeScale[textVariant].fontSize,
-        lineHeight: typeScale[textVariant].lineHeight,
+        ...(Platform.OS !== 'ios' ? { lineHeight: typeScale[textVariant].lineHeight } : null),
       }
     : null;
   return (
@@ -148,6 +153,8 @@ export function TextField({
             styles.input,
             mono ? styles.mono : styles.sans,
             multiline && styles.multiline,
+            // lineHeight omitted on iOS: see variantStyle comment above.
+            multiline && Platform.OS !== 'ios' && styles.multilineLineHeight,
             variantStyle,
             plain && styles.inputPlain,
             grownHeight !== undefined ? { height: grownHeight } : null,
@@ -213,9 +220,11 @@ const styles = StyleSheet.create({
   // <textarea> whose line box collapses without an explicit lineHeight, stacking lines
   // on top of each other. Also keeps the editor's metrics identical to the Markdown
   // reader so entering edit doesn't reflow the text.
+  // lineHeight is split into a separate style applied only on non-iOS (see above).
   sans: { fontFamily: fonts.body, fontSize: typeScale.body.fontSize },
   mono: { fontFamily: fonts.mono, fontSize: typeScale.caption.fontSize },
-  multiline: { textAlignVertical: 'top', paddingTop: spacing.sm, lineHeight: typeScale.body.lineHeight },
+  multiline: { textAlignVertical: 'top', paddingTop: spacing.sm },
+  multilineLineHeight: { lineHeight: typeScale.body.lineHeight },
   // Drop the input's own vertical padding so the first line sits where the reader's
   // first paragraph does (the surrounding view supplies any padding). The explicit
   // `paddingTop: 0` is load-bearing: RN resolves `paddingTop` (set by `multiline`

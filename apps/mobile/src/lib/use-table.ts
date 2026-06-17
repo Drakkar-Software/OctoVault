@@ -106,10 +106,7 @@ export function useTable(page: PageHook, blockId: string): TableHook {
     deleteColumn:     (colId) => { mutate((d) => tbl.deleteTableColumn(d, blockId, colId)); },
 
     // Row
-    addRow:       (atIdx) => {
-      console.log('[useTable] addRow called, doc:', !!page.doc, 'blockId:', blockId);
-      mutate((d) => tbl.addTableRow(d, blockId, atIdx));
-    },
+    addRow:       (atIdx) => { mutate((d) => tbl.addTableRow(d, blockId, atIdx)); },
     moveRow:      (rowId, toIdx) => { mutate((d) => tbl.moveTableRow(d, blockId, rowId, toIdx)); },
     duplicateRow: (rowId) => { mutate((d) => tbl.duplicateTableRow(d, blockId, rowId)); },
     deleteRow:    (rowId) => { mutate((d) => tbl.deleteTableRow(d, blockId, rowId)); },

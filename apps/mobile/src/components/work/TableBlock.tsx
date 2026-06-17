@@ -103,36 +103,41 @@ export function TableBlock({ page, blockId }: TableBlockProps) {
             refreshFades();
           }}
         >
-          {/* ── Header row ─────────────────────────────────────────── */}
-          <View style={[styles.headerRow, { borderBottomColor: colors.lineSoft }]}>
-            {/* Row-gutter spacer */}
-            <View style={[styles.gutterHeader, { borderRightColor: colors.lineFaint }]} />
-            {table.columns.map((col, idx) => (
-              <TableHeaderCell
-                key={col.id}
-                column={col}
+          {/* ── Single column wrapper — forces vertical stacking on iOS/web ── */}
+          {/* Without this, horizontal ScrollView's default row content-container */}
+          {/* lays header + body rows side-by-side on iOS instead of stacked.    */}
+          <View style={styles.grid}>
+            {/* ── Header row ───────────────────────────────────────── */}
+            <View style={[styles.headerRow, { borderBottomColor: colors.lineSoft }]}>
+              {/* Row-gutter spacer */}
+              <View style={[styles.gutterHeader, { borderRightColor: colors.lineFaint }]} />
+              {table.columns.map((col, idx) => (
+                <TableHeaderCell
+                  key={col.id}
+                  column={col}
+                  table={table}
+                  sortActive={col.id === activeSortColId}
+                  columnIndex={idx}
+                  columnCount={table.columns.length}
+                  colWidth={layout.tableColDefaultWidth}
+                />
+              ))}
+              {/* Add-column button */}
+              <AddColumnButton onPress={() => table.addColumn('text', 'Column')} />
+            </View>
+
+            {/* ── Body rows ────────────────────────────────────────── */}
+            {table.rows.map((rowId, rowIdx) => (
+              <TableBodyRow
+                key={rowId}
+                rowId={rowId}
+                rowIndex={rowIdx}
                 table={table}
-                sortActive={col.id === activeSortColId}
-                columnIndex={idx}
-                columnCount={table.columns.length}
-                colWidth={layout.tableColDefaultWidth}
+                activeSortColId={activeSortColId}
+                totalRows={table.rows.length}
               />
             ))}
-            {/* Add-column button */}
-            <AddColumnButton onPress={() => table.addColumn('text', 'Column')} />
           </View>
-
-          {/* ── Body rows ──────────────────────────────────────────── */}
-          {table.rows.map((rowId, rowIdx) => (
-            <TableBodyRow
-              key={rowId}
-              rowId={rowId}
-              rowIndex={rowIdx}
-              table={table}
-              activeSortColId={activeSortColId}
-              totalRows={table.rows.length}
-            />
-          ))}
         </ScrollView>
 
         {/* Edge fades (web only) */}
@@ -157,11 +162,7 @@ export function TableBlock({ page, blockId }: TableBlockProps) {
       </View>
 
       {/* ── Add-row footer (outside scroll so always visible) ─────── */}
-      <AddRowButton onPress={() => {
-        console.log('[TableBlock] addRow pressed, ready:', table.ready, 'rows:', table.rows.length);
-        table.addRow();
-        console.log('[TableBlock] addRow called, rows after:', table.rows.length);
-      }} />
+      <AddRowButton onPress={() => table.addRow()} />
     </View>
   );
 }
@@ -295,6 +296,7 @@ function filterLabel(colTitle: string, filter: import('@/lib/use-table').TableFi
 
 const styles = StyleSheet.create({
   frame: {
+    flex: 1,
     overflow: 'hidden',
     marginVertical: spacing.sm,
   },
@@ -307,6 +309,10 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   scrollWrap: { position: 'relative', overflow: 'hidden' },
+  // Inner column container: forces header + body rows to stack vertically inside the
+  // horizontal ScrollView. Without this, RN's default row content-container lays them
+  // side-by-side on iOS instead of stacked, making the table invisible.
+  grid: { flexDirection: 'column' },
   headerRow: {
     flexDirection: 'row',
     borderBottomWidth: 1,
