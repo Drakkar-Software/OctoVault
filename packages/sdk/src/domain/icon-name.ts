@@ -103,4 +103,6 @@ export type IconName =
   | 'arrow-up'
   | 'arrow-down'
   | 'enter'
-  | 'command';
+  | 'command'
+  | 'table'
+  | 'filter';

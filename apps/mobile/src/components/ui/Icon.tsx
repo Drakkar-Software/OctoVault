@@ -122,6 +122,9 @@ const ICONS = {
   // Keyboard hints (shortcut captions in menus and tooltips).
   enter: { lib: Feather, n: 'corner-down-left' },
   command: { lib: Feather, n: 'command' },
+  // Table block
+  table: { lib: MaterialCommunityIcons, n: 'table' },
+  filter: { lib: MaterialCommunityIcons, n: 'filter-variant' },
 } satisfies Record<string, IconDef>;
 
 export const ICON_NAMES: IconName[] = Object.keys(ICONS) as IconName[];

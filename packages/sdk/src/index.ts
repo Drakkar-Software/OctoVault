@@ -57,6 +57,7 @@ export * from './object-content-model';
 export * from './page-content';
 export * from './comments-content';
 export * from './board-content';
+export * from './table-content';
 export * from './task-model';
 export * from './calendar-content';
 // form-content: addField/patchField/deleteField conflict with the same names in

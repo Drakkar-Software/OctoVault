@@ -67,6 +67,7 @@ export const BLOCK_TYPES: BlockTypeDef[] = [
   { type: 'image', label: 'Image', icon: 'image', section: 'other', keywords: ['picture', 'photo', 'img', 'upload'], variant: 'body', mono: false, multiline: false, placeholder: '' },
   { type: 'file', label: 'File', icon: 'paperclip', section: 'other', keywords: ['attachment', 'upload', 'pdf', 'doc', 'attach'], variant: 'body', mono: false, multiline: false, placeholder: '' },
   { type: 'bookmark', label: 'Web bookmark', icon: 'link', section: 'other', keywords: ['url', 'link', 'bookmark', 'embed', 'web'], variant: 'body', mono: false, multiline: false, placeholder: 'Paste a link…' },
+  { type: 'table', label: 'Table', icon: 'table', section: 'other', keywords: ['table', 'grid', 'database', 'db', 'rows', 'columns'], variant: 'body', mono: false, multiline: false, placeholder: '' },
 ];
 
 const BY_TYPE: Record<BlockType, BlockTypeDef> = BLOCK_TYPES.reduce(

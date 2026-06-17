@@ -614,6 +614,18 @@ export const layout = {
   voteControlSize: 36,
   /** Minimum height for an "empty" section placeholder within a form/list editor. */
   emptySectionMinHeight: 180,
+  /** Inline table block: row handle/gutter column width. */
+  tableRowGutter: 28,
+  /** Inline table block: column header row height. */
+  tableHeaderHeight: 34,
+  /** Inline table block: data row height. */
+  tableRowHeight: 36,
+  /** Inline table block: minimum column width. */
+  tableColMinWidth: 100,
+  /** Inline table block: default column width (used when no override is stored). */
+  tableColDefaultWidth: 160,
+  /** Inline table block: fixed-width checkbox column. */
+  tableCheckboxColWidth: 48,
 } as const;
 
 // ── Semantic helpers ───────────────────────────────────────────────────────

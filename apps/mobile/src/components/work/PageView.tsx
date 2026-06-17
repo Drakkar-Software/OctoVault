@@ -19,7 +19,8 @@ import {
   type MdShortcutMatch,
 } from '@drakkar.software/octovault-sdk';
 import { REF_BLOCK_TYPES, visibleBlocks } from '@drakkar.software/octovault-sdk';
-import { usePage, type Block, type BlockType } from '@/lib/use-page';
+import * as tableContent from '@drakkar.software/octovault-sdk';
+import { usePage, type Block, type BlockType, type PageHook } from '@/lib/use-page';
 import { usePageComments } from '@/lib/use-comments';
 import { iconForNode } from '@drakkar.software/octovault-sdk';
 import { useSpaceObjects } from '@/lib/space-objects-context';
@@ -39,6 +40,7 @@ import { BlockHandleMenu, InsertBlockMenu, SlashMenu, flattenBySection } from '@
 import { ObjectHero } from '@/components/work/ObjectHero';
 import { AttachmentBlock } from '@/components/work/AttachmentBlock';
 import { BookmarkBlock } from '@/components/work/BookmarkBlock';
+import { TableBlock } from '@/components/work/TableBlock';
 import { BlockComments } from '@/components/work/BlockComments';
 import { useObjectFiles } from '@/lib/use-object-files';
 import type { BookmarkMeta } from '@/lib/use-page';
@@ -203,6 +205,15 @@ export function PageView({ spaceId, objectId, emoji, title, subtitle, onRenameTi
       } else {
         convertToRefBlock(s.id, def.type);
       }
+      return;
+    }
+    if (def.type === 'table') {
+      page.setBlockType(s.id, 'table');
+      page.setBlockText(s.id, '');
+      page.mutate((d) => tableContent.createTable(d, s.id));
+      setEditing(null);
+      const nid = page.insertBlock(insertIndexAfter(s.id), { type: 'paragraph', indent: getBlock(s.id)?.indent });
+      if (nid) focusBlock(nid, SEL_START);
       return;
     }
     if (def.type === 'divider') {
@@ -586,6 +597,7 @@ export function PageView({ spaceId, objectId, emoji, title, subtitle, onRenameTi
           <BlockRow
             key={b.id}
             block={b}
+            page={page}
             ordinal={ordinals.get(b.id)}
             childNode={REF_BLOCK_TYPES.has(b.type) && b.ref ? objects.get(b.ref) : undefined}
             editing={editing?.id === b.id}
@@ -685,7 +697,8 @@ export function PageView({ spaceId, objectId, emoji, title, subtitle, onRenameTi
             return;
           }
           const nid = page.insertBlock(insertIndexAfter(afterId), { type: def.type, indent: getBlock(afterId)?.indent });
-          if (nid && def.type !== 'divider') focusBlock(nid, SEL_START);
+          if (nid && def.type === 'table') page.mutate((d) => tableContent.createTable(d, nid));
+          if (nid && def.type !== 'divider' && def.type !== 'table') focusBlock(nid, SEL_START);
         }}
         onClose={() => setInsertMenu(null)}
       />
@@ -750,6 +763,7 @@ export function PageView({ spaceId, objectId, emoji, title, subtitle, onRenameTi
 
 interface BlockRowProps {
   block: Block;
+  page: PageHook;
   /** 1-based position within its numbered run (numbered blocks only). */
   ordinal?: number;
   /** Live index node a `page` block links to (title/emoji update on rename). */
@@ -791,6 +805,7 @@ interface BlockRowProps {
 
 function BlockRow({
   block,
+  page,
   ordinal,
   childNode,
   editing,
@@ -841,6 +856,19 @@ function BlockRow({
     rowRef.current = node;
     registerRow(node);
   };
+
+  if (block.type === 'table') {
+    return (
+      <View
+        ref={setRef}
+        collapsable={false}
+        onLayout={(e) => onLayoutRow(e.nativeEvent.layout.y, e.nativeEvent.layout.height)}
+        style={[styles.row, indentPad ? { marginLeft: indentPad } : null]}
+      >
+        <TableBlock page={page} blockId={block.id} />
+      </View>
+    );
+  }
 
   if (block.type === 'divider') {
     return (

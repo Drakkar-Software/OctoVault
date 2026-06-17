@@ -3,12 +3,22 @@ import { useMemo } from 'react';
 import { useObjectContent, useWalMutator } from './use-object-content';
 import * as page from '@drakkar.software/octovault-sdk';
 import type { Block, BlockType, BookmarkMeta, NewBlock } from '@drakkar.software/octovault-sdk';
+import type { WalDocument } from '@drakkar.software/starfish-wal';
 
 export type { Block, BlockType, BookmarkMeta, NewBlock } from '@drakkar.software/octovault-sdk';
 
 export interface PageHook {
   blocks: Block[];
   ready: boolean;
+  /** The underlying WAL document (non-null once open). Exposed so table/comments
+   *  hooks can share this doc without opening a second WAL lifecycle. */
+  doc: WalDocument | null;
+  /** WAL version counter — bumps on every mutation and pull; use as useMemo dep. */
+  version: number;
+  /** Generic WAL mutator — apply `fn` to the open doc and schedule a debounced
+   *  commit. Returns the function's return value, or undefined when the doc is not
+   *  yet open. Equivalent to the internal `mut` in each mutation binding. */
+  mutate: <T>(fn: (d: WalDocument) => T) => T | undefined;
   opening: boolean;
   openError: string | null;
   offline: boolean;
@@ -65,6 +75,9 @@ export function usePage(spaceId: string, pageId: string, opts: { enabled?: boole
     openError,
     offline,
     reload,
+    doc,
+    version,
+    mutate: mut,
     appendBlock: (init) => mut((d) => page.appendBlock(d, init)),
     insertBlock: (index, init) => mut((d) => page.insertBlock(d, index, init)),
     setBlockText: (id, text) => mut((d) => page.setBlockText(d, id, text)),
