@@ -70,8 +70,11 @@ export interface TableHook {
  * @param blockId  The block id of the `table` block.
  */
 export function useTable(page: PageHook, blockId: string): TableHook {
-  // Re-compute the model whenever the underlying WAL doc changes (version bumps
-  // on every mutation, mirroring the `blocks` memo in usePage).
+  // The React Compiler strips deps that don't appear in the callback body — but
+  // page.version IS a real dep here (the WAL doc is mutated in-place; version is
+  // the only signal that readTable must re-run). Opt this hook out of compilation
+  // so the explicit deps array is respected as written.
+  'use no memo';
   const model = useMemo<TableModel | null>(
     () => (page.doc ? tbl.readTable(page.doc, blockId) : null),
     // eslint-disable-next-line react-hooks/exhaustive-deps

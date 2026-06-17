@@ -1,11 +1,19 @@
 import { useState } from 'react';
 import type { NativeSyntheticEvent, StyleProp, TextInputContentSizeChangeEventData, TextInputProps, TextStyle, ViewStyle } from 'react-native';
-import { Platform, StyleSheet, TextInput, View } from 'react-native';
+import { DynamicColorIOS, Platform, StyleSheet, TextInput, View } from 'react-native';
 
-import { fonts, glowShadow, radii, spacing, type as typeScale } from '@/theme';
+import { colors as themePalette, fonts, glowShadow, radii, spacing, type as typeScale } from '@/theme';
 import { useTheme } from '@/lib/use-theme';
 
 import { Icon, type IconName } from './Icon';
+
+// Resolve ink through the native UIColor dynamic-provider so iOS always has the
+// correct foreground color in typingAttributes regardless of React render timing.
+// A plain hex string can arrive at the wrong value when useColorScheme() hasn't
+// resolved yet (first render), making typed characters invisible on the dark canvas.
+const IOS_INK = Platform.OS === 'ios'
+  ? DynamicColorIOS({ light: themePalette.light.ink, dark: themePalette.dark.ink })
+  : null;
 
 // On web, drop the browser's default focus outline — the field container shows
 // a themed accent ring + glow on focus, which is the (more on-brand) indicator.
@@ -159,7 +167,7 @@ export function TextField({
             plain && styles.inputPlain,
             grownHeight !== undefined ? { height: grownHeight } : null,
             WEB_OUTLINE_RESET,
-            { color: colors.ink },
+            { color: IOS_INK ?? colors.ink },
             // iOS UIKit defaults to a white background on TextInput when editing;
             // in plain mode (doc surface / title editor) that white fill renders
             // over the dark canvas in dark mode, making light ink invisible.
