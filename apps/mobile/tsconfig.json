@@ -13,7 +13,7 @@
         "../../packages/sdk/src/index.ts"
       ],
       "@drakkar.software/octovault-sdk/platform": [
-        "../../packages/sdk/src/platform/index.ts"
+        "../../packages/sdk/src/platform/index.native.ts"
       ],
       "@drakkar.software/octovault-sdk/hash-wasm-shim": [
         "../../packages/sdk/src/platform/hash-wasm-shim.ts"

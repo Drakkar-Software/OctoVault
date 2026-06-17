@@ -184,8 +184,8 @@ export function useObjects(spaceId: string, opts: { enabled?: boolean; liveSync?
     if (!session) return null;
     // Always fetch the registry so enc:true nodes mint the keyring for ALL current
     // members (not just the owner). getMemberCap short-circuit would skip this.
-    const reg = await ensureRegistry(spaceId);
-    const node = await createNode(session, spaceId, { ...input, ...flags }, reg ?? undefined);
+    await ensureRegistry(spaceId);
+    const node = await createNode(session, spaceId, { ...input, ...flags });
     // Optimistic local insert so the sidebar and open-screen see the new node
     // immediately — pull() converges with the authoritative server state.
     applyNodes((cur) => addObject(cur, { ...input, ...flags, id: node.id }, stamp()).nodes);

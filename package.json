@@ -26,5 +26,10 @@
   },
   "dependencies": {
     "@drakkar.software/whistlers": "^0.6.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "@drakkar.software/octospaces-sdk": "0.12.8"
+    }
   }
 }
