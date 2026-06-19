@@ -19,7 +19,7 @@
 import type { Json, WalDocument } from '@drakkar.software/starfish-wal';
 
 import { randomId } from './domain/ids';
-import { rgaList, dedupRgaList } from './wal-helpers';
+import { rgaList, dedupRgaList, asBool, asObj } from './wal-helpers';
 
 export type BlockType =
   | 'paragraph'
@@ -90,24 +90,18 @@ export function readBlocks(doc: WalDocument): Block[] {
   const blocks: Block[] = [];
   for (const raw of dedupRgaList(state[ORDER])) {
     const type = (state[typeReg(raw)] as BlockType | undefined) ?? 'paragraph';
-    const checkedVal = state[checkedReg(raw)];
     const indentVal = state[indentReg(raw)];
-    const collapsedVal = state[collapsedReg(raw)];
     const refVal = state[refReg(raw)];
-    const bookmarkVal = state[bookmarkReg(raw)];
-    const bookmark = bookmarkVal && typeof bookmarkVal === 'object' && !Array.isArray(bookmarkVal)
-      ? (bookmarkVal as unknown as BookmarkMeta)
-      : undefined;
     blocks.push({
       id: raw,
       type,
       text: doc.text(textList(raw)),
-      checked: typeof checkedVal === 'boolean' ? checkedVal : undefined,
+      checked: asBool(state[checkedReg(raw)]),
       // Clamp a concurrent-merge artifact (negative indent) rather than render off-canvas.
       indent: typeof indentVal === 'number' && indentVal > 0 ? Math.floor(indentVal) : undefined,
-      collapsed: typeof collapsedVal === 'boolean' ? collapsedVal : undefined,
+      collapsed: asBool(state[collapsedReg(raw)]),
       ref: typeof refVal === 'string' ? refVal : undefined,
-      bookmark,
+      bookmark: asObj<BookmarkMeta>(state[bookmarkReg(raw)]),
     });
   }
   return blocks;
