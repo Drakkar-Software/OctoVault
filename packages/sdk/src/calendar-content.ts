@@ -1,5 +1,6 @@
-import type { Json, WalDocument } from '@drakkar.software/starfish-wal';
+import type { WalDocument } from '@drakkar.software/starfish-wal';
 import { randomId } from './domain/ids';
+import { rgaList, dedupRgaList, asNum } from './wal-helpers';
 
 export interface CalendarEvent {
   id: string;
@@ -19,21 +20,12 @@ const colorReg  = (id: string) => `ecolor:${id}`;
 const descReg   = (id: string) => `edesc:${id}`;
 const titleList = (id: string) => `etitle:${id}`;
 
-function eventsOrder(doc: WalDocument): string[] {
-  const v = doc.materialize()[EVENTS];
-  return Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [];
-}
-
 export function readEvents(doc: WalDocument): CalendarEvent[] {
   const state = doc.materialize();
-  const order = Array.isArray(state[EVENTS]) ? (state[EVENTS] as Json[]) : [];
-  const seen = new Set<string>();
   const events: CalendarEvent[] = [];
-  for (const raw of order) {
-    if (typeof raw !== 'string' || seen.has(raw)) continue;
-    seen.add(raw);
-    const start = typeof state[startReg(raw)] === 'number' ? (state[startReg(raw)] as number) : 0;
-    const end = typeof state[endReg(raw)] === 'number' ? (state[endReg(raw)] as number) : start;
+  for (const raw of dedupRgaList(state[EVENTS])) {
+    const start = asNum(state[startReg(raw)], 0);
+    const end = asNum(state[endReg(raw)], start);
     events.push({
       id: raw,
       title: doc.text(titleList(raw)),
@@ -49,7 +41,7 @@ export function readEvents(doc: WalDocument): CalendarEvent[] {
 
 export function addEvent(doc: WalDocument, init: { start: number; end?: number; title?: string; allDay?: boolean; color?: string; desc?: string }): string {
   const id = randomId();
-  const order = eventsOrder(doc);
+  const order = rgaList(doc, EVENTS);
   doc.setField(startReg(id), init.start);
   doc.setField(endReg(id), init.end ?? init.start);
   if (init.allDay) doc.setField(allDayReg(id), true);
@@ -61,7 +53,7 @@ export function addEvent(doc: WalDocument, init: { start: number; end?: number; 
 }
 
 export function deleteEvent(doc: WalDocument, id: string): void {
-  const order = eventsOrder(doc);
+  const order = rgaList(doc, EVENTS);
   doc.setList(EVENTS, order.filter((x) => x !== id));
   doc.setText(titleList(id), '');
   doc.deleteField(startReg(id));
