@@ -1,5 +1,6 @@
 import type { Json, WalDocument } from '@drakkar.software/starfish-wal';
 import { randomId } from './domain/ids';
+import { rgaList, dedupRgaList, deleteFieldsByPrefix } from './wal-helpers';
 
 export type FeedbackStatus = 'open' | 'planned' | 'in-progress' | 'done';
 
@@ -25,11 +26,6 @@ const voteKey    = (itemId: string, userId: string) => `ivote:${itemId}:${userId
 // Prefix used to scan all votes for an item.
 const votePrefix = (itemId: string) => `ivote:${itemId}:`;
 
-function itemsOrder(doc: WalDocument): string[] {
-  const v = doc.materialize()[ITEMS];
-  return Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [];
-}
-
 /** Collect all voter userIds for `itemId` by scanning per-voter keys. */
 function readVoters(state: Record<string, Json>, itemId: string): string[] {
   const prefix = votePrefix(itemId);
@@ -44,12 +40,8 @@ function readVoters(state: Record<string, Json>, itemId: string): string[] {
 
 export function readItems(doc: WalDocument): FeedbackItem[] {
   const state = doc.materialize() as Record<string, Json>;
-  const order = Array.isArray(state[ITEMS]) ? (state[ITEMS] as Json[]) : [];
-  const seen = new Set<string>();
   const items: FeedbackItem[] = [];
-  for (const raw of order) {
-    if (typeof raw !== 'string' || seen.has(raw)) continue;
-    seen.add(raw);
+  for (const raw of dedupRgaList(state[ITEMS])) {
     items.push({
       id: raw,
       title: doc.text(titleList(raw)),
@@ -65,7 +57,7 @@ export function readItems(doc: WalDocument): FeedbackItem[] {
 
 export function addItem(doc: WalDocument, title: string): string {
   const id = randomId();
-  const order = itemsOrder(doc);
+  const order = rgaList(doc, ITEMS);
   doc.setText(titleList(id), title);
   doc.setField(statusReg(id), 'open');
   doc.setList(ITEMS, [...order, id]);
@@ -73,17 +65,13 @@ export function addItem(doc: WalDocument, title: string): string {
 }
 
 export function deleteItem(doc: WalDocument, id: string): void {
-  const order = itemsOrder(doc);
+  const order = rgaList(doc, ITEMS);
   doc.setList(ITEMS, order.filter((x) => x !== id));
   doc.setText(titleList(id), '');
   doc.deleteField(statusReg(id));
   doc.deleteField(descReg(id));
   // Clean up all per-voter keys for this item.
-  const state = doc.materialize() as Record<string, Json>;
-  const prefix = votePrefix(id);
-  for (const key of Object.keys(state)) {
-    if (key.startsWith(prefix)) doc.deleteField(key);
-  }
+  deleteFieldsByPrefix(doc, votePrefix(id));
 }
 
 export function patchItem(doc: WalDocument, id: string, patch: Partial<Omit<FeedbackItem, 'id' | 'voters'>>): void {

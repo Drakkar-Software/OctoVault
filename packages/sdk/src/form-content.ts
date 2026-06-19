@@ -1,5 +1,6 @@
-import type { Json, WalDocument } from '@drakkar.software/starfish-wal';
+import type { WalDocument } from '@drakkar.software/starfish-wal';
 import { randomId } from './domain/ids';
+import { rgaList, dedupRgaList, asStr, asNum } from './wal-helpers';
 
 export type FormFieldKind = 'text' | 'email' | 'number' | 'select' | 'checkbox';
 
@@ -34,11 +35,6 @@ const submittedAtReg = (id: string) => `rsubmittedAt:${id}`;
 const submitterReg   = (id: string) => `rsubmitter:${id}`;
 const dataReg        = (id: string) => `rdata:${id}`;
 
-function listOf(doc: WalDocument, key: string): string[] {
-  const v = doc.materialize()[key];
-  return Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [];
-}
-
 function safeParseJson<T>(raw: unknown): T | null {
   if (typeof raw !== 'string') return null;
   try { return JSON.parse(raw) as T; } catch { return null; }
@@ -46,12 +42,8 @@ function safeParseJson<T>(raw: unknown): T | null {
 
 export function readFields(doc: WalDocument): FormField[] {
   const state = doc.materialize();
-  const order = Array.isArray(state[FIELDS]) ? (state[FIELDS] as Json[]) : [];
-  const seen = new Set<string>();
   const fields: FormField[] = [];
-  for (const raw of order) {
-    if (typeof raw !== 'string' || seen.has(raw)) continue;
-    seen.add(raw);
+  for (const raw of dedupRgaList(state[FIELDS])) {
     fields.push({
       id: raw,
       label: doc.text(labelList(raw)),
@@ -65,16 +57,12 @@ export function readFields(doc: WalDocument): FormField[] {
 
 export function readResponses(doc: WalDocument): FormResponse[] {
   const state = doc.materialize();
-  const order = Array.isArray(state[RESPONSES]) ? (state[RESPONSES] as Json[]) : [];
-  const seen = new Set<string>();
   const responses: FormResponse[] = [];
-  for (const raw of order) {
-    if (typeof raw !== 'string' || seen.has(raw)) continue;
-    seen.add(raw);
+  for (const raw of dedupRgaList(state[RESPONSES])) {
     responses.push({
       id: raw,
-      submittedAt: typeof state[submittedAtReg(raw)] === 'number' ? (state[submittedAtReg(raw)] as number) : 0,
-      submitter: typeof state[submitterReg(raw)] === 'string' ? (state[submitterReg(raw)] as string) : '',
+      submittedAt: asNum(state[submittedAtReg(raw)], 0),
+      submitter: asStr(state[submitterReg(raw)]),
       data: safeParseJson<Record<string, unknown>>(state[dataReg(raw)]) ?? {},
     });
   }
@@ -83,7 +71,7 @@ export function readResponses(doc: WalDocument): FormResponse[] {
 
 export function addField(doc: WalDocument, init: Partial<FormField> = {}): string {
   const id = randomId();
-  const order = listOf(doc, FIELDS);
+  const order = rgaList(doc, FIELDS);
   doc.setField(kindReg(id), init.kind ?? 'text');
   if (init.required) doc.setField(requiredReg(id), true);
   if (init.options?.length) doc.setField(optionsReg(id), JSON.stringify(init.options));
@@ -93,7 +81,7 @@ export function addField(doc: WalDocument, init: Partial<FormField> = {}): strin
 }
 
 export function deleteField(doc: WalDocument, id: string): void {
-  const order = listOf(doc, FIELDS);
+  const order = rgaList(doc, FIELDS);
   doc.setList(FIELDS, order.filter((x) => x !== id));
   doc.setText(labelList(id), '');
   doc.deleteField(kindReg(id));
@@ -102,7 +90,7 @@ export function deleteField(doc: WalDocument, id: string): void {
 }
 
 export function moveField(doc: WalDocument, id: string, toIndex: number): void {
-  const order = listOf(doc, FIELDS);
+  const order = rgaList(doc, FIELDS);
   const without = order.filter((x) => x !== id);
   const clamped = Math.max(0, Math.min(toIndex, without.length));
   without.splice(clamped, 0, id);
@@ -118,7 +106,7 @@ export function patchField(doc: WalDocument, id: string, patch: Partial<Omit<For
 
 export function addResponse(doc: WalDocument, submitter: string, data: Record<string, unknown>, now: number): string {
   const id = randomId();
-  const order = listOf(doc, RESPONSES);
+  const order = rgaList(doc, RESPONSES);
   doc.setField(submittedAtReg(id), now);
   doc.setField(submitterReg(id), submitter);
   doc.setField(dataReg(id), JSON.stringify(data));

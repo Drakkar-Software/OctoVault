@@ -24,6 +24,7 @@
 import type { Json, WalDocument } from '@drakkar.software/starfish-wal';
 
 import { randomId } from './domain/ids';
+import { strArray, dedupRgaList, deleteFieldsByPrefix } from './wal-helpers';
 
 /** One emoji and the members who reacted with it. */
 export interface CommentReaction {
@@ -60,24 +61,9 @@ const bodyList = (commentId: string) => `body:${commentId}`;
 const resolvedReg = (blockId: string) => `resolved:${blockId}`;
 const reactReg = (commentId: string, userId: string) => `${REACT_PREFIX}${commentId}:${userId}`;
 
-function ids(value: Json | undefined): string[] {
-  return Array.isArray(value) ? value.filter((x): x is string => typeof x === 'string') : [];
-}
-
-function emojis(value: Json | undefined): string[] {
-  return Array.isArray(value) ? value.filter((x): x is string => typeof x === 'string') : [];
-}
-
 /** Live comment ids for a block, in RGA order, de-duplicated. */
 function commentIds(state: Record<string, Json>, blockId: string): string[] {
-  const seen = new Set<string>();
-  const out: string[] = [];
-  for (const id of ids(state[commentsList(blockId)])) {
-    if (seen.has(id)) continue; // dedup concurrent reorders
-    seen.add(id);
-    out.push(id);
-  }
-  return out;
+  return dedupRgaList(state[commentsList(blockId)]);
 }
 
 /** Fold the per-reactor `react:{commentId}:*` registers into emoji groups.
@@ -88,7 +74,7 @@ function readReactions(state: Record<string, Json>, commentId: string): CommentR
   for (const key of Object.keys(state)) {
     if (!key.startsWith(prefix)) continue;
     const userId = key.slice(prefix.length);
-    for (const emoji of emojis(state[key])) {
+    for (const emoji of strArray(state[key])) {
       const arr = groups.get(emoji) ?? [];
       if (!arr.includes(userId)) arr.push(userId);
       groups.set(emoji, arr);
@@ -176,10 +162,7 @@ export function removeComment(doc: WalDocument, blockId: string, commentId: stri
   doc.setText(bodyList(commentId), '');
   doc.deleteField(authorReg(commentId));
   doc.deleteField(createdReg(commentId));
-  const prefix = `${REACT_PREFIX}${commentId}:`;
-  for (const key of Object.keys(state)) {
-    if (key.startsWith(prefix)) doc.deleteField(key);
-  }
+  deleteFieldsByPrefix(doc, `${REACT_PREFIX}${commentId}:`);
 }
 
 /** Mark a block's discussion resolved (or reopen it). Clears the register when
@@ -198,7 +181,7 @@ export function toggleReaction(
   userId: string,
   emoji: string,
 ): void {
-  const current = emojis(doc.materialize()[reactReg(commentId, userId)]);
+  const current = strArray(doc.materialize()[reactReg(commentId, userId)]);
   const next = current.includes(emoji)
     ? current.filter((e) => e !== emoji)
     : [...current, emoji];

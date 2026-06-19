@@ -19,6 +19,7 @@
 import type { Json, WalDocument } from '@drakkar.software/starfish-wal';
 
 import { randomId } from './domain/ids';
+import { rgaList, dedupRgaList } from './wal-helpers';
 
 export type BlockType =
   | 'paragraph'
@@ -83,20 +84,11 @@ const refReg = (id: string) => `ref:${id}`;
 const bookmarkReg = (id: string) => `bookmark:${id}`;
 const textList = (id: string) => `text:${id}`;
 
-function orderOf(doc: WalDocument): string[] {
-  const v = doc.materialize()[ORDER];
-  return Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [];
-}
-
 /** Project the WAL document into an ordered, de-duplicated list of blocks. */
 export function readBlocks(doc: WalDocument): Block[] {
   const state = doc.materialize();
-  const order = Array.isArray(state[ORDER]) ? (state[ORDER] as Json[]) : [];
-  const seen = new Set<string>();
   const blocks: Block[] = [];
-  for (const raw of order) {
-    if (typeof raw !== 'string' || seen.has(raw)) continue; // dedup concurrent reorders
-    seen.add(raw);
+  for (const raw of dedupRgaList(state[ORDER])) {
     const type = (state[typeReg(raw)] as BlockType | undefined) ?? 'paragraph';
     const checkedVal = state[checkedReg(raw)];
     const indentVal = state[indentReg(raw)];
@@ -149,7 +141,7 @@ export function insertBlock(doc: WalDocument, index: number, init: NewBlock = {}
   if (init.checked !== undefined) doc.setField(checkedReg(id), init.checked);
   if (init.indent) doc.setField(indentReg(id), init.indent);
   if (init.ref) doc.setField(refReg(id), init.ref);
-  const order = orderOf(doc);
+  const order = rgaList(doc, ORDER);
   const at = Math.max(0, Math.min(index, order.length));
   doc.setList(ORDER, [...order.slice(0, at), id, ...order.slice(at)]);
   return id;
@@ -157,7 +149,7 @@ export function insertBlock(doc: WalDocument, index: number, init: NewBlock = {}
 
 /** Append a block to the end. Returns the new block id. */
 export function appendBlock(doc: WalDocument, init: NewBlock = {}): string {
-  return insertBlock(doc, orderOf(doc).length, init);
+  return insertBlock(doc, rgaList(doc, ORDER).length, init);
 }
 
 /** Replace a block's body text (character-level CRDT merge). */
@@ -191,7 +183,7 @@ export function setBlockRef(doc: WalDocument, id: string, ref: string): void {
 
 /** Remove a block: drop it from `order`, clear its text, tombstone its props. */
 export function removeBlock(doc: WalDocument, id: string): void {
-  doc.setList(ORDER, orderOf(doc).filter((x) => x !== id));
+  doc.setList(ORDER, rgaList(doc, ORDER).filter((x) => x !== id));
   doc.setText(textList(id), '');
   doc.deleteField(typeReg(id));
   doc.deleteField(checkedReg(id));
@@ -203,7 +195,7 @@ export function removeBlock(doc: WalDocument, id: string): void {
 
 /** Move a block to `toIndex` via a minimal reconcile of the order list. */
 export function moveBlock(doc: WalDocument, id: string, toIndex: number): void {
-  const order = orderOf(doc).filter((x) => x !== id);
+  const order = rgaList(doc, ORDER).filter((x) => x !== id);
   const at = Math.max(0, Math.min(toIndex, order.length));
   order.splice(at, 0, id);
   doc.setList(ORDER, order);
@@ -217,7 +209,7 @@ export function moveBlock(doc: WalDocument, id: string, toIndex: number): void {
  * null when `id` is no longer in the order (concurrently removed).
  */
 export function splitBlock(doc: WalDocument, id: string, head: string, init: NewBlock = {}): string | null {
-  const order = orderOf(doc);
+  const order = rgaList(doc, ORDER);
   const at = order.indexOf(id);
   if (at < 0) return null;
   doc.setText(textList(id), head);
@@ -235,7 +227,7 @@ export function mergeBlockIntoPrevious(
   id: string,
   textOverride?: string,
 ): { prevId: string; offset: number } | null {
-  const order = orderOf(doc);
+  const order = rgaList(doc, ORDER);
   const at = order.indexOf(id);
   if (at <= 0) return null;
   const prevId = order[at - 1]!;
@@ -248,7 +240,7 @@ export function mergeBlockIntoPrevious(
 
 /** Insert a copy of `id` (type/text/checked/indent/ref/bookmark) directly below it. */
 export function duplicateBlock(doc: WalDocument, id: string): string | null {
-  const order = orderOf(doc);
+  const order = rgaList(doc, ORDER);
   const at = order.indexOf(id);
   if (at < 0) return null;
   const state = doc.materialize();
@@ -284,7 +276,7 @@ export function restoreBlock(doc: WalDocument, index: number, block: Block): voi
   if (block.collapsed !== undefined) doc.setField(collapsedReg(block.id), block.collapsed);
   if (block.ref) doc.setField(refReg(block.id), block.ref);
   if (block.bookmark) doc.setField(bookmarkReg(block.id), block.bookmark as unknown as Json);
-  const order = orderOf(doc).filter((x) => x !== block.id);
+  const order = rgaList(doc, ORDER).filter((x) => x !== block.id);
   const at = Math.max(0, Math.min(index, order.length));
   doc.setList(ORDER, [...order.slice(0, at), block.id, ...order.slice(at)]);
 }

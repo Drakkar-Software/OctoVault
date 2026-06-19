@@ -18,6 +18,7 @@
 import type { Json, WalDocument } from '@drakkar.software/starfish-wal';
 
 import { randomId } from './domain/ids';
+import { rgaList, dedupRgaList, asStr } from './wal-helpers';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -85,17 +86,8 @@ const tCell     = (r: string, c: string) => `tcell:${r}:${c}`;
 
 // ── Internal helpers ───────────────────────────────────────────────────────────
 
-function colIdsOf(doc: WalDocument, T: string): string[] {
-  const v = doc.materialize()[tblCols(T)];
-  return Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [];
-}
-
-function rowIdsOf(doc: WalDocument, T: string): string[] {
-  const v = doc.materialize()[tblRows(T)];
-  return Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [];
-}
-
-const asStr = (v: Json | undefined): string => (typeof v === 'string' ? v : '');
+const colIdsOf = (doc: WalDocument, T: string): string[] => rgaList(doc, tblCols(T));
+const rowIdsOf = (doc: WalDocument, T: string): string[] => rgaList(doc, tblRows(T));
 
 // ── Read projection ────────────────────────────────────────────────────────────
 
@@ -104,12 +96,8 @@ export function readTable(doc: WalDocument, T: string): TableModel {
   const state = doc.materialize();
 
   // Columns — dedup concurrent reorders (mirrors readBlocks / readColumns)
-  const rawCols = Array.isArray(state[tblCols(T)]) ? (state[tblCols(T)] as Json[]) : [];
-  const seenC = new Set<string>();
   const columns: TableColumn[] = [];
-  for (const raw of rawCols) {
-    if (typeof raw !== 'string' || seenC.has(raw)) continue;
-    seenC.add(raw);
+  for (const raw of dedupRgaList(state[tblCols(T)])) {
     const optsRaw = state[tColOpts(raw)];
     const options: TableSelectOption[] | undefined = Array.isArray(optsRaw)
       ? (optsRaw as Json[])
@@ -135,14 +123,7 @@ export function readTable(doc: WalDocument, T: string): TableModel {
   }
 
   // Rows — dedup
-  const rawRows = Array.isArray(state[tblRows(T)]) ? (state[tblRows(T)] as Json[]) : [];
-  const seenR = new Set<string>();
-  const rowIds: string[] = [];
-  for (const raw of rawRows) {
-    if (typeof raw !== 'string' || seenR.has(raw)) continue;
-    seenR.add(raw);
-    rowIds.push(raw);
-  }
+  const rowIds = dedupRgaList(state[tblRows(T)]);
 
   // Cells — iterate stored (row, col) pairs
   const cells: Record<string, CellValue> = {};

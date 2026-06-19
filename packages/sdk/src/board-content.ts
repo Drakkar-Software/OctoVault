@@ -7,9 +7,10 @@
  *
  * Every mutation is an idempotent CRDT op. Pure over a WalDocument (no React/network).
  */
-import type { Json, WalDocument } from '@drakkar.software/starfish-wal';
+import type { WalDocument } from '@drakkar.software/starfish-wal';
 
 import { randomId } from './domain/ids';
+import { rgaList, dedupRgaList, asStr } from './wal-helpers';
 
 export interface Column {
   id: string;
@@ -22,23 +23,12 @@ const COLS = 'columns';
 const colTitle = (id: string) => `coltitle:${id}`;
 const colDone = (id: string) => `coldone:${id}`;
 
-const str = (v: Json | undefined): string => (typeof v === 'string' ? v : '');
-
-function colIds(doc: WalDocument): string[] {
-  const v = doc.materialize()[COLS];
-  return Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [];
-}
-
 /** Project the WAL document into the board's column list. */
 export function readColumns(doc: WalDocument): Column[] {
   const state = doc.materialize();
-  const ids = Array.isArray(state[COLS]) ? (state[COLS] as Json[]) : [];
-  const seen = new Set<string>();
   const columns: Column[] = [];
-  for (const raw of ids) {
-    if (typeof raw !== 'string' || seen.has(raw)) continue;
-    seen.add(raw);
-    columns.push({ id: raw, title: str(state[colTitle(raw)]), done: state[colDone(raw)] === true });
+  for (const raw of dedupRgaList(state[COLS])) {
+    columns.push({ id: raw, title: asStr(state[colTitle(raw)]), done: state[colDone(raw)] === true });
   }
   return columns;
 }
@@ -70,7 +60,7 @@ export function setColumnDone(doc: WalDocument, id: string, done: boolean): void
 }
 
 export function moveColumn(doc: WalDocument, id: string, toIndex: number): void {
-  const cur = colIds(doc).filter((x, i, a) => a.indexOf(x) === i);
+  const cur = rgaList(doc, COLS).filter((x, i, a) => a.indexOf(x) === i);
   const from = cur.indexOf(id);
   if (from === -1) return;
   const next = cur.filter((x) => x !== id);
@@ -79,7 +69,7 @@ export function moveColumn(doc: WalDocument, id: string, toIndex: number): void 
 }
 
 export function deleteColumn(doc: WalDocument, id: string): void {
-  doc.setList(COLS, colIds(doc).filter((x) => x !== id));
+  doc.setList(COLS, rgaList(doc, COLS).filter((x) => x !== id));
   doc.deleteField(colTitle(id));
   doc.deleteField(colDone(id));
 }
