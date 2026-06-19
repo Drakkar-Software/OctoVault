@@ -1,6 +1,6 @@
 {
   "name": "@drakkar.software/octovault-sdk",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "type": "module",
   "sideEffects": false,
   "description": "OctoVault — headless SDK (crypto, sync, WAL/CRDT models, pure domain logic)",
@@ -32,7 +32,7 @@
   },
   "dependencies": {
     "@drakkar.software/octospaces-platform-sdk": "0.1.1",
-    "@drakkar.software/octospaces-sdk": "0.13.3",
+    "@drakkar.software/octospaces-sdk": "0.13.4",
     "@drakkar.software/starfish-client": "3.0.0-alpha.27",
     "@drakkar.software/starfish-identities": "3.0.0-alpha.27",
     "@drakkar.software/starfish-keyring": "3.0.0-alpha.27",

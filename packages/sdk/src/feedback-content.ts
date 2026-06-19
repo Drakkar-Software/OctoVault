@@ -1,6 +1,6 @@
 import type { Json, WalDocument } from '@drakkar.software/starfish-wal';
 import { randomId } from './domain/ids';
-import { rgaList, dedupRgaList, deleteFieldsByPrefix } from './wal-helpers';
+import { rgaList, dedupRgaList, deleteFieldsByPrefix, asStrOrNull } from './wal-helpers';
 
 export type FeedbackStatus = 'open' | 'planned' | 'in-progress' | 'done';
 
@@ -46,7 +46,7 @@ export function readItems(doc: WalDocument): FeedbackItem[] {
       id: raw,
       title: doc.text(titleList(raw)),
       status: (typeof state[statusReg(raw)] === 'string' ? state[statusReg(raw)] : 'open') as FeedbackStatus,
-      desc: typeof state[descReg(raw)] === 'string' ? (state[descReg(raw)] as string) : null,
+      desc: asStrOrNull(state[descReg(raw)]),
       voters: readVoters(state, raw),
     });
   }

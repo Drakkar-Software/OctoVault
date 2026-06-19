@@ -1,6 +1,6 @@
 import type { WalDocument } from '@drakkar.software/starfish-wal';
 import { randomId } from './domain/ids';
-import { rgaList, dedupRgaList, asNum } from './wal-helpers';
+import { rgaList, dedupRgaList, asNum, asStrOrNull } from './wal-helpers';
 
 export interface CalendarEvent {
   id: string;
@@ -32,8 +32,8 @@ export function readEvents(doc: WalDocument): CalendarEvent[] {
       start,
       end,
       allDay: state[allDayReg(raw)] === true,
-      color: typeof state[colorReg(raw)] === 'string' ? (state[colorReg(raw)] as string) : null,
-      desc: typeof state[descReg(raw)] === 'string' ? (state[descReg(raw)] as string) : null,
+      color: asStrOrNull(state[colorReg(raw)]),
+      desc: asStrOrNull(state[descReg(raw)]),
     });
   }
   return events.sort((a, b) => a.start - b.start);

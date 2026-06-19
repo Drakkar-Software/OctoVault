@@ -46,6 +46,21 @@ export const asStr = (v: Json | undefined): string => (typeof v === 'string' ? v
 export const asNum = (v: Json | undefined, fallback: number): number =>
   typeof v === 'number' ? v : fallback;
 
+/** Coerce a LWW register to a boolean, or `undefined` when absent/non-boolean. */
+export const asBool = (v: Json | undefined): boolean | undefined =>
+  typeof v === 'boolean' ? v : undefined;
+
+/** Coerce a LWW register to a string, or `null` when absent/non-string (the
+ *  nullable-string projection variant, distinct from `asStr`'s empty-string fallback). */
+export const asStrOrNull = (v: Json | undefined): string | null =>
+  typeof v === 'string' ? v : null;
+
+/** Narrow a LWW register to a plain object of shape `T`, or `undefined` when absent /
+ *  non-object / an array. (The register stores arbitrary Json; this is the guarded cast
+ *  every object-valued projection repeated inline.) */
+export const asObj = <T>(v: Json | undefined): T | undefined =>
+  v != null && typeof v === 'object' && !Array.isArray(v) ? (v as unknown as T) : undefined;
+
 /** Tombstone every field whose key starts with `prefix` (per-voter / per-reactor
  *  register cleanup on entity delete). */
 export function deleteFieldsByPrefix(doc: WalDocument, prefix: string): void {
