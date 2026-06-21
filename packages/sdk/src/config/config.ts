@@ -41,14 +41,14 @@ let _config: OctoVaultConfig = {
 export function configureOctoVault(config: Partial<OctoVaultConfig>): void {
   _config = { ..._config, ...config };
   // Forward to octospaces-sdk so its internal getters (getSyncBase, getSyncNamespace,
-  // getSyncPrefix, getEventsUrl, getWebBase) are populated. All re-exported octospaces
-  // modules (client, identity, registry, members, object-index, …) delegate to those
-  // getters — they throw if unconfigured.
+  // getSyncPrefix, getEventsUrl) are populated. All re-exported octospaces modules
+  // (client, identity, registry, members, object-index, …) delegate to those getters —
+  // they throw if unconfigured. (`webBase` is kept locally on OctoVaultConfig; octospaces
+  // dropped its `webBase` config field, so it is no longer forwarded.)
   configureOctoSpaces({
     syncBase: _config.syncBase,
     syncNamespace: _config.syncNamespace,
     eventsUrl: _config.eventsUrl,
-    webBase: _config.webBase,
     ...(_config.sharedSpacesNamespace ? { sharedSpacesNamespace: _config.sharedSpacesNamespace } : {}),
   });
 }
