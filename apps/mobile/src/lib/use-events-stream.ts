@@ -39,7 +39,7 @@ export function useEventsStream(session: Session | null, spaceIds: string[]): vo
       authHeaders: (method, pathAndQuery) => {
         const s = sessionRef.current;
         if (!s) return Promise.reject(new Error('no session'));
-        return buildAuthHeaders(s.chatCap, s.keys.edPriv, method, pathAndQuery);
+        return buildAuthHeaders(s.contentCap, s.keys.edPriv, method, pathAndQuery);
       },
       parse: extractChangedIds,
       onChange: ({ spaceId, objectId, nodeId }) => {

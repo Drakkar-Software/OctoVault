@@ -95,7 +95,7 @@ export function useMergeDoc(opts: MergeDocOptions): MergeDocResult {
     const memberCap = getMemberCap(spaceId);
     const nodeEntryCap = nodeEntry?.kind === 'member' ? nodeEntry.cap : null;
     const rawCap = nodeEntryCap ?? (memberCap ? memberCap : null);
-    const cap = rawCap ? JSON.parse(rawCap) : session.chatCap;
+    const cap = rawCap ? JSON.parse(rawCap) : session.contentCap;
     const paths = privatePaths();
     return {
       ...base,

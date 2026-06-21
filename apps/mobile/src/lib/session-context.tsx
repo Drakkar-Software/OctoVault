@@ -147,7 +147,12 @@ async function hydrateCapsFor(session: Session): Promise<void> {
   // prime SpacesProvider with the list; neither then re-reads the identical doc. Pass
   // the seed-authenticated accountClient (readSpaces degrades to empty on failure,
   // which leaves the local cap cache intact).
-  const { spaces, caps, mutes, reads, pubAccess, quickReactions } = await readSpaces(session.accountClient, session.userId);
+  const spacesDoc = await readSpaces(session.accountClient, session.userId);
+  const { spaces, caps, mutes, reads, pubAccess } = spacesDoc;
+  // octospaces 0.16 moved app-specific fields under `extra`; quickReactions is OctoVault-owned.
+  const quickReactions = Array.isArray(spacesDoc.extra?.quickReactions)
+    ? (spacesDoc.extra.quickReactions as unknown[]).filter((x): x is string => typeof x === 'string')
+    : [];
   // Recover space access (member caps + link credentials) from the synced `_spaces` doc.
   // This replaces the old hydrateMemberCaps + hydratePubspaceCaps + recoverPubspaceAccess trio.
   await recoverSpaceAccess(session, { caps, pubAccess });

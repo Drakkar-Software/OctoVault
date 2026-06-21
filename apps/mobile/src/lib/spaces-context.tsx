@@ -212,7 +212,7 @@ export function SpacesProvider({ children }: { children: ReactNode }) {
       // Mint the space keyring immediately so the first invite always adds the
       // recipient KEM (createSpaceInviteLink silently skips when keyring is missing).
       await ownerEnsureKeyring(
-        session.chatClient,
+        session.contentClient,
         session.keys,
         keyringPull(space.id),
         keyringPush(space.id),

@@ -126,7 +126,6 @@ export * from './starfish/member-caps';
 export {
   readSpaces,
   updateSpacesDoc,
-  updateQuickReactionsDoc,
   reorderSpaces,
   readSpaceAccess,
   writeSpaceAccess,
