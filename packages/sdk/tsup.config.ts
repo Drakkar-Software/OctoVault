@@ -17,6 +17,7 @@ export default defineConfig({
     '@drakkar.software/starfish-keyring',
     '@drakkar.software/starfish-protocol',
     '@drakkar.software/starfish-sharing',
+    '@drakkar.software/starfish-spaces',
     '@drakkar.software/starfish-wal',
     '@react-native-async-storage/async-storage',
     'expo-secure-store',

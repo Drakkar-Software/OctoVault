@@ -126,8 +126,8 @@ export function SpaceRegistryProvider({ children }: { children: ReactNode }) {
   const fetchEntry = useCallback(async (spaceId: string): Promise<SpaceRegistryEntry> => {
     const s = sessionRef.current;
     if (!s) return IDLE;
-    const { owner, members, name, image, hash } = await readSpaceAccess(s.accountClient, spaceId);
-    void reconcileSpaceMeta(s.accountClient, s.userId, spaceId, { name, image }, spacesRef.current).catch(() => {});
+    const { owner, members, name, image, hash } = await readSpaceAccess(s.contentClient, spaceId, s);
+    void reconcileSpaceMeta(s.spacesRegistryClient, s, spaceId, { name, image }, spacesRef.current).catch(() => {});
     return { owner, members, name, image, hash, loading: false, loaded: true };
   }, []);
 

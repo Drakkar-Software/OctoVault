@@ -85,8 +85,9 @@ export function useSpaceDetails(spaceId: string): SpaceDetails {
     (async () => {
       try {
         const { owner: ownr, name: sharedName, image: sharedImage } = await readSpaceAccess(
-            session.accountClient,
+            session.contentClient,
             spaceId,
+            session,
           );
           if (cancelled) return;
           setOwner(ownr);
@@ -137,8 +138,8 @@ export function useSpaceDetails(spaceId: string): SpaceDetails {
           // Re-read the access record for the freshest owner/members/hash, then rewrite it
           // with the new shared name/image (owner-gated). Threads owner+members through so
           // the meta edit never drops the roster.
-          const { owner: ownr, members, hash } = await readSpaceAccess(session.accountClient, spaceId);
-          await writeSpaceAccess(session.accountClient, spaceId, ownr ?? session.userId, members, hash, {
+          const { owner: ownr, members, hash } = await readSpaceAccess(session.contentClient, spaceId, session);
+          await writeSpaceAccess(session.contentClient, spaceId, ownr ?? session.userId, members, hash, session, {
             name: nextName,
             image: nextImage,
           });

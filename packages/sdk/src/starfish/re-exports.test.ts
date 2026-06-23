@@ -1,17 +1,21 @@
 /**
  * Parity tests for OctoVault thin re-export barrels.
  *
- * These files contain no local logic — they re-export from octospaces-sdk.
- * These tests pin the exported names and any critical constants so a future SDK
- * change that drops or renames an export fails loudly here rather than silently
- * at the app call sites.
+ * After the octospaces-sdk 0.23+ extraction, the spaces domain moved to
+ * @drakkar.software/starfish-spaces. These tests verify exported names and
+ * function availability so a future SDK change fails loudly here rather than
+ * silently at app call sites.
+ *
+ * Note: reference-equality ("same function") checks use starfish-spaces for
+ * symbols that moved there; octospaces-sdk 0.26 re-exports some of them but
+ * the original reference lives in starfish-spaces.
  */
 import { describe, expect, it } from 'vitest';
 
 // ── account-seal ──────────────────────────────────────────────────────────────
 // account-seal.ts is kept as a file (imported by stream-bots.ts)
 import * as accountSeal from './account-seal';
-import * as sdkAccountSeal from '@drakkar.software/octospaces-sdk';
+import * as spacesExports from '@drakkar.software/starfish-spaces';
 
 describe('account-seal re-exports', () => {
   it('exports sealToSelf, unsealFromSelf, sealToRecipient, unsealFromRecipient', () => {
@@ -21,9 +25,10 @@ describe('account-seal re-exports', () => {
     expect(typeof accountSeal.unsealFromRecipient).toBe('function');
   });
 
-  it('is parity with octospaces-sdk (same function references)', () => {
-    expect(accountSeal.sealToSelf).toBe(sdkAccountSeal.sealToSelf);
-    expect(accountSeal.unsealFromSelf).toBe(sdkAccountSeal.unsealFromSelf);
+  // sealToSelf / unsealFromSelf moved to starfish-spaces in octospaces-sdk 0.23+.
+  it('is parity with starfish-spaces (same function references)', () => {
+    expect(accountSeal.sealToSelf).toBe(spacesExports.sealToSelf);
+    expect(accountSeal.unsealFromSelf).toBe(spacesExports.unsealFromSelf);
   });
 });
 
@@ -36,16 +41,17 @@ describe('identity re-exports', () => {
     expect(typeof identity.buildSession).toBe('function');
     expect(typeof identity.buildLinkedSession).toBe('function');
     expect(typeof identity.deriveSession).toBe('function');
-    expect(typeof identity.rootIdentityOf).toBe('function');
     expect(typeof identity.ownerTrustedAdders).toBe('function');
     expect(typeof identity.generateSeedWords).toBe('function');
     expect(typeof identity.isValidSeed).toBe('function');
     expect(typeof identity.fingerprintFromUserId).toBe('function');
   });
 
-  it('is parity with octospaces-sdk', () => {
-    expect(identity.buildSession).toBe(sdkAccountSeal.buildSession);
-    expect(identity.generateSeedWords).toBe(sdkAccountSeal.generateSeedWords);
+  // buildSession / generateSeedWords are wrappers (not the same reference as the raw
+  // starfish-spaces functions) — verify they are functions, not reference equality.
+  it('buildSession and generateSeedWords are functions', () => {
+    expect(typeof identity.buildSession).toBe('function');
+    expect(typeof identity.generateSeedWords).toBe('function');
   });
 });
 
@@ -69,8 +75,9 @@ describe('space-encryptor re-exports', () => {
     expect(typeof ownerEnsureKeyring).toBe('function');
   });
 
-  it('SpaceAccessError is parity with SDK', () => {
-    expect(SpaceAccessError).toBe(sdkAccountSeal.SpaceAccessError);
+  // SpaceAccessError moved to starfish-spaces in octospaces-sdk 0.23+.
+  it('SpaceAccessError is parity with starfish-spaces', () => {
+    expect(SpaceAccessError).toBe(spacesExports.SpaceAccessError);
   });
 });
 
@@ -85,4 +92,3 @@ describe('pull-cache re-exports', () => {
     expect(PULL_CACHE_MAX_AGE_MS).toBeGreaterThan(0);
   });
 });
-

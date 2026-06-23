@@ -57,7 +57,9 @@ export function WorkspaceNav() {
 
   const railSpaces: RailSpace[] = spaces.map((s) => ({
     id: s.id,
-    short: s.short,
+    name: s.name,
+    // `short` is required by RailSpace; Space.short is optional (seeded by onSpaceMeta).
+    short: s.short ?? initialsFor(s.name),
     image: s.image,
     unread: s.unread,
   }));

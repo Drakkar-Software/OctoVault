@@ -13,9 +13,26 @@
  *   node.meta?.props       →  propsOf(node)       (from objects-ext.ts)
  */
 
-import type { PresenceStatus, VerificationLevel, SealedBlob } from '@drakkar.software/octospaces-sdk';
+import type { PresenceStatus, VerificationLevel } from '@drakkar.software/octospaces-sdk';
+// SealedBlob used in AutomationMeta.credential; imported from starfish-spaces (canonical source
+// since octospaces-sdk 0.23+). account-seal.ts re-exports it for the barrel.
+import type { SealedBlob } from '@drakkar.software/starfish-spaces';
 
 // ── Re-export shared octospaces domain types ───────────────────────────────
+// `Space` moved to starfish-spaces in octospaces-sdk 0.23+ and is NOT re-exported
+// by octospaces-sdk 0.26. OctoVault extends the minimal base with display fields
+// that are seeded by reconcileSpaceMeta / onSpaceMeta and the unread overlay.
+// All extra fields are optional so the base `Space[]` from readSpaces() is
+// structurally assignable to `OctoVaultSpace[]` (TypeScript structural typing).
+import type { Space as _BaseSpace } from '@drakkar.software/starfish-spaces';
+export interface Space extends _BaseSpace {
+  /** Two-letter monogram shown in compact rail tiles. Populated by onSpaceMeta. */
+  short?: string;
+  /** Avatar data-URI (same contract as profile avatars). Populated by onSpaceMeta. */
+  image?: string;
+  /** Live unread count, overlaid by `useSpaces` from the read-marks store. */
+  unread?: number;
+}
 export type {
   ID,
   NodeAccess,
@@ -23,7 +40,6 @@ export type {
   ObjectType,
   ObjectContentKind,
   ObjectsIndex,
-  Space,
   CapMap,
   PubAccessMap,
   MuteValue,
@@ -32,8 +48,9 @@ export type {
   ReadPrefs,
   PresenceStatus,
   VerificationLevel,
-  SealedBlob,
 } from '@drakkar.software/octospaces-sdk';
+// SealedBlob exported from account-seal (starfish-spaces) to avoid a duplicate
+// namespace warning in tsup — both octospaces-sdk and starfish-spaces carry the same type.
 
 // ── Vault-specific types ────────────────────────────────────────────────────
 

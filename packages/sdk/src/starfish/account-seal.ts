@@ -1,10 +1,10 @@
 /**
- * Re-exports the shared octospaces-sdk account-seal implementation.
+ * Re-exports the account-seal implementation from starfish-spaces.
  */
 export {
   sealToSelf,
   unsealFromSelf,
   sealToRecipient,
   unsealFromRecipient,
-} from '@drakkar.software/octospaces-sdk';
-export type { SealedBlob } from '@drakkar.software/octospaces-sdk';
+} from '@drakkar.software/starfish-spaces';
+export type { SealedBlob } from '@drakkar.software/starfish-spaces';

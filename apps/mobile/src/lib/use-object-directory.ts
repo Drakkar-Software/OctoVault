@@ -15,6 +15,7 @@ import { sortDiscoverEntries } from '@drakkar.software/octospaces-ui';
 import type { DiscoverEntry } from '@drakkar.software/octospaces-ui';
 import { humanizeError, readObjectDirectory } from '@drakkar.software/octovault-sdk';
 
+import { useSession } from './session-context';
 import { useSpaces } from './use-spaces';
 
 type Status = 'idle' | 'loading' | 'ready' | 'error';
@@ -29,12 +30,18 @@ export interface ObjectDirectoryResult {
 
 export function useObjectDirectory(opts: { enabled: boolean }): ObjectDirectoryResult {
   const { enabled } = opts;
+  const { session } = useSession();
   const { spaces } = useSpaces();
 
   // Hold the member-space set in a ref so the stable `load` always reads the latest
   // membership without becoming a dependency (avoids re-fetching on every render).
   const memberIdsRef = useRef(new Set<string>());
   memberIdsRef.current = new Set(spaces.map((s) => s.id));
+
+  // Session ref: readObjectDirectory(session) needs the live session but must not
+  // become a `load` dependency (would reset the cache on every re-render).
+  const sessionRef = useRef(session);
+  sessionRef.current = session;
 
   const [status, setStatus] = useState<Status>('idle');
   const [entries, setEntries] = useState<DiscoverEntry[]>([]);
@@ -51,7 +58,8 @@ export function useObjectDirectory(opts: { enabled: boolean }): ObjectDirectoryR
       setError(null);
     }
     try {
-      const raw = await readObjectDirectory();
+      if (!sessionRef.current) { setStatus('idle'); return; }
+      const raw = await readObjectDirectory(sessionRef.current);
       if (cancelledRef.current) return;
       const filtered = raw.filter((e) => memberIdsRef.current.has(e.spaceId));
       setEntries(sortDiscoverEntries(filtered));

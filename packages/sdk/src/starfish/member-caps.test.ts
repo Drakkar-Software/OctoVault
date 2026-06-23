@@ -1,15 +1,18 @@
 /**
- * Tests for the member-caps compat shim. Most of this module re-exports octospaces-sdk
+ * Tests for the member-caps compat shim. Most of this module re-exports starfish-spaces
  * directly — we only test the local shim `getMemberCap` that isn't in the SDK.
+ *
+ * Note: member-caps.ts moved its source from octospaces-sdk to starfish-spaces in the
+ * octospaces-sdk 0.23+ migration — mock the correct module.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('@drakkar.software/octospaces-sdk', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@drakkar.software/octospaces-sdk')>();
+vi.mock('@drakkar.software/starfish-spaces', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@drakkar.software/starfish-spaces')>();
   return { ...actual, getSpaceAccessEntry: vi.fn() };
 });
 
-import { getSpaceAccessEntry } from '@drakkar.software/octospaces-sdk';
+import { getSpaceAccessEntry } from '@drakkar.software/starfish-spaces';
 import { getMemberCap } from './member-caps';
 
 beforeEach(() => vi.clearAllMocks());

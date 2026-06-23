@@ -2,8 +2,11 @@
 // Pure, React-free logic for OctoVault: crypto/identity, Starfish sync, WAL/CRDT
 // document models, data registries, pure helpers.
 //
-// The shared octospaces-sdk surface is re-exported here; the vault adds only its
-// own WAL engine, content models, domain descriptors, and vault-specific helpers.
+// After the starfish-spaces extraction (octospaces-sdk 0.23+), the spaces domain
+// (registry, members, nodes, identity, keyrings, profiles) comes from
+// `@drakkar.software/starfish-spaces`; `@drakkar.software/octospaces-sdk` retains
+// config, blobs, paths, pairing, SSE transport, session-persistence, search/bus, and
+// storage types. The vault adds its own WAL/CRDT content models and domain descriptors.
 
 // ── Config / DI seams ─────────────────────────────────────────────────────────
 export * from './config/config';
@@ -80,11 +83,12 @@ export * from './feedback-content';
 
 // ── Starfish sync layer ───────────────────────────────────────────────────────
 
-// Identity / session (file kept — imported by starfish/stream-bots.ts)
+// Identity / session (wrappers that inject clientOpts into starfish-spaces builders)
 export * from './starfish/identity';
 
-// Client helpers + node-access resolver (merged; openEncryptor/buildEncryptor/ownerEnsureKeyring
-// appear in both shims — exported once here; ownerTrustedAdders is covered by identity above)
+// Client helpers: host-aware auth headers, profile/encryptor wrappers, layout
+// (merged; openEncryptor/buildEncryptor/ownerEnsureKeyring appear in both shims —
+// exported once here)
 export {
   capProviderFor,
   readProfile,
@@ -93,20 +97,36 @@ export {
   buildAuthHeaders,
   buildEncryptor,
   ownerEnsureKeyring,
+} from './starfish/client';
+
+// Space access store + per-node access (starfish-spaces)
+export {
   SpaceAccessError,
   getSpaceClient,
   getNodeAccess,
   clearNodeAccessCache,
-} from '@drakkar.software/octospaces-sdk';
+  hydrateSpaceAccessStore,
+  getSpaceAccessEntry,
+  saveSpaceAccessEntry,
+  removeSpaceAccessEntry,
+  getNodeAccessEntry,
+  saveNodeAccessEntry,
+  localSpaceAccessEntries,
+  memberCapsFromStore,
+  linkAccessFromStore,
+  type SpaceAccessEntry,
+  type SpaceAccessMap,
+  type NodeAccess,
+} from '@drakkar.software/starfish-spaces';
 
-// Device pairing
+// Device pairing (octospaces-sdk)
 export {
   startDevicePairing,
   completeDevicePairing,
 } from '@drakkar.software/octospaces-sdk';
 export type { PairResult } from '@drakkar.software/octospaces-sdk';
 
-// Space membership + node membership
+// Space membership + node membership (starfish-spaces)
 export {
   makeJoinRequest,
   inviteToSpace,
@@ -117,14 +137,15 @@ export {
   createNode,
   inviteToNode,
   joinNodeByLink,
-} from '@drakkar.software/octospaces-sdk';
+} from '@drakkar.software/starfish-spaces';
 
 // Member-cap shims + canonical store API (file kept — defines getMemberCap)
 export * from './starfish/member-caps';
 
-// Registry
+// Registry (starfish-spaces)
+// readSpaces is NOT re-exported from starfish-spaces here — registry-ext.ts wraps
+// it to re-flatten mutes/reads from extra (SpacesDoc restructure in 0.23+).
 export {
-  readSpaces,
   updateSpacesDoc,
   reorderSpaces,
   readSpaceAccess,
@@ -134,11 +155,12 @@ export {
   reconcileSpaceMeta,
   onSpaceMeta,
   broadcastSpaceMeta,
-} from '@drakkar.software/octospaces-sdk';
-export type { SpaceMeta, SpaceMetaUpdate } from '@drakkar.software/octospaces-sdk';
+} from '@drakkar.software/starfish-spaces';
+export type { SpaceMeta, SpaceMetaUpdate } from '@drakkar.software/starfish-spaces';
 export * from './starfish/registry-ext';
 
-// Objects / object tree (octospaces core)
+// Objects / object tree (octospaces-sdk still owns these — present in both packages;
+// keep octospaces-sdk source to minimise churn)
 export {
   buildTree,
   breadcrumbs,
@@ -177,7 +199,7 @@ export {
   archiveType,
 } from './starfish/object-types-store';
 
-// Blob uploads
+// Blob uploads (octospaces-sdk)
 export type { ObjectBlobRef, ObjectBlobStore } from '@drakkar.software/octospaces-sdk';
 export {
   MAX_OBJECT_BLOB_BYTES,
@@ -191,9 +213,10 @@ export {
 export * from './starfish/attachments';
 // account-seal kept as a file — imported by starfish/stream-bots.ts
 export * from './starfish/account-seal';
-export { fetchWithTimeout } from '@drakkar.software/octospaces-sdk';
+// fetchWithTimeout removed from octospaces-sdk in 0.24 — vendored via starfish-client/fetch.
+export { fetchWithTimeout, CONNECT_TIMEOUT_MS } from './starfish/fetch-timeout';
 
-// Paths / scopes
+// Paths / scopes (octospaces-sdk)
 export {
   OBJECT_COLLECTIONS,
   keyringPull,
@@ -207,22 +230,28 @@ export {
   typesIndexPull,
   typesIndexPush,
   objectDirName,
-  readObjectDirectory,
   bytesToHex,
   objLogName,
   objectBlobName,
   typesIndexName,
 } from '@drakkar.software/octospaces-sdk';
-export type { PublicObjectDirEntry } from '@drakkar.software/octospaces-sdk';
+// readObjectDirectory / ObjectDirectoryEntry moved from octospaces-sdk to starfish-spaces in 0.24.
+// New API: readObjectDirectory(session, shard?) — session provides baseUrl + layout.
+// PublicObjectDirEntry alias kept for call-site backwards compat (same shape as ObjectDirectoryEntry).
+export { readObjectDirectory, parseObjectDirectoryDoc } from '@drakkar.software/starfish-spaces';
+export type { ObjectDirectoryEntry } from '@drakkar.software/starfish-spaces';
+export type { ObjectDirectoryEntry as PublicObjectDirEntry } from '@drakkar.software/starfish-spaces';
 
 // Session / cache
-export { sessionFromPersisted, activeAccountOf } from '@drakkar.software/octospaces-sdk';
-export { pullCache, PULL_CACHE_MAX_AGE_MS } from '@drakkar.software/octospaces-sdk';
+export { sessionFromPersisted, activeAccountOf, rootIdentityOf } from '@drakkar.software/octospaces-sdk';
+// pullCache / PULL_CACHE_MAX_AGE_MS were removed from octospaces-sdk in 0.24 —
+// vendored locally via starfish-client's createKvPullCache.
+export { pullCache, PULL_CACHE_MAX_AGE_MS } from './starfish/pull-cache';
 
 // Stream bots (app-specific)
 export * from './starfish/stream-bots';
 
-// SSE events transport
+// SSE events transport (octospaces-sdk)
 export {
   buildSignedEventsRequest,
   parseSseFrames,
@@ -230,12 +259,11 @@ export {
 } from '@drakkar.software/octospaces-sdk';
 export type { SubscribeChangesOptions } from '@drakkar.software/octospaces-sdk';
 
-// WAL document factory
-export {
-  WalDocument,
-  createWalDocument,
-  noopEncryptor,
-} from '@drakkar.software/octospaces-sdk/wal';
+// WAL document factory — moved from octospaces-sdk/wal (subpath dropped in 0.24).
+// WalDocument class/type lives in the root entry; createWalDocument + noopEncryptor
+// are the client-side factory exported from the /client subpath.
+export { WalDocument } from '@drakkar.software/starfish-wal';
+export { createWalDocument, noopEncryptor } from '@drakkar.software/starfish-wal/client';
 
 // Storage types (platform-agnostic; implementations live in ./platform)
 export type {

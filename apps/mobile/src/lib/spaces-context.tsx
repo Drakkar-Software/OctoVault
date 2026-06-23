@@ -102,7 +102,7 @@ export function SpacesProvider({ children }: { children: ReactNode }) {
 
   const refresh = useCallback(async () => {
     if (!session) return;
-    const { spaces: list, mutes, reads } = await readSpaces(session.accountClient, session.userId);
+    const { spaces: list, mutes, reads } = await readSpaces(session.spacesRegistryClient, session);
     setSpaces(list.filter(visibleSpace));
     setActiveIdState((prev) => prev ?? pickActive(list));
     // This `_spaces` re-pull runs on every navigation (effect below) and on app
@@ -235,7 +235,7 @@ export function SpacesProvider({ children }: { children: ReactNode }) {
         [...list].sort((a, b) => (order.get(a.id) ?? Infinity) - (order.get(b.id) ?? Infinity));
       setSpaces((prev) => reordered(prev));
       try {
-        await reorderSpacesDoc(session.accountClient, session.userId, orderedRailIds);
+        await reorderSpacesDoc(session.spacesRegistryClient, session, orderedRailIds);
       } catch {
         // Write failed — re-read the authoritative doc so the rail can't drift from the server.
         void refresh().catch(() => {});

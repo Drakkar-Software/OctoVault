@@ -7,7 +7,7 @@
  * per-space membership check that follows).
  *
  * Filter: client declares candidate spaceIds via ?spaces=sp-a,sp-b. All spaces are
- * validated against `spaces/{id}/_access` membership (makeSpaceRoleEnricher). The
+ * validated against `spaces/{id}/_access` membership (createSpacesRoleEnricher). The
  * authorized ids map to sanitized Whistlers destinationTopics, and only those topics
  * proxy upstream. There is no space-level public concept — per-node access flags
  * control content visibility; SSE always requires membership.
@@ -37,7 +37,9 @@ import type {
   RoleEnricher,
 } from "@drakkar.software/starfish-server";
 
-import { SPACE_MEMBER_ROLE } from "./space-role.js";
+// SPACE_MEMBER_ROLE is not exported by starfish-spaces; define inline.
+// TODO: import from starfish-spaces when it exports the constant (tracks createSpacesRoleEnricher config.memberRole).
+const SPACE_MEMBER_ROLE = 'space:member';
 
 const WHISTLERS_INTERNAL_URL =
   process.env.WHISTLERS_INTERNAL_URL ?? "http://localhost:8080/events";

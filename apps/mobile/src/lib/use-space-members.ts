@@ -10,8 +10,7 @@
  */
 import { useCallback, useEffect, useState } from 'react';
 
-import { readSpaceAccess, removeSpaceMember as removeSpaceMemberDoc } from '@drakkar.software/octovault-sdk';
-import { fingerprintFromUserId } from '@drakkar.software/octovault-sdk';
+import { readSpaceAccess, removeSpaceMember as removeSpaceMemberDoc, fingerprintFromUserId } from '@drakkar.software/octovault-sdk';
 import { useAvatars, usePseudos } from './use-pseudos';
 import { useSession } from './session-context';
 
@@ -68,7 +67,7 @@ export function useSpaceMembers(spaceId: string): SpaceMembers {
       return;
     }
     try {
-      const { owner: ownr, members } = await readSpaceAccess(session.accountClient, spaceId);
+      const { owner: ownr, members } = await readSpaceAccess(session.contentClient, spaceId, session);
       setOwner(ownr);
       // Owner first, then members — deduped (the roster never includes the owner, but
       // be defensive against a legacy doc that did).
@@ -127,7 +126,7 @@ export function useSpaceMembers(spaceId: string): SpaceMembers {
   const removeMember = useCallback(
     async (memberUserId: string) => {
       if (!session) return;
-      await removeSpaceMemberDoc(session.accountClient, spaceId, memberUserId);
+      await removeSpaceMemberDoc(session.contentClient, spaceId, memberUserId, session);
       await refresh();
     },
     [session, spaceId, refresh],

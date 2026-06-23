@@ -14,12 +14,13 @@ import { identitiesServerPlugin } from "@drakkar.software/starfish-identities";
 import { sharingServerPlugin } from "@drakkar.software/starfish-sharing";
 import { createQueuingServerPlugin } from "@drakkar.software/starfish-queuing";
 import { createProjectionServerPlugin } from "@drakkar.software/starfish-projection";
+// makeSpaceRoleEnricher retired — replaced by createSpacesRoleEnricher from starfish-spaces.
+import { createSpacesRoleEnricher, createSpacesDirectoryServerPlugin } from "@drakkar.software/starfish-spaces";
 
 import { config } from "./config.js";
 import { projections } from "./projections.js";
 import { createNatsQueue } from "./queue.js";
 import { createFileRevocationStore } from "./revocation-store.js";
-import { makeSpaceRoleEnricher, makeSpaceReadEnricher } from "./space-role.js";
 
 const PORT = Number(process.env.PORT ?? 8787);
 const DATA_DIR = process.env.STARFISH_DATA_DIR ?? "./data";
@@ -99,18 +100,29 @@ const queuing = createQueuingServerPlugin({
   },
 });
 
-// Two role enrichers sharing the same store:
-//  - spaceEnricher: TOFU-aware (sync router — first write grants owner)
-//  - sseEnricher:   no TOFU (SSE proxy — non-existent space denies subscription)
-const spaceEnricher = makeSpaceRoleEnricher(store);
-const sseEnricher = makeSpaceReadEnricher(store);
+// Space-membership enricher: synthesizes `space:owner` / `space:member` from
+// the access record at `spaces/{spaceId}/_access`. Shared between the sync router
+// (collection-level gating) and the /events proxy (membership validation).
+// createSpacesRoleEnricher (starfish-spaces) replaces the hand-rolled makeSpaceRoleEnricher.
+const spaceEnricher = createSpacesRoleEnricher(store);
+
+// Legacy projection: maintains the public-space directory at `_index/spaces/public`.
+const projection = createProjectionServerPlugin({ store, projections });
+
+// The canonical spaces directory plugin: writes public-node metadata to
+// `_index/objects/public` on each objindex write.
+const spacesDirectory = createSpacesDirectoryServerPlugin({
+  getString: (k) => store.getString(k),
+  putString: (k, v) => store.put(k, v),
+});
 
 const syncRouter = createSyncRouter({
   store,
   config,
   roleResolver,
+  // Grants `space:owner` / `space:member` from the access record.
   roleEnricher: spaceEnricher,
-  plugins: [createProjectionServerPlugin({ store, projections }), queuing],
+  plugins: [queuing, projection, spacesDirectory],
 });
 
 await saveConfig(store, config);
@@ -143,7 +155,7 @@ app.use("*", async (c, next) => {
 // Must be mounted BEFORE the sync router so /events is not swallowed by its catch-all.
 app.route(
   "/",
-  createEventsRoute({ enricher: sseEnricher, nonceCache, revocationStore }),
+  createEventsRoute({ enricher: spaceEnricher, nonceCache, revocationStore }),
 );
 
 // Public OG-unfurl endpoint: fetches a URL server-side and returns OpenGraph metadata.

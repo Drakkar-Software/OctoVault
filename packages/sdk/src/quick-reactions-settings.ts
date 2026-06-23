@@ -14,16 +14,17 @@
  * until the next successful pull heals it.
  */
 import type { Session } from './starfish/identity';
-import { updateSpacesExtraField } from '@drakkar.software/octospaces-sdk';
+// updateSpacesExtraField moved from octospaces-sdk to starfish-spaces in 0.23+.
+// New signature: (client, session, key, mutator) — session replaces userId.
+import { updateSpacesExtraField } from '@drakkar.software/starfish-spaces';
 
 /** Persist the palette to the user's `_spaces` doc. octospaces 0.16 extracted the
  *  quick-reactions doc helper out of the generic SDK; OctoVault now owns it on top of
  *  the generic `updateSpacesExtraField`, storing it under `extra.quickReactions`. */
 const updateQuickReactionsDoc = (
-  client: Session['accountClient'],
-  userId: string,
+  session: Session,
   mutator: (cur: string[] | undefined) => string[] | null,
-): Promise<void> => updateSpacesExtraField<string[]>(client, userId, 'quickReactions', mutator);
+): Promise<void> => updateSpacesExtraField<string[]>(session.spacesRegistryClient, session, 'quickReactions', mutator);
 
 /** How many emojis the quick-reaction palette holds — a fixed six slots. */
 export const QUICK_REACTION_COUNT = 6;
@@ -101,7 +102,7 @@ export async function saveQuickReactions(session: Session, emojis: string[]): Pr
   setQuickReactions(next);
   pending++;
   try {
-    await updateQuickReactionsDoc(session.accountClient, session.userId, () => next);
+    await updateQuickReactionsDoc(session, () => next);
   } catch (err) {
     console.error('[OctoVault] quick reactions: failed to sync palette change', err);
   } finally {

@@ -1,12 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('@drakkar.software/octospaces-sdk', () => ({
+// registry-ext now imports updateSpacesDoc + removeSpaceAccessEntry from starfish-spaces
+// (moved there in octospaces-sdk 0.23+). Mock the correct module.
+vi.mock('@drakkar.software/starfish-spaces', () => ({
   updateSpacesDoc: vi.fn(),
   removeSpaceAccessEntry: vi.fn(),
 }));
 
 import { leaveSpace, CategoryError } from './registry-ext';
-import { updateSpacesDoc, removeSpaceAccessEntry } from '@drakkar.software/octospaces-sdk';
+import { updateSpacesDoc, removeSpaceAccessEntry } from '@drakkar.software/starfish-spaces';
 
 type SpacesDocSlice = {
   spaces: { id: string; name: string }[];
@@ -15,12 +17,16 @@ type SpacesDocSlice = {
 };
 
 function setupUpdateSpacesDoc(doc: SpacesDocSlice) {
-  vi.mocked(updateSpacesDoc).mockImplementation(async (_client, _userId, mutator) => {
+  // Third argument is the mutator (client, session, mutator)
+  vi.mocked(updateSpacesDoc).mockImplementation(async (_client, _session, mutator) => {
     mutator(doc as never);
   });
 }
 
 const FAKE_CLIENT = {} as never;
+// Minimal session stub — leaveSpace only uses it to pass through to updateSpacesDoc,
+// which is mocked, so the shape only needs to satisfy TypeScript.
+const FAKE_SESSION = { userId: 'user-1', layout: {} } as never;
 
 beforeEach(() => vi.clearAllMocks());
 
@@ -33,7 +39,7 @@ describe('leaveSpace', () => {
     };
     setupUpdateSpacesDoc(doc);
 
-    await leaveSpace(FAKE_CLIENT, 'user-1', 'sp-1');
+    await leaveSpace(FAKE_CLIENT, FAKE_SESSION, 'sp-1');
 
     const mutator = vi.mocked(updateSpacesDoc).mock.calls[0]![2];
     const result = mutator(doc as never);
@@ -46,7 +52,7 @@ describe('leaveSpace', () => {
 
   it('calls removeSpaceAccessEntry with the spaceId', async () => {
     setupUpdateSpacesDoc({ spaces: [], caps: {}, pubAccess: {} });
-    await leaveSpace(FAKE_CLIENT, 'user-1', 'sp-42');
+    await leaveSpace(FAKE_CLIENT, FAKE_SESSION, 'sp-42');
     expect(removeSpaceAccessEntry).toHaveBeenCalledWith('sp-42');
   });
 
@@ -57,7 +63,7 @@ describe('leaveSpace', () => {
       pubAccess: {},
     };
     setupUpdateSpacesDoc(doc);
-    await leaveSpace(FAKE_CLIENT, 'user-1', 'sp-missing');
+    await leaveSpace(FAKE_CLIENT, FAKE_SESSION, 'sp-missing');
     const mutator = vi.mocked(updateSpacesDoc).mock.calls[0]![2];
     const result = mutator(doc as never);
     // Returns the same reference when space not found (no-op)

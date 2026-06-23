@@ -8,8 +8,15 @@
  * Also wires the shared `@drakkar.software/octospaces-sdk` config so that all
  * re-exported octospaces modules (identity, registry, members, object-index, …)
  * are correctly configured from the same call.
+ *
+ * Then installs the OctoVault SpaceLayout via `configureSpaces` so every session
+ * builder (fresh + restore) mints account/linked-device caps with explicit
+ * collections instead of `["*"]` — preventing a 403 on `_spaces`.
  */
 import { configureOctoSpaces } from '@drakkar.software/octospaces-sdk';
+import { configureSpaces } from '@drakkar.software/starfish-spaces';
+import { octoVaultLayout } from '../starfish/client';
+import { resetPullCache } from '../starfish/pull-cache';
 
 interface OctoVaultConfig {
   syncBase: string;
@@ -36,10 +43,12 @@ let _config: OctoVaultConfig = {
  * (before any other SDK function), passing the env-derived values.
  *
  * Also configures the shared octospaces-sdk so all re-exported modules work
- * without requiring a separate `configureOctoSpaces` call at the app level.
+ * without requiring a separate `configureOctoSpaces` call at the app level,
+ * then installs the OctoVault SpaceLayout via `configureSpaces`.
  */
 export function configureOctoVault(config: Partial<OctoVaultConfig>): void {
   _config = { ..._config, ...config };
+  resetPullCache();
   // Forward to octospaces-sdk so its internal getters (getSyncBase, getSyncNamespace,
   // getSyncPrefix, getEventsUrl) are populated. All re-exported octospaces modules
   // (client, identity, registry, members, object-index, …) delegate to those getters —
@@ -51,6 +60,10 @@ export function configureOctoVault(config: Partial<OctoVaultConfig>): void {
     eventsUrl: _config.eventsUrl,
     ...(_config.sharedSpacesNamespace ? { sharedSpacesNamespace: _config.sharedSpacesNamespace } : {}),
   });
+  // Install the OctoVault layout module-wide. configureSpaces merges, so any kvAdapter
+  // already set by configureKv is preserved. Must run after configureOctoSpaces so
+  // getSyncBase()/getSyncNamespace() are ready when octoVaultLayout() reads them.
+  configureSpaces({ layout: octoVaultLayout() });
 }
 
 /** Base URL of the Starfish sync server, e.g. `https://sync.example.com`. */
@@ -75,5 +88,3 @@ export function getSyncPrefix(): string {
 export function getEventsUrl(): string {
   return _config.eventsUrl;
 }
-
-

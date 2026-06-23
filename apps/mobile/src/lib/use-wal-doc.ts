@@ -62,7 +62,9 @@ export function useWalDoc(opts: UseWalDocOptions): WalDocHandle {
     let cancelled = false;
     setOpening(true);
     const d = createWalDocument({
-      client,
+      // TODO: remove cast when starfish-wal is bumped to alpha.32 — its WalStarfishClient.pull
+      // is a single-signature function while StarfishClient.pull is overloaded; runtime-compatible.
+      client: client as never,
       documentKey,
       edPubHex,
       edPrivHex,

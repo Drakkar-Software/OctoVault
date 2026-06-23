@@ -79,7 +79,7 @@ export default function SpaceDetailsScreen() {
     if (!ok) return;
     setLeaving(true);
     try {
-      await leaveSpace(session.accountClient, session.userId, spaceId);
+      await leaveSpace(session.spacesRegistryClient, session, spaceId);
       // Land somewhere real: the active space if it survives, else the first
       // remaining one — /join only when this was the LAST space.
       const remaining = spaces.filter((s) => s.id !== spaceId);

@@ -205,7 +205,12 @@ describe('convergence across two replicas', () => {
     expect(votersB).toContain('user-bob');
   });
 
-  it('same-voter concurrent vote vs unvote resolves via LWW (higher-clock wins)', async () => {
+  it('same-voter unvote then re-vote resolves via LWW (later Lamport clock wins)', async () => {
+    // LWW tiebreaking: the WAL clock is ticked at mutation time (not commit time).
+    // "Concurrent" ops from two replicas that haven't synced get the SAME `c` value
+    // and then tie-break on replicaId — making the result non-deterministic.
+    // This test instead verifies the meaningful property: an op created AFTER
+    // observing the opposing op (strictly higher Lamport counter) wins.
     const transport = memTransport();
     const docA = await openDoc(transport);
     const docB = await openDoc(transport);
@@ -214,17 +219,14 @@ describe('convergence across two replicas', () => {
     await docA.commit();
     await docB.pull();
 
-    // A votes (ts=2 after sync+commit); B unvotes the same user concurrently
-    c.vote(docA, id, 'user-alice');
+    // B unvotes and commits first; A observes, then votes with a higher counter.
     c.unvote(docB, id, 'user-alice');
-
-    // B commits first, then A — so A's vote has a higher clock
     await docB.commit();
+    await docA.pull(); // A's Lamport clock advances past B's unvote clock
+    c.vote(docA, id, 'user-alice'); // A ticks to a strictly higher c → vote wins
     await docA.commit();
-    await docA.pull();
     await docB.pull();
 
-    // A's vote committed after B's unvote → vote wins
     const votersA = c.readItems(docA).find((i) => i.id === id)?.voters ?? [];
     const votersB = c.readItems(docB).find((i) => i.id === id)?.voters ?? [];
     expect(votersA).toContain('user-alice');
