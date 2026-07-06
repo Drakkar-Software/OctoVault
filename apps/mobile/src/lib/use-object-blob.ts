@@ -11,7 +11,7 @@ import { File as FSFile, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 
 import type { ByteSealer, ObjectNode } from '@drakkar.software/octovault-sdk';
-import { humanizeError, loadObjectBlob, propsOf, getSpaceClient, buildEncryptor, keyringPull, ownerTrustedAdders } from '@drakkar.software/octovault-sdk';
+import { humanizeError, loadObjectBlob, propsOf, getSpaceClient, buildEncryptor, ownerTrustedAdders } from '@drakkar.software/octovault-sdk';
 import { useSession } from './session-context';
 
 /** Convert a Uint8Array to a base64 data URI safely for any size.
@@ -63,7 +63,7 @@ export function useObjectBlob(spaceId: string, node: ObjectNode | undefined): Ob
     (async () => {
       try {
         const blobClient = getSpaceClient(spaceId, session);
-        const blobEnc = await buildEncryptor(blobClient, session.keys, keyringPull(spaceId), ownerTrustedAdders(session));
+        const blobEnc = await buildEncryptor(blobClient, session.keys, spaceId, ownerTrustedAdders(session));
         if (!blobEnc) throw new Error(`[octovault] no space keyring for ${spaceId}`);
         const enc = blobEnc as unknown as ByteSealer;
         const data = await loadObjectBlob(blobClient, enc, spaceId, blobId);

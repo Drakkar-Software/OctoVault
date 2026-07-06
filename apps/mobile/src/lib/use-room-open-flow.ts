@@ -14,7 +14,7 @@ import { useEffect, useState } from 'react';
 import type { Encryptor, StarfishClient } from '@drakkar.software/starfish-client';
 
 import { getMemberCap } from '@drakkar.software/octovault-sdk';
-import { getNodeAccess, getSpaceClient, buildEncryptor, ownerTrustedAdders, keyringPull } from '@drakkar.software/octovault-sdk';
+import { getNodeAccess, getSpaceClient, buildEncryptor, ownerTrustedAdders } from '@drakkar.software/octovault-sdk';
 import type { NodeAccess } from '@drakkar.software/octovault-sdk';
 import { useSpaceRegistryActions } from './space-registry-context';
 import { useSession } from './session-context';
@@ -85,7 +85,7 @@ export function useSpaceOpen(opts: {
           const reg = getMemberCap(spaceId) ? null : await ensureRegistry(spaceId);
           const docClient = getSpaceClient(spaceId, session);
           const trustedAdders = reg?.owner ? [reg.owner] : ownerTrustedAdders(session);
-          const enc = await buildEncryptor(docClient, session.keys, keyringPull(spaceId), trustedAdders);
+          const enc = await buildEncryptor(docClient, session.keys, spaceId, trustedAdders);
           if (!cancelled) {
             setEncryptor(enc);
             setClient(docClient);

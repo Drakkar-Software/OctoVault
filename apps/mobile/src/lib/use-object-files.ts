@@ -9,7 +9,7 @@ import { useCallback } from 'react';
 import * as DocumentPicker from 'expo-document-picker';
 
 import type { ByteSealer } from '@drakkar.software/octovault-sdk';
-import { uploadObjectBlob, MAX_OBJECT_BLOB_BYTES, FileTooLargeError, getSpaceClient, buildEncryptor, keyringPull, ownerTrustedAdders } from '@drakkar.software/octovault-sdk';
+import { uploadObjectBlob, MAX_OBJECT_BLOB_BYTES, FileTooLargeError, getSpaceClient, buildEncryptor, ownerTrustedAdders } from '@drakkar.software/octovault-sdk';
 import type { Encryptor } from '@drakkar.software/starfish-client';
 import { useSession } from './session-context';
 import { useSpaceObjects } from './space-objects-context';
@@ -55,7 +55,7 @@ export function useObjectFiles(spaceId: string): UseObjectFilesResult {
     if (!session) throw new Error('No active session');
     // Blobs are always space-keyring sealed; open the keyring directly.
     const blobClient = getSpaceClient(spaceId, session);
-    const blobEnc = await buildEncryptor(blobClient, session.keys, keyringPull(spaceId), ownerTrustedAdders(session));
+    const blobEnc = await buildEncryptor(blobClient, session.keys, spaceId, ownerTrustedAdders(session));
     if (!blobEnc) throw new Error(`[octovault] no space keyring for ${spaceId}`);
     const enc = blobEnc as unknown as ByteSealer;
 

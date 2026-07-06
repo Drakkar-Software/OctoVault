@@ -33,6 +33,7 @@ import type { SignableMethod } from '@drakkar.software/starfish-protocol';
 import {
   getSyncBase,
   getSyncNamespace,
+  getSyncPrefix,
   profilePull,
   profilePush,
   accountScope,
@@ -106,9 +107,15 @@ export function octoVaultLayout(): SpaceLayout {
   return _OCTOVAULT_LAYOUT;
 }
 
-/** Read a user's public profile (pseudo, avatar, public keys). Injects globals. */
+/**
+ * Read a user's public profile (pseudo, avatar, public keys). Injects globals.
+ *
+ * Unlike readProfiles (routed through a namespace-aware client), starfish-spaces'
+ * readProfile does a raw `${baseUrl}${pullPath}` concat with no namespace option —
+ * so baseUrl must already carry the `/v1/{ns}` prefix (getSyncPrefix()).
+ */
 export async function readProfile(userId: string): Promise<PublicProfile> {
-  return _readProfile(userId, { baseUrl: getSyncBase(), layout: octoVaultLayout() });
+  return _readProfile(userId, { baseUrl: `${getSyncBase()}${getSyncPrefix()}`, layout: octoVaultLayout() });
 }
 
 /** Read multiple users' profiles in batched round-trips. Injects globals. */
