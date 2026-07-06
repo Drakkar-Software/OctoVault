@@ -33,6 +33,7 @@ import {
   vaultMethods,
 } from '@drakkar.software/octovault-sdk/platform';
 import { disableBiometricLock } from './app-lock';
+import { captureException } from './analytics';
 import type { PersistedSession, SeedLock, UnlockMethod, Vault } from '@drakkar.software/octovault-sdk';
 import { clearLiveSyncBus } from '@drakkar.software/octovault-sdk';
 import { clearPrimedSpaces, primeSpaces } from '@drakkar.software/octovault-sdk';
@@ -273,6 +274,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
             // Genuine corrupt/stale persisted identity OR sessionFromPersisted
             // throw. Log so the next cold-start welcome incident is diagnosable.
             console.error('[session-context] sessionFromPersisted failed', err);
+            captureException(err);
           }
         }
       }

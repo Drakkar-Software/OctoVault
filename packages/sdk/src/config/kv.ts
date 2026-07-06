@@ -6,11 +6,11 @@
  * on native); all SDK modules that need key-value persistence import the three
  * functions below instead of importing `./starfish/kv` directly.
  *
- * Also forwards to the shared octospaces-sdk KV seam so that re-exported
- * octospaces modules (pull-cache, profile-cache, access-store, …) use the
+ * Also forwards to the shared dk-spaces-sdk KV seam so that re-exported
+ * DKSpaces modules (pull-cache, profile-cache, access-store, …) use the
  * same platform adapter without requiring a separate `configureKv` call.
  */
-import { configureKv as octospacesConfigure } from '@drakkar.software/octospaces-sdk';
+import { configureKv as dkSpacesConfigure } from '@drakkar.software/dk-spaces-sdk';
 
 interface KvAdapter {
   get: (key: string) => Promise<string | null>;
@@ -28,12 +28,12 @@ let _kv: KvAdapter = {
  * Configure the KV store. Call at app boot before any SDK function that reads
  * or writes persisted state (member caps, mutes, reads, AI settings, etc.).
  *
- * Also wires the shared octospaces-sdk so its pull-cache, profile-cache, and
+ * Also wires the shared dk-spaces-sdk so its pull-cache, profile-cache, and
  * space-access-store all use the same platform adapter.
  */
 export function configureKv(adapter: KvAdapter): void {
   _kv = adapter;
-  octospacesConfigure({ get: adapter.get, set: adapter.set, remove: adapter.remove });
+  dkSpacesConfigure({ get: adapter.get, set: adapter.set, remove: adapter.remove });
 }
 
 export async function kvGet(key: string): Promise<string | null> {

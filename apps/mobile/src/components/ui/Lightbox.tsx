@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-import { Lightbox as LightboxOverlay } from '@drakkar.software/octospaces-ui';
+import { Lightbox as LightboxOverlay } from '@drakkar.software/dk-spaces-ui';
 
 import { useTheme } from '@/lib/use-theme';
 import { IconButton } from './IconButton';
@@ -22,7 +22,7 @@ export interface LightboxProps {
  * Full-screen image-preview overlay. Tapping the backdrop, the ✕ button,
  * Escape (web) or hardware back (Android) dismisses it.
  *
- * Delegates to the shared `Lightbox` from @drakkar.software/octospaces-ui and
+ * Delegates to the shared `Lightbox` from @drakkar.software/dk-spaces-ui and
  * wires in OctoVault's `IconButton` for chrome.
  */
 export function Lightbox({

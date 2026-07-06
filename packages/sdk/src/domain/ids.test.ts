@@ -1,10 +1,10 @@
 /**
- * Parity + characterization tests for domain/ids (thin re-export from octospaces-sdk).
+ * Parity + characterization tests for domain/ids (thin re-export from starfish-protocol).
  * Pins randomId/roomSlug behavior so any future SDK drift is caught immediately.
  */
 import { describe, it, expect } from 'vitest';
 import { randomId, roomSlug } from './ids';
-import { randomId as sdkRandomId, slugify as sdkRoomSlug } from '@drakkar.software/octospaces-sdk';
+import { randomId as sdkRandomId, slugify as sdkRoomSlug } from '@drakkar.software/starfish-protocol';
 
 describe('randomId', () => {
   it('returns a 32-char lowercase hex string', () => {

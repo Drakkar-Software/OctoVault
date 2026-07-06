@@ -11,8 +11,8 @@
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { sortDiscoverEntries } from '@drakkar.software/octospaces-ui';
-import type { DiscoverEntry } from '@drakkar.software/octospaces-ui';
+import { sortDiscoverEntries } from '@drakkar.software/dk-spaces-ui';
+import type { DiscoverEntry } from '@drakkar.software/dk-spaces-ui';
 import { humanizeError, readObjectDirectory } from '@drakkar.software/octovault-sdk';
 
 import { useSession } from './session-context';

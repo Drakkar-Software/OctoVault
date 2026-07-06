@@ -6,15 +6,15 @@
  *           numerals, today's inked indigo disc, swatch event chips.
  *   Agenda — a time-sorted list of all events with tap-to-edit.
  *
- * Built on the `MonthGrid` headless component from `@drakkar.software/octospaces-ui`
+ * Built on the `MonthGrid` headless component from `@drakkar.software/dk-spaces-ui`
  * (pure month math + theme-driven layout) wired to `useCalendar` (WAL-backed
  * CRDT events). `DateTimeField` replaces the previous raw-text date inputs.
  */
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
-import { MonthGrid, bucketEventsByDay, matrixDayKey } from '@drakkar.software/octospaces-ui';
-import type { MatrixDay } from '@drakkar.software/octospaces-ui';
+import { MonthGrid, bucketEventsByDay, matrixDayKey } from '@drakkar.software/dk-spaces-ui';
+import type { MatrixDay } from '@drakkar.software/dk-spaces-ui';
 
 import { SWATCH_NAMES, radii, spacing, swatches } from '@/theme';
 import type { SwatchName } from '@/theme';

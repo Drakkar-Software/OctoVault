@@ -1,6 +1,6 @@
-export { previewInvite } from '@drakkar.software/octospaces-sdk';
+export { previewInvite } from '@drakkar.software/dk-spaces-sdk';
+export type { InvitePreview } from '@drakkar.software/dk-spaces-sdk';
 export type {
-  InvitePreview,
   SpaceInviteLinkToken,
   NodeInviteLinkToken,
-} from '@drakkar.software/octospaces-sdk';
+} from '@drakkar.software/starfish-spaces';

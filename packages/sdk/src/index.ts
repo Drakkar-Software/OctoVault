@@ -2,11 +2,10 @@
 // Pure, React-free logic for OctoVault: crypto/identity, Starfish sync, WAL/CRDT
 // document models, data registries, pure helpers.
 //
-// After the starfish-spaces extraction (octospaces-sdk 0.23+), the spaces domain
-// (registry, members, nodes, identity, keyrings, profiles) comes from
-// `@drakkar.software/starfish-spaces`; `@drakkar.software/octospaces-sdk` retains
-// config, blobs, paths, pairing, SSE transport, session-persistence, search/bus, and
-// storage types. The vault adds its own WAL/CRDT content models and domain descriptors.
+// After the starfish-spaces extraction, the spaces domain (registry, members, nodes,
+// identity, keyrings, profiles) comes from `@drakkar.software/starfish-spaces`;
+// `@drakkar.software/dk-spaces-sdk` retains config, paths, SSE transport, and search/bus.
+// The vault adds its own WAL/CRDT content models and domain descriptors.
 
 // ── Config / DI seams ─────────────────────────────────────────────────────────
 export * from './config/config';
@@ -119,12 +118,10 @@ export {
   type NodeAccess,
 } from '@drakkar.software/starfish-spaces';
 
-// Device pairing (octospaces-sdk)
-export {
-  startDevicePairing,
-  completeDevicePairing,
-} from '@drakkar.software/octospaces-sdk';
-export type { PairResult } from '@drakkar.software/octospaces-sdk';
+// Device pairing (local wrapper — starfish alpha.63 made root-trust mandatory on
+// pairing completion; see ./starfish/pairing for the confirmUnpinnedRoot decision)
+export { startDevicePairing, completeDevicePairing, PAIR_PREFIX } from './starfish/pairing';
+export type { PairResult } from './starfish/pairing';
 
 // Space membership + node membership (starfish-spaces)
 export {
@@ -159,8 +156,7 @@ export {
 export type { SpaceMeta, SpaceMetaUpdate } from '@drakkar.software/starfish-spaces';
 export * from './starfish/registry-ext';
 
-// Objects / object tree (octospaces-sdk still owns these — present in both packages;
-// keep octospaces-sdk source to minimise churn)
+// Objects / object tree (moved to starfish-spaces in 0.31)
 export {
   buildTree,
   breadcrumbs,
@@ -172,8 +168,8 @@ export {
   reparentObject,
   reorderObjects,
   archiveObject,
-} from '@drakkar.software/octospaces-sdk';
-export type { ObjectTreeNode, NewObjectInput } from '@drakkar.software/octospaces-sdk';
+} from '@drakkar.software/starfish-spaces';
+export type { ObjectTreeNode, NewObjectInput } from '@drakkar.software/starfish-spaces';
 
 // Vault-specific object extensions (props/automation in meta)
 export * from './starfish/objects-ext';
@@ -199,15 +195,9 @@ export {
   archiveType,
 } from './starfish/object-types-store';
 
-// Blob uploads (octospaces-sdk)
-export type { ObjectBlobRef, ObjectBlobStore } from '@drakkar.software/octospaces-sdk';
-export {
-  MAX_OBJECT_BLOB_BYTES,
-  FileTooLargeError,
-  uploadObjectBlob,
-  loadObjectBlob,
-  createObjectBlobStore,
-} from '@drakkar.software/octospaces-sdk';
+// Default object-blob store (bare uploadObjectBlob/loadObjectBlob — octospaces-sdk
+// 0.31 dropped these; recreated locally, see ./starfish/object-blobs)
+export * from './starfish/object-blobs';
 
 // Attachments / crypto helpers (attachment file kept — local createAttachmentStore singleton)
 export * from './starfish/attachments';
@@ -216,7 +206,7 @@ export * from './starfish/account-seal';
 // fetchWithTimeout removed from octospaces-sdk in 0.24 — vendored via starfish-client/fetch.
 export { fetchWithTimeout, CONNECT_TIMEOUT_MS } from './starfish/fetch-timeout';
 
-// Paths / scopes (octospaces-sdk)
+// Paths / scopes (DKSpaces-unique — pure package rename; bytesToHex moved to starfish-protocol)
 export {
   OBJECT_COLLECTIONS,
   keyringPull,
@@ -230,11 +220,11 @@ export {
   typesIndexPull,
   typesIndexPush,
   objectDirName,
-  bytesToHex,
   objLogName,
   objectBlobName,
   typesIndexName,
-} from '@drakkar.software/octospaces-sdk';
+} from '@drakkar.software/dk-spaces-sdk';
+export { bytesToHex } from '@drakkar.software/starfish-protocol';
 // readObjectDirectory / ObjectDirectoryEntry moved from octospaces-sdk to starfish-spaces in 0.24.
 // New API: readObjectDirectory(session, shard?) — session provides baseUrl + layout.
 // PublicObjectDirEntry alias kept for call-site backwards compat (same shape as ObjectDirectoryEntry).
@@ -243,7 +233,7 @@ export type { ObjectDirectoryEntry } from '@drakkar.software/starfish-spaces';
 export type { ObjectDirectoryEntry as PublicObjectDirEntry } from '@drakkar.software/starfish-spaces';
 
 // Session / cache
-export { sessionFromPersisted, activeAccountOf, rootIdentityOf } from '@drakkar.software/octospaces-sdk';
+export { sessionFromPersisted, activeAccountOf, rootIdentityOf } from './starfish/identity';
 // pullCache / PULL_CACHE_MAX_AGE_MS were removed from octospaces-sdk in 0.24 —
 // vendored locally via starfish-client's createKvPullCache.
 export { pullCache, PULL_CACHE_MAX_AGE_MS } from './starfish/pull-cache';
@@ -251,13 +241,11 @@ export { pullCache, PULL_CACHE_MAX_AGE_MS } from './starfish/pull-cache';
 // Stream bots (app-specific)
 export * from './starfish/stream-bots';
 
-// SSE events transport (octospaces-sdk)
-export {
-  buildSignedEventsRequest,
-  parseSseFrames,
-  subscribeChanges,
-} from '@drakkar.software/octospaces-sdk';
-export type { SubscribeChangesOptions } from '@drakkar.software/octospaces-sdk';
+// SSE events transport (buildSignedEventsRequest/subscribeChanges are DKSpaces-unique;
+// parseSseFrames moved to starfish-client)
+export { buildSignedEventsRequest, subscribeChanges } from '@drakkar.software/dk-spaces-sdk';
+export type { SubscribeChangesOptions } from '@drakkar.software/dk-spaces-sdk';
+export { parseSseFrames } from '@drakkar.software/starfish-client/events';
 
 // WAL document factory — moved from octospaces-sdk/wal (subpath dropped in 0.24).
 // WalDocument class/type lives in the root entry; createWalDocument + noopEncryptor
@@ -266,12 +254,12 @@ export { WalDocument } from '@drakkar.software/starfish-wal';
 export { createWalDocument, noopEncryptor } from '@drakkar.software/starfish-wal/client';
 
 // Storage types (platform-agnostic; implementations live in ./platform)
+// PersistedSession is exported via ./starfish/identity above — not repeated here.
 export type {
   DerivedIdentity,
-  PersistedSession,
   Vault,
   UnlockMethod,
   PasskeyEnrollment,
   SeedLock,
   VaultLoad,
-} from '@drakkar.software/octospaces-sdk';
+} from '@drakkar.software/starfish-spaces';

@@ -12,9 +12,9 @@
  *   OLD: setProps(nodes, id, patch, now)  → same, from here
  *   OLD: clearProp(nodes, id, key, now)   → same, from here
  */
-import type { ObjectNode } from '@drakkar.software/octospaces-sdk';
-import { patchObject, addObject, nextOrder } from '@drakkar.software/octospaces-sdk';
-import type { NewObjectInput } from '@drakkar.software/octospaces-sdk';
+import type { ObjectNode } from '@drakkar.software/starfish-spaces';
+import { patchObject, addObject, nextOrder } from '@drakkar.software/starfish-spaces';
+import type { NewObjectInput } from '@drakkar.software/starfish-spaces';
 import type { AutomationMeta, PropValue } from '../domain/types';
 import { randomId } from '../domain/ids';
 

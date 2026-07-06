@@ -13,17 +13,17 @@
  *   node.meta?.props       →  propsOf(node)       (from objects-ext.ts)
  */
 
-import type { PresenceStatus, VerificationLevel } from '@drakkar.software/octospaces-sdk';
-// SealedBlob used in AutomationMeta.credential; imported from starfish-spaces (canonical source
-// since octospaces-sdk 0.23+). account-seal.ts re-exports it for the barrel.
+import type { PresenceStatus, VerificationLevel } from '@drakkar.software/dk-spaces-sdk';
+// SealedBlob used in AutomationMeta.credential; imported from starfish-spaces (canonical source).
+// account-seal.ts re-exports it for the barrel.
 import type { SealedBlob } from '@drakkar.software/starfish-spaces';
 
-// ── Re-export shared octospaces domain types ───────────────────────────────
-// `Space` moved to starfish-spaces in octospaces-sdk 0.23+ and is NOT re-exported
-// by octospaces-sdk 0.26. OctoVault extends the minimal base with display fields
-// that are seeded by reconcileSpaceMeta / onSpaceMeta and the unread overlay.
-// All extra fields are optional so the base `Space[]` from readSpaces() is
-// structurally assignable to `OctoVaultSpace[]` (TypeScript structural typing).
+// ── Re-export shared domain types ───────────────────────────────────────────
+// `Space` lives on starfish-spaces (not re-exported by dk-spaces-sdk). OctoVault
+// extends the minimal base with display fields that are seeded by
+// reconcileSpaceMeta / onSpaceMeta and the unread overlay. All extra fields are
+// optional so the base `Space[]` from readSpaces() is structurally assignable
+// to `OctoVaultSpace[]` (TypeScript structural typing).
 import type { Space as _BaseSpace } from '@drakkar.software/starfish-spaces';
 export interface Space extends _BaseSpace {
   /** Two-letter monogram shown in compact rail tiles. Populated by onSpaceMeta. */
@@ -44,13 +44,11 @@ export type {
   PubAccessMap,
   MuteValue,
   MutePrefs,
-  ReadValue,
   ReadPrefs,
-  PresenceStatus,
-  VerificationLevel,
-} from '@drakkar.software/octospaces-sdk';
+} from '@drakkar.software/starfish-spaces';
+export type { ReadValue, PresenceStatus, VerificationLevel } from '@drakkar.software/dk-spaces-sdk';
 // SealedBlob exported from account-seal (starfish-spaces) to avoid a duplicate
-// namespace warning in tsup — both octospaces-sdk and starfish-spaces carry the same type.
+// namespace warning in tsup — both dk-spaces-sdk and starfish-spaces carry the same type.
 
 // ── Vault-specific types ────────────────────────────────────────────────────
 

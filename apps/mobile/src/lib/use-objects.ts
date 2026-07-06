@@ -19,6 +19,7 @@ import {
 } from '@drakkar.software/octovault-sdk';
 import type { ID, ObjectNode, PropValue } from '@drakkar.software/octovault-sdk';
 import { getMemberCap } from '@drakkar.software/octovault-sdk';
+import { captureObjectCreated } from './analytics';
 import { useMergeDoc } from './use-merge-doc';
 import { useDocLiveSync } from './use-doc-live-sync';
 import { stripInviteIndexFields } from './object-index-utils';
@@ -190,6 +191,7 @@ export function useObjects(spaceId: string, opts: { enabled?: boolean; liveSync?
     // immediately — pull() converges with the authoritative server state.
     applyNodes((cur) => addObject(cur, { ...input, ...flags, id: node.id }, stamp()).nodes);
     pull();
+    captureObjectCreated(input.type);
     return node.id;
   }, [session, spaceId, ensureRegistry, pull, stamp, applyNodes]);
 

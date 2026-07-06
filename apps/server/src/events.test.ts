@@ -5,13 +5,13 @@ import type { RoleEnricher } from "@drakkar.software/starfish-server";
 /**
  * Regression tests for events.ts topic derivation.
  *
- * B2 fix: events.ts previously derived the Whistlers topic from the OLD
- * `octovault.chat.changed.<spaceId>` subject. The server now publishes on
- * `octospaces.object.changed.<spaceId>`. These tests lock in the correct string
- * so a future rename regression is caught at test time.
+ * The server publishes on `dk.object.changed.<spaceId>` (renamed from the old
+ * `octospaces.object.changed.<spaceId>` when the deployed namespace moved
+ * `octospaces` → `dk`). These tests lock in the correct string so a future
+ * rename regression is caught at test time.
  */
 describe("buildWhistlersTopic", () => {
-  it("uses octospaces.object.changed (NOT the old octovault.object.changed)", () => {
+  it("uses dk.object.changed (NOT the old octospaces.object.changed)", () => {
     const topic = buildWhistlersTopic("sp-abc123");
     // Must contain 'object-changed', never 'chat-changed'.
     expect(topic).toContain("object-changed");
@@ -25,17 +25,17 @@ describe("buildWhistlersTopic", () => {
   });
 
   it("produces the exact Whistlers topic format for a typical space id", () => {
-    // Derived from: `octospaces` namespace + sanitize(`octospaces.object.changed.sp-abc123`)
-    // sanitizeTopic replaces '.' with '-', so: octospaces-octospaces-object-changed-sp-abc123
+    // Derived from: `dk` namespace + sanitize(`dk.object.changed.sp-abc123`)
+    // sanitizeTopic replaces '.' with '-', so: dk-dk-object-changed-sp-abc123
     expect(buildWhistlersTopic("sp-abc123")).toBe(
-      "octospaces-octospaces-object-changed-sp-abc123",
+      "dk-dk-object-changed-sp-abc123",
     );
   });
 
   it("sanitizes special chars in space ids (dots → dashes)", () => {
     // Edge case: a space id that contains dots or other special chars.
     const topic = buildWhistlersTopic("sp-test.room");
-    expect(topic).toBe("octospaces-octospaces-object-changed-sp-test-room");
+    expect(topic).toBe("dk-dk-object-changed-sp-test-room");
   });
 });
 

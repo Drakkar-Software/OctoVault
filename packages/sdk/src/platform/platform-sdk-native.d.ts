@@ -1,25 +1,25 @@
 /**
- * Module augmentation — adds the native exports from `@drakkar.software/octospaces-platform-sdk`
+ * Module augmentation — adds the native exports from `@drakkar.software/dk-spaces-platform-sdk`
  * that TypeScript cannot see when `moduleResolution: Bundler` resolves the web barrel (index.d.ts).
  * Metro resolves index.native.js at runtime, which exports these correctly.
- * Remove this file once octospaces-platform-sdk@0.1.1 (exports fix) is installed.
+ * Remove this file once dk-spaces-platform-sdk's exports resolution is fixed for Bundler.
  */
 export type {};
 
-declare module '@drakkar.software/octospaces-platform-sdk' {
+declare module '@drakkar.software/dk-spaces-platform-sdk' {
   export interface VaultStorageNative {
-    loadVault(): Promise<import('@drakkar.software/octospaces-sdk').VaultLoad>;
-    vaultMethods(): import('@drakkar.software/octospaces-sdk').UnlockMethod[];
+    loadVault(): Promise<import('@drakkar.software/starfish-spaces').VaultLoad>;
+    vaultMethods(): import('@drakkar.software/starfish-spaces').UnlockMethod[];
     unlockVault(
-      method: import('@drakkar.software/octospaces-sdk').UnlockMethod,
+      method: import('@drakkar.software/starfish-spaces').UnlockMethod,
       pin?: string,
-    ): Promise<import('@drakkar.software/octospaces-sdk').Vault>;
+    ): Promise<import('@drakkar.software/starfish-spaces').Vault>;
     saveVault(
-      vault: import('@drakkar.software/octospaces-sdk').Vault,
-      lock?: import('@drakkar.software/octospaces-sdk').SeedLock,
+      vault: import('@drakkar.software/starfish-spaces').Vault,
+      lock?: import('@drakkar.software/starfish-spaces').SeedLock,
     ): Promise<void>;
     addPasskeyToVault(
-      passkey: import('@drakkar.software/octospaces-sdk').PasskeyEnrollment,
+      passkey: import('@drakkar.software/starfish-spaces').PasskeyEnrollment,
     ): Promise<void>;
     removePasskeyFromVault(): Promise<void>;
     clearVault(): Promise<void>;

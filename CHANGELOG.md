@@ -1,5 +1,66 @@
 # Changelog
 
+## 0.5.0 — "dk-spaces migration + analytics"
+
+Migrates off the renamed `octospaces` packages onto `dk-spaces-sdk@0.32.0` /
+`dk-spaces-ui@0.8.0` / `dk-spaces-platform-sdk@0.3.5` and unifies the starfish
+floor at `alpha.65` (from a mixed `alpha.31/32/33`), and adds analytics/crash
+reporting via `@drakkar.software/dk-spaces-analytics-sdk`.
+
+### Dependency rename — octospaces → dk-spaces
+
+- **`@drakkar.software/octospaces-sdk` → `dk-spaces-sdk@0.32.0`**,
+  **`octospaces-ui` → `dk-spaces-ui@0.8.0`** (`OctoSpacesThemeProvider` →
+  `DKSpacesThemeProvider`), **`octospaces-platform-sdk` → `dk-spaces-platform-sdk@0.3.5`**.
+  Root `pnpm.overrides` removed — direct pins make it unnecessary.
+- **`packages/sdk`**: the octospaces-sdk starfish-proxy layer (dropped upstream in
+  0.31) is gone — object-tree ops, blob/pairing/session-persistence types, and most
+  domain types now come straight from `@drakkar.software/starfish-spaces`;
+  `bytesToHex`/`randomId`/`slugify` moved to `starfish-protocol`;
+  `parseSseFrames` moved to `starfish-client`'s `/events` subpath.
+- **Rewrites** — `mutes.ts`/`reads.ts` rebuilt on starfish-spaces' generic
+  `createPrefsStore` (fed `dk-spaces-sdk`'s `mutePrefsConfig`/`readPrefsConfig`
+  presets); `starfish/attachments.ts` rebuilt on starfish-client's
+  `createSealedBlobStore`; a new `starfish/object-blobs.ts` recreates the
+  formerly-bare `uploadObjectBlob`/`loadObjectBlob` singleton (in-memory cache
+  only, matching prior behavior); a new `starfish/pairing.ts` wraps
+  `startDevicePairing`/`completeDevicePairing` with the mandatory (starfish
+  alpha.63+) `confirmUnpinnedRoot` root-trust decision; `starfish/identity.ts`
+  gained a `sessionFromPersisted` wrapper (now requires explicit `clientOpts`).
+  All public APIs are unchanged — no call-site changes required.
+- **`apps/server`**: `createSpacesRoleEnricher` now passes `{ allowTofu: true }` —
+  starfish alpha.39 flipped its default to fail-closed (`403` on a space's first
+  write before its `_access` doc is durably seen), which would otherwise break
+  first-launch `createSpace`. The `dk.object.changed` wire topic (renamed from
+  `octospaces.object.changed`) is now published on all six object collections and
+  reconstructed identically by the `/events` SSE proxy
+  (`WHISTLERS_NAMESPACE` → `"dk"`); the mobile SSE parser's topic prefix was
+  updated to match.
+- **KV migration shim**: a one-time `octospaces.spaceaccess.*` → `dk.spaceaccess.*`
+  key rename (guarded by `dk-migration:v1:done`) runs at app boot
+  (`apps/mobile/src/lib/kv-migration{,.native}.ts`) so the space-access store
+  doesn't take a cold-read miss after the bump. See `MIGRATION_CLEANUP.md` for
+  what to remove once the rollout window has passed.
+- **Desktop build-env guard**: `check-build-env.mjs`'s namespace check now requires
+  `EXPO_PUBLIC_STARFISH_NAMESPACE=dk` instead of `octospaces`.
+
+### Analytics — dk-spaces-analytics-sdk
+
+- New `apps/mobile/src/lib/analytics/` wraps
+  `@drakkar.software/dk-spaces-analytics-sdk`'s `createTelemetry` /
+  `createTelemetryClient` / `TelemetryProvider` / `useTelemetryScreenTracking` /
+  `captureException`, mirroring the pattern OctoChat hand-rolled directly against
+  `sunglasses-*`, now packaged behind one SDK.
+- `TelemetryProvider` mounts as the outermost provider in `app/_layout.tsx`,
+  enabling automatic screen-view tracking and global/render-phase error capture
+  (rendering a new `AppErrorFallback` component on a fatal crash). `captureException`
+  is also called explicitly from the session-restore and space-creation catch
+  blocks — the latter being the exact symptom path if the `allowTofu` fix above
+  regresses.
+- One custom event, `object_created` (object `type` only — never title/body, per
+  this app's E2EE content-privacy rule), fires after a successful `createNode` in
+  `use-objects.ts`.
+
 ## 0.4.0 — "Per-node access + Discover"
 
 Removes the pubspace (public-space) subsystem in favour of a **per-node access

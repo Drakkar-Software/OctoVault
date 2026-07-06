@@ -2,13 +2,13 @@
 // Consumed as @drakkar.software/octovault-sdk/platform on native.
 // hash-wasm-shim stays as its own dedicated subpath entry (./hash-wasm-shim).
 
-import { createVaultStorageNative, enrollPasskey as _enrollPasskey } from '@drakkar.software/octospaces-platform-sdk';
-import type { PasskeyEnrollment } from '@drakkar.software/octospaces-sdk';
+import { createVaultStorageNative, enrollPasskey as _enrollPasskey } from '@drakkar.software/dk-spaces-platform-sdk';
+import type { PasskeyEnrollment } from '@drakkar.software/starfish-spaces';
 
-export { kvGet, kvSet, kvRemove } from '@drakkar.software/octospaces-platform-sdk';
-export { configureStarfishPlatform } from '@drakkar.software/octospaces-platform-sdk';
-export { passkeyEnrollable, evalPasskey } from '@drakkar.software/octospaces-platform-sdk';
-export type { PersistedSession } from '@drakkar.software/octospaces-sdk';
+export { kvGet, kvSet, kvRemove } from '@drakkar.software/dk-spaces-platform-sdk';
+export { configureStarfishPlatform } from '@drakkar.software/dk-spaces-platform-sdk';
+export { passkeyEnrollable, evalPasskey } from '@drakkar.software/dk-spaces-platform-sdk';
+export type { PersistedSession } from '@drakkar.software/starfish-spaces';
 export { subscribeArgon2Progress } from './hash-wasm-shim';
 
 const _vault = createVaultStorageNative({ storageKey: 'octovault_session_v1' });

@@ -1,27 +1,27 @@
 /**
  * Tests for the OctoVault KV dependency-injection seam.
- * Key invariant: configureKv wires BOTH the local seam AND the octospaces-sdk seam
+ * Key invariant: configureKv wires BOTH the local seam AND the dk-spaces-sdk seam
  * so all SDK modules (pull-cache, profile-cache, access-store) use the same adapter.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-// Must mock octospaces-sdk BEFORE importing kv, since configureKv calls octospacesConfigure.
-vi.mock('@drakkar.software/octospaces-sdk', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@drakkar.software/octospaces-sdk')>();
+// Must mock dk-spaces-sdk BEFORE importing kv, since configureKv calls dkSpacesConfigure.
+vi.mock('@drakkar.software/dk-spaces-sdk', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@drakkar.software/dk-spaces-sdk')>();
   return { ...actual, configureKv: vi.fn() };
 });
 
-import { configureKv as octospacesConfigure } from '@drakkar.software/octospaces-sdk';
+import { configureKv as dkSpacesConfigure } from '@drakkar.software/dk-spaces-sdk';
 import { configureKv, kvGet, kvSet, kvRemove } from './kv';
 
 beforeEach(() => vi.clearAllMocks());
 
 describe('configureKv', () => {
-  it('wires the octospaces-sdk KV seam with the same adapter', () => {
+  it('wires the dk-spaces-sdk KV seam with the same adapter', () => {
     const adapter = { get: vi.fn(), set: vi.fn(), remove: vi.fn() };
     configureKv(adapter);
-    expect(octospacesConfigure).toHaveBeenCalledOnce();
-    const sdkAdapter = vi.mocked(octospacesConfigure).mock.calls[0]![0];
+    expect(dkSpacesConfigure).toHaveBeenCalledOnce();
+    const sdkAdapter = vi.mocked(dkSpacesConfigure).mock.calls[0]![0];
     expect(sdkAdapter.get).toBe(adapter.get);
     expect(sdkAdapter.set).toBe(adapter.set);
     expect(sdkAdapter.remove).toBe(adapter.remove);

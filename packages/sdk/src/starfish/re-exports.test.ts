@@ -53,6 +53,37 @@ describe('identity re-exports', () => {
     expect(typeof identity.buildSession).toBe('function');
     expect(typeof identity.generateSeedWords).toBe('function');
   });
+
+  // sessionFromPersisted moved to starfish-spaces in dk-spaces-sdk 0.31 (no more
+  // proxy) — identity.ts adds a wrapper injecting clientOpts. activeAccountOf /
+  // rootIdentityOf are direct pass-throughs (no clientOpts needed).
+  it('exports sessionFromPersisted, activeAccountOf, rootIdentityOf', () => {
+    expect(typeof identity.sessionFromPersisted).toBe('function');
+    expect(typeof identity.activeAccountOf).toBe('function');
+    expect(typeof identity.rootIdentityOf).toBe('function');
+  });
+
+  it('activeAccountOf / rootIdentityOf are the same references as starfish-spaces (pass-through)', () => {
+    expect(identity.activeAccountOf).toBe(spacesExports.activeAccountOf);
+    expect(identity.rootIdentityOf).toBe(spacesExports.rootIdentityOf);
+  });
+});
+
+// ── pairing ───────────────────────────────────────────────────────────────────
+// pairing.ts is a NEW file — dk-spaces-sdk 0.31 dropped its device-pairing proxy;
+// startDevicePairing/completeDevicePairing now come straight from starfish-spaces,
+// wrapped here for the confirmUnpinnedRoot decision + the app's own QR prefix.
+import * as pairing from './pairing';
+
+describe('pairing re-exports', () => {
+  it('exports startDevicePairing and completeDevicePairing as functions', () => {
+    expect(typeof pairing.startDevicePairing).toBe('function');
+    expect(typeof pairing.completeDevicePairing).toBe('function');
+  });
+
+  it('PAIR_PREFIX is the app-specific octovault-pair: prefix', () => {
+    expect(pairing.PAIR_PREFIX).toBe('octovault-pair:');
+  });
 });
 
 // ── space-encryptor ───────────────────────────────────────────────────────────

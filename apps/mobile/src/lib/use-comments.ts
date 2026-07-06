@@ -88,7 +88,7 @@ export function usePageComments(spaceId: string, pageId: string, opts: { enabled
   });
 
   // Live cross-member sync: the comment append already fans out as an
-  // `octospaces.object.changed` event over SSE, so other members re-pull live.
+  // `dk.object.changed` event over SSE, so other members re-pull live.
   useDocLiveSync({ docId, ready, pull, skipFirstFocus: true, firstFocusKey: doc });
 
   // `version` is the recompute trigger — the WalDocument is mutated in place.

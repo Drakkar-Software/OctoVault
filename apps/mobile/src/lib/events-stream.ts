@@ -2,7 +2,7 @@
  * OctoVault-specific SSE payload parser for the `/events` endpoint.
  *
  * The generic transport (buildSignedEventsRequest / parseSseFrames /
- * subscribeChanges) now lives in `@drakkar.software/octospaces-sdk`
+ * subscribeChanges) now lives in `@drakkar.software/dk-spaces-sdk`
  * (re-exported through `@drakkar.software/octovault-sdk`).
  *
  * This file contains only the domain-specific `extractChangedIds` parser —
@@ -18,7 +18,7 @@ export interface ChangedIds {
 /**
  * Extract the changed resource ids from the JSON payload of a parsed SSE data line.
  * Whistlers wraps the NATS payload as: { sourceTopic, rawPayload, ... }
- *  - sourceTopic = "octospaces.object.changed.<spaceId>"  (reliable)
+ *  - sourceTopic = "dk.object.changed.<spaceId>"  (reliable)
  *  - rawPayload.params = { spaceId, objectId?, nodeId? } (best-effort)
  */
 export function extractChangedIds(dataJson: string): ChangedIds {
@@ -29,7 +29,7 @@ export function extractChangedIds(dataJson: string): ChangedIds {
     };
     const result: ChangedIds = {};
 
-    const TOPIC_PREFIX = 'octospaces.object.changed.';
+    const TOPIC_PREFIX = 'dk.object.changed.';
     if (typeof frame.sourceTopic === 'string' && frame.sourceTopic.startsWith(TOPIC_PREFIX)) {
       result.spaceId = frame.sourceTopic.slice(TOPIC_PREFIX.length);
     }

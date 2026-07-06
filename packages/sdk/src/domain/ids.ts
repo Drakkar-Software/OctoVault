@@ -1,4 +1,4 @@
 /**
- * Re-exports the shared octospaces-sdk identifier helpers.
+ * Re-exports the shared starfish-protocol identifier helpers.
  */
-export { randomId, slugify as roomSlug } from '@drakkar.software/octospaces-sdk';
+export { randomId, slugify as roomSlug } from '@drakkar.software/starfish-protocol';

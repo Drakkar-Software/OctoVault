@@ -37,9 +37,9 @@ import {
   profilePush,
   accountScope,
   linkedDeviceScope,
-} from '@drakkar.software/octospaces-sdk';
+} from '@drakkar.software/dk-spaces-sdk';
 
-import { keyringPull } from '@drakkar.software/octospaces-sdk';
+import { keyringPull } from '@drakkar.software/dk-spaces-sdk';
 
 export type { DeviceKeys, PublicProfile };
 export { capProviderFor, ownerEnsureKeyring };

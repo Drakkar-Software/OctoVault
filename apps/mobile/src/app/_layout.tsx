@@ -23,10 +23,13 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 
-import { OctoSpacesThemeProvider } from '@drakkar.software/octospaces-ui';
+import { DKSpacesThemeProvider } from '@drakkar.software/dk-spaces-ui';
+import { TelemetryProvider, useTelemetryScreenTracking } from '@drakkar.software/dk-spaces-analytics-sdk';
 import { colors, resolveOctoSpacesTheme } from '@/theme';
 import { useAppFonts } from '@/lib/use-app-fonts';
 import { AppFrame } from '@/components/ui/AppFrame';
+import { AppErrorFallback } from '@/components/ui/AppErrorFallback';
+import { analytics, initAnalytics } from '@/lib/analytics';
 
 // Install platform crypto (no-op on web; quick-crypto install() on native).
 configureStarfishPlatform();
@@ -46,11 +49,15 @@ export default function RootLayout() {
     if (fontsLoaded || fontError) void SplashScreen.hideAsync();
   }, [fontsLoaded, fontError]);
 
+  useEffect(() => { initAnalytics().catch(console.error); }, []);
+  useTelemetryScreenTracking(analytics);
+
   // Block first paint until fonts resolve so we never flash a fallback face.
   if (!fontsLoaded && !fontError) return null;
 
   return (
-    <OctoSpacesThemeProvider theme={resolveOctoSpacesTheme(scheme)}>
+    <TelemetryProvider client={analytics} fallback={<AppErrorFallback />}>
+    <DKSpacesThemeProvider theme={resolveOctoSpacesTheme(scheme)}>
     <BrandProvider>
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
@@ -89,6 +96,7 @@ export default function RootLayout() {
       </SafeAreaProvider>
     </GestureHandlerRootView>
     </BrandProvider>
-    </OctoSpacesThemeProvider>
+    </DKSpacesThemeProvider>
+    </TelemetryProvider>
   );
 }

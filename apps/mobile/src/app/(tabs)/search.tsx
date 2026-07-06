@@ -18,8 +18,8 @@ import { SignInPrompt } from '@/components/ui/SignInPrompt';
 import { StackScreen } from '@/components/ui/StackScreen';
 import { TextField } from '@/components/ui/TextField';
 
-import { filterDiscoverEntries, DiscoverList } from '@drakkar.software/octospaces-ui';
-import type { DiscoverEntry } from '@drakkar.software/octospaces-ui';
+import { filterDiscoverEntries, DiscoverList } from '@drakkar.software/dk-spaces-ui';
+import type { DiscoverEntry } from '@drakkar.software/dk-spaces-ui';
 import { routeForNode } from '@drakkar.software/octovault-sdk';
 
 type SearchMode = 'content' | 'discover';

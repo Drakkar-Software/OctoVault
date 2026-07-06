@@ -9,8 +9,12 @@
  */
 import { configureKv, configureOctoVault } from '@drakkar.software/octovault-sdk';
 import { kvGet, kvRemove, kvSet } from '@drakkar.software/octovault-sdk/platform';
+// One-time octospaces→dk KV prefix migration (spaceaccess store only) — must run
+// before the first sync call. Side-effect import; Metro resolves the .native
+// variant on native. See kv-migration.ts / kv-migration.native.ts, MIGRATION_CLEANUP.md.
+import './kv-migration';
 
-const SYNC_BASE = process.env.EXPO_PUBLIC_STARFISH_URL ?? 'http://localhost:8787';
+export const SYNC_BASE = process.env.EXPO_PUBLIC_STARFISH_URL ?? 'http://localhost:8787';
 
 const _ns = process.env.EXPO_PUBLIC_STARFISH_NAMESPACE?.trim() ?? '';
 if (_ns !== '' && !/^[A-Za-z0-9_-]+$/.test(_ns)) {
@@ -18,7 +22,7 @@ if (_ns !== '' && !/^[A-Za-z0-9_-]+$/.test(_ns)) {
     `EXPO_PUBLIC_STARFISH_NAMESPACE must be a bare name ([A-Za-z0-9_-]+), got "${_ns}"`,
   );
 }
-const SYNC_NAMESPACE = _ns || undefined;
+export const SYNC_NAMESPACE = _ns || undefined;
 const SYNC_PREFIX = SYNC_NAMESPACE ? `/v1/${SYNC_NAMESPACE}` : '';
 const EVENTS_URL = process.env.EXPO_PUBLIC_EVENTS_URL ?? `${SYNC_BASE}${SYNC_PREFIX}/events`;
 const WEB_BASE = (process.env.EXPO_PUBLIC_WEB_URL ?? '').replace(/\/+$/, '');

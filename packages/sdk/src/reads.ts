@@ -1,16 +1,25 @@
-import { createReadsStore } from '@drakkar.software/octospaces-sdk';
+/**
+ * dk-spaces-sdk 0.31 stopped wrapping the read-marks store — `createReadsStore` is
+ * gone. Build the generic `createPrefsStore` directly with dk-spaces-sdk's read
+ * config preset, and re-derive the old room-specific method names this module used
+ * to expose (the generic store only has `get`/`mutate`/`subscribe`/etc.).
+ */
+import { createPrefsStore, type ReadPrefs, type Session } from '@drakkar.software/starfish-spaces';
+import { readPrefsConfig } from '@drakkar.software/dk-spaces-sdk';
 
-const _store = createReadsStore({
+const _store = createPrefsStore<ReadPrefs>({
+  ...readPrefsConfig('octovault'),
   client: (s) => s.accountClient,
-  kvNamespace: 'octovault',
-  logTag: '[OctoVault]',
 });
 
-export const getReadPrefs = () => _store.getReadPrefs();
-export const getRoomReadAt = (roomId: string) => _store.getNodeReadAt(roomId);
-export const subscribeReads = (listener: () => void) => _store.subscribeReads(listener);
-export const loadReadMarksFromKv = _store.loadReadMarksFromKv.bind(_store);
-export const hydrateReads = _store.hydrateReads.bind(_store);
-export const resetReads = () => _store.resetReads();
-export const flushReadsNow = () => _store.flushReadsNow();
-export const setRoomReadAt = _store.setNodeReadAt.bind(_store);
+export const getReadPrefs = () => _store.get();
+export const getRoomReadAt = (roomId: string) => _store.get().nodes[roomId];
+export const subscribeReads = (listener: () => void) => _store.subscribe(listener);
+export const loadReadMarksFromKv = (userId: string) => _store.loadFromKv(userId);
+export const hydrateReads = (userId: string, serverPrefs: ReadPrefs) => _store.hydrate(userId, serverPrefs);
+export const resetReads = () => _store.reset();
+export const flushReadsNow = () => _store.flushNow();
+export const setRoomReadAt = (session: Session, roomId: string, ts: number) =>
+  _store.mutate(session, (cur) =>
+    ts > (cur.nodes[roomId] ?? 0) ? { nodes: { ...cur.nodes, [roomId]: ts } } : null,
+  );

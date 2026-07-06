@@ -3,7 +3,7 @@
  * docs update live without waiting for the 4-second fallback poll.
  *
  * One stream per session × space-set. Reconnects automatically (capped
- * exponential backoff handled by subscribeChanges in octospaces-sdk). Tears
+ * exponential backoff handled by subscribeChanges in dk-spaces-sdk). Tears
  * down cleanly on session change, space-set change, or unmount.
  *
  * Wire-up: call inside SpacesProvider (has both session + spaces).

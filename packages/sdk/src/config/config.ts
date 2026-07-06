@@ -5,15 +5,15 @@
  * At boot, the app calls {@link configureOctoVault} with the env-derived values;
  * all SDK modules call the getter functions below instead of importing the env vars.
  *
- * Also wires the shared `@drakkar.software/octospaces-sdk` config so that all
- * re-exported octospaces modules (identity, registry, members, object-index, …)
+ * Also wires the shared `@drakkar.software/dk-spaces-sdk` config so that all
+ * re-exported DKSpaces modules (identity, registry, members, object-index, …)
  * are correctly configured from the same call.
  *
  * Then installs the OctoVault SpaceLayout via `configureSpaces` so every session
  * builder (fresh + restore) mints account/linked-device caps with explicit
  * collections instead of `["*"]` — preventing a 403 on `_spaces`.
  */
-import { configureOctoSpaces } from '@drakkar.software/octospaces-sdk';
+import { configureDKSpaces } from '@drakkar.software/dk-spaces-sdk';
 import { configureSpaces } from '@drakkar.software/starfish-spaces';
 import { octoVaultLayout } from '../starfish/client';
 import { resetPullCache } from '../starfish/pull-cache';
@@ -49,12 +49,12 @@ let _config: OctoVaultConfig = {
 export function configureOctoVault(config: Partial<OctoVaultConfig>): void {
   _config = { ..._config, ...config };
   resetPullCache();
-  // Forward to octospaces-sdk so its internal getters (getSyncBase, getSyncNamespace,
-  // getSyncPrefix, getEventsUrl) are populated. All re-exported octospaces modules
+  // Forward to dk-spaces-sdk so its internal getters (getSyncBase, getSyncNamespace,
+  // getSyncPrefix, getEventsUrl) are populated. All re-exported DKSpaces modules
   // (client, identity, registry, members, object-index, …) delegate to those getters —
-  // they throw if unconfigured. (`webBase` is kept locally on OctoVaultConfig; octospaces
+  // they throw if unconfigured. (`webBase` is kept locally on OctoVaultConfig; DKSpaces
   // dropped its `webBase` config field, so it is no longer forwarded.)
-  configureOctoSpaces({
+  configureDKSpaces({
     syncBase: _config.syncBase,
     syncNamespace: _config.syncNamespace,
     eventsUrl: _config.eventsUrl,

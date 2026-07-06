@@ -8,7 +8,7 @@
  * `leaveSpace` and `CategoryError` are vault-specific (not in starfish-spaces).
  */
 import { readSpaces as _readSpaces, updateSpacesDoc, removeSpaceAccessEntry } from '@drakkar.software/starfish-spaces';
-import type { MutePrefs, ReadPrefs } from '@drakkar.software/octospaces-sdk';
+import type { MutePrefs, ReadPrefs } from '@drakkar.software/starfish-spaces';
 import type { StarfishClient } from '@drakkar.software/starfish-client';
 import type { Session } from '@drakkar.software/starfish-spaces';
 

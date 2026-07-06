@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { ObjectNode } from '@drakkar.software/octospaces-sdk';
+import type { ObjectNode } from '@drakkar.software/starfish-spaces';
 import {
   propsOf,
   automationOf,

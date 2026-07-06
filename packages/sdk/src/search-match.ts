@@ -3,5 +3,5 @@ export {
   rankResults,
   fold,
   isWordStart,
-} from '@drakkar.software/octospaces-sdk';
-export type { MatchRange, TitleMatch, RankedResult } from '@drakkar.software/octospaces-sdk';
+} from '@drakkar.software/dk-spaces-sdk';
+export type { MatchRange, TitleMatch, RankedResult } from '@drakkar.software/dk-spaces-sdk';

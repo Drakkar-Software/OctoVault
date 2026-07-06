@@ -4,4 +4,4 @@ export {
   emitSseStatus,
   onSseStatus,
   clearLiveSyncBus,
-} from '@drakkar.software/octospaces-sdk';
+} from '@drakkar.software/dk-spaces-sdk';

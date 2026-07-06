@@ -2,7 +2,7 @@
  * Tests for OctoVault-specific SSE payload parser.
  *
  * The generic transport tests (buildSignedEventsRequest, parseSseFrames) have
- * been migrated to octospaces-sdk (src/sync/events.test.ts). This file covers
+ * been migrated to dk-spaces-sdk (src/sync/events.test.ts). This file covers
  * only the OctoVault-specific extractChangedIds parser.
  */
 import { describe, it, expect } from 'vitest';
@@ -12,13 +12,13 @@ import { extractChangedIds } from './events-stream';
 
 describe('extractChangedIds', () => {
   it('extracts spaceId from sourceTopic', () => {
-    const data = JSON.stringify({ sourceTopic: 'octospaces.object.changed.sp-abc' });
+    const data = JSON.stringify({ sourceTopic: 'dk.object.changed.sp-abc' });
     expect(extractChangedIds(data)).toEqual({ spaceId: 'sp-abc' });
   });
 
   it('extracts objectId from rawPayload.params (object form)', () => {
     const data = JSON.stringify({
-      sourceTopic: 'octospaces.object.changed.sp-abc',
+      sourceTopic: 'dk.object.changed.sp-abc',
       rawPayload: { params: { spaceId: 'sp-abc', objectId: 'obj-1' } },
     });
     expect(extractChangedIds(data)).toEqual({ spaceId: 'sp-abc', objectId: 'obj-1' });
@@ -26,7 +26,7 @@ describe('extractChangedIds', () => {
 
   it('extracts objectId from rawPayload.params (JSON string form)', () => {
     const data = JSON.stringify({
-      sourceTopic: 'octospaces.object.changed.sp-abc',
+      sourceTopic: 'dk.object.changed.sp-abc',
       rawPayload: JSON.stringify({ params: { spaceId: 'sp-abc', objectId: 'obj-2', nodeId: 'n-3' } }),
     });
     const ids = extractChangedIds(data);
@@ -49,14 +49,14 @@ describe('extractChangedIds', () => {
   });
 
   it('returns empty string spaceId when topic suffix is empty', () => {
-    // "octospaces.object.changed." — trailing dot, zero-length spaceId
-    const data = JSON.stringify({ sourceTopic: 'octospaces.object.changed.' });
+    // "dk.object.changed." — trailing dot, zero-length spaceId
+    const data = JSON.stringify({ sourceTopic: 'dk.object.changed.' });
     expect(extractChangedIds(data)).toEqual({ spaceId: '' });
   });
 
   it('ignores a non-JSON rawPayload string (valid envelope, invalid inner payload)', () => {
     const data = JSON.stringify({
-      sourceTopic: 'octospaces.object.changed.sp-abc',
+      sourceTopic: 'dk.object.changed.sp-abc',
       rawPayload: 'not-valid-json',
     });
     const ids = extractChangedIds(data);

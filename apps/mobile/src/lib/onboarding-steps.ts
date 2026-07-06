@@ -9,6 +9,7 @@ import { Platform } from 'react-native';
 import { router } from 'expo-router';
 
 import { generateSeedWords } from '@drakkar.software/octovault-sdk';
+import { captureException } from './analytics';
 import { useSession } from './session-context';
 import { useSpaces } from './use-spaces';
 
@@ -127,8 +128,9 @@ export function useFirstRunSpace(): { finishing: boolean; finish: () => void } {
       if (spaces.length === 0) {
         try {
           await createSpace('Personal');
-        } catch {
+        } catch (e) {
           // Tolerated: the Vault's zero-space empty state is the fallback.
+          captureException(e);
         }
       }
       clearPendingSeedWords('onboarding');

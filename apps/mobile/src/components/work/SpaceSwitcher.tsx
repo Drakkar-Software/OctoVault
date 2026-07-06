@@ -6,8 +6,8 @@ import { focusRingStyle, useFocusRing } from '@/lib/focus';
 import { useHover } from '@/lib/use-hover';
 import { useSpaces } from '@/lib/use-spaces';
 import { useTheme } from '@/lib/use-theme';
-import { SpaceSwitcher as PkgSpaceSwitcher } from '@drakkar.software/octospaces-ui';
-import type { SwitcherIconName } from '@drakkar.software/octospaces-ui';
+import { SpaceSwitcher as PkgSpaceSwitcher } from '@drakkar.software/dk-spaces-ui';
+import type { SwitcherIconName } from '@drakkar.software/dk-spaces-ui';
 import { AccountSwitcher } from '@/components/account/AccountSwitcher';
 import { Avatar } from '@/components/ui/Avatar';
 import { Icon } from '@/components/ui/Icon';
@@ -49,7 +49,7 @@ interface SpaceSwitcherProps {
  * handled by the SpacesRail, so there is no dropdown here.
  *
  * **Mobile (`appbar`):** delegates to the shared `SpaceSwitcher` from
- * `@drakkar.software/octospaces-ui`, opening a bottom {@link Sheet} with
+ * `@drakkar.software/dk-spaces-ui`, opening a bottom {@link Sheet} with
  * the full menu — space list, "Join or create", "Space settings", and the
  * full account section ({@link AccountSwitcher}). When no space exists the
  * trigger shows "Create a space" as an entry point to `/join`.

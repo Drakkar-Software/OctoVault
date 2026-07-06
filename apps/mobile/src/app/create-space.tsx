@@ -4,6 +4,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { spacing } from '@/theme';
 import { humanizeError } from '@drakkar.software/octovault-sdk';
+import { captureException } from '@/lib/analytics';
 import { useSession } from '@/lib/session-context';
 import { useSpaces } from '@/lib/use-spaces';
 import { AppBar } from '@/components/ui/AppBar';
@@ -50,6 +51,7 @@ export default function CreateSpaceScreen() {
       setActiveId(space.id);
       router.replace('/(tabs)/work');
     } catch (e) {
+      captureException(e);
       setError(humanizeError(e, "Couldn't create the space. Try again."));
       setBusy(false);
     }

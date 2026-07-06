@@ -12,8 +12,8 @@ import { useQuickCreate } from '@/lib/use-quick-create';
 import { formatShortcut } from '@/lib/use-shortcuts';
 import { useSpaces } from '@/lib/use-spaces';
 import { initialsFor } from '@drakkar.software/octovault-sdk';
-import { Sidebar, SidebarHeader, SpacesRail } from '@drakkar.software/octospaces-ui';
-import type { RailIconName, RailSpace } from '@drakkar.software/octospaces-ui';
+import { Sidebar, SidebarHeader, SpacesRail } from '@drakkar.software/dk-spaces-ui';
+import type { RailIconName, RailSpace } from '@drakkar.software/dk-spaces-ui';
 import { useBrand } from '@/lib/brand-context';
 import { Avatar } from '@/components/ui/Avatar';
 import { Badge } from '@/components/ui/Badge';
@@ -35,7 +35,7 @@ const RAIL_ICON: Record<RailIconName, IconName> = {
 
 /**
  * Persistent left navigation of the OctoVault desktop shell: the compact spaces
- * rail (via SpacesRail from octospaces-ui) and the active space's sidebar panel
+ * rail (via SpacesRail from dk-spaces-ui) and the active space's sidebar panel
  * (SpaceSwitcher header over the workspace tree, via Sidebar + SidebarHeader).
  *
  * Rendered once by {@link AppFrame} on wide viewports, inside its collapsible

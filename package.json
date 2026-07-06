@@ -26,11 +26,5 @@
   },
   "dependencies": {
     "@drakkar.software/whistlers": "^0.9.0"
-  },
-  "pnpm": {
-    "overrides": {
-      "@drakkar.software/octospaces-sdk": "0.26.0",
-      "@drakkar.software/starfish-protocol": "3.0.0-alpha.32"
-    }
   }
 }

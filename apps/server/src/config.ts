@@ -201,7 +201,7 @@ export const config: SyncConfig = {
     // projection upserts that space's `{ nodes:[{id,title,type,emoji?,updatedAt}], ts }`
     // or removes the entry when the space has no public nodes. Anonymous callers may pull
     // it to discover public content. `pullOnly` rejects all client writes.
-    // Keep in sync with objectDirName in @drakkar.software/octospaces-sdk (paths.ts)
+    // Keep in sync with objectDirName in @drakkar.software/dk-spaces-sdk (paths.ts)
     // AND drakkar_sync/apps/octovault/collections.py.
     {
       name: "objectindex",

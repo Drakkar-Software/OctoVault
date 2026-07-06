@@ -85,18 +85,18 @@ const roleResolver = createCapCertRoleResolver({
 // for enc nodes; public/invite-plaintext nodes carry no inline content in events),
 // which Whistlers can re-serve as SSE. Metadata only, opt-in per collection.
 // The object tree index + WAL op-log + merge-doc + public node content publish on
-// `octospaces.object.changed` so a write wakes other devices to pull new ops.
+// `dk.object.changed` so a write wakes other devices to pull new ops.
 // snapshot (`objsnap`) writes are NOT queued — readers resume from the log.
 const { queue, nc } = await createNatsQueue();
 const queuing = createQueuingServerPlugin({
   queue,
   collections: {
-    objindex:  { topic: "octospaces.object.changed", includeParams: true, includeIdentity: false },
-    objlog:    { topic: "octospaces.object.changed", includeParams: true, includeIdentity: false },
-    objdoc:    { topic: "octospaces.object.changed", includeParams: true, includeIdentity: false },
-    objpub:    { topic: "octospaces.object.changed", includeParams: true, includeIdentity: false },
-    objinv:    { topic: "octospaces.object.changed", includeParams: true, includeIdentity: false },
-    typeindex: { topic: "octospaces.object.changed", includeParams: true, includeIdentity: false },
+    objindex:  { topic: "dk.object.changed", includeParams: true, includeIdentity: false },
+    objlog:    { topic: "dk.object.changed", includeParams: true, includeIdentity: false },
+    objdoc:    { topic: "dk.object.changed", includeParams: true, includeIdentity: false },
+    objpub:    { topic: "dk.object.changed", includeParams: true, includeIdentity: false },
+    objinv:    { topic: "dk.object.changed", includeParams: true, includeIdentity: false },
+    typeindex: { topic: "dk.object.changed", includeParams: true, includeIdentity: false },
   },
 });
 
@@ -104,7 +104,10 @@ const queuing = createQueuingServerPlugin({
 // the access record at `spaces/{spaceId}/_access`. Shared between the sync router
 // (collection-level gating) and the /events proxy (membership validation).
 // createSpacesRoleEnricher (starfish-spaces) replaces the hand-rolled makeSpaceRoleEnricher.
-const spaceEnricher = createSpacesRoleEnricher(store);
+// starfish alpha.39 flipped the default to fail-closed (allowTofu: false — absent `_access`
+// doc → 403). allowTofu: true restores first-write provisioning so a brand-new space's
+// first write (createSpace) isn't rejected before its `_access` doc has been seen.
+const spaceEnricher = createSpacesRoleEnricher(store, undefined, { allowTofu: true });
 
 // Legacy projection: maintains the public-space directory at `_index/spaces/public`.
 const projection = createProjectionServerPlugin({ store, projections });

@@ -395,7 +395,7 @@ export const radii = {
  * These are LIGHT-SCHEME static constants — safe for use in `StyleSheet.create()`
  * which requires compile-time values. For scheme-aware inline styles that must
  * update in dark mode, use `dropShadow(colors.shadow, …)` from
- * `@drakkar.software/octospaces-ui` instead. The `resolveOctoSpacesTheme` adapter
+ * `@drakkar.software/dk-spaces-ui` instead. The `resolveOctoSpacesTheme` adapter
  * overrides `shadowColor` per-scheme so shared UI components always pick up the
  * correct tint.
  */
@@ -638,12 +638,12 @@ export const layout = {
 import type { PresenceStatus, VerificationLevel } from '@drakkar.software/octovault-sdk';
 export type { PresenceStatus, VerificationLevel };
 
-// dropShadow — scheme-aware drop-shadow helper from octospaces-ui.
+// dropShadow — scheme-aware drop-shadow helper from dk-spaces-ui.
 // Re-exported here so components can import it from '@/theme' alongside the
-// static `shadows` presets without needing a separate octospaces-ui import.
+// static `shadows` presets without needing a separate dk-spaces-ui import.
 // Use it for inline styles on elevated surfaces that must pick up dark-mode tint:
 //   style={[styles.card, dropShadow(colors.shadow, 'md')]}
-export { dropShadow } from '@drakkar.software/octospaces-ui';
+export { dropShadow } from '@drakkar.software/dk-spaces-ui';
 
 export function presenceColor(p: Palette, status: PresenceStatus): string {
   switch (status) {
@@ -663,13 +663,13 @@ export type Theme = {
   colors: Palette;
 };
 
-// ── octospaces-ui theme adapter ────────────────────────────────────────────
-// Maps OctoVault's Palette tokens to the octospaces-ui Theme contract so the
+// ── dk-spaces-ui theme adapter ─────────────────────────────────────────────
+// Maps OctoVault's Palette tokens to the dk-spaces-ui Theme contract so the
 // shared UI primitives (presenceColor, verificationColor, focusRingStyle…) work
 // without any per-component migration yet. Keep vault's palette as the single
-// source of truth; update only this function when the octospaces-ui contract changes.
+// source of truth; update only this function when the dk-spaces-ui contract changes.
 
-import type { Theme as OctoSpacesTheme } from '@drakkar.software/octospaces-ui';
+import type { Theme as OctoSpacesTheme } from '@drakkar.software/dk-spaces-ui';
 
 export function resolveOctoSpacesTheme(scheme: ColorScheme): OctoSpacesTheme {
   const p = colors[scheme];
@@ -803,7 +803,7 @@ export function resolveOctoSpacesTheme(scheme: ColorScheme): OctoSpacesTheme {
 
     shadows: {
       none: shadows.none,
-      // Override shadowColor per-scheme so octospaces-ui components pick up the
+      // Override shadowColor per-scheme so dk-spaces-ui components pick up the
       // right tint (light: warm near-black; dark: pure black).
       sm: { ...shadows.sm, shadowColor: p.shadow },
       md: { ...shadows.md, shadowColor: p.shadow },

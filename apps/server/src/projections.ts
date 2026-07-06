@@ -24,7 +24,7 @@ import type { Projection, ProjectionOp } from "@drakkar.software/starfish-projec
  *
  * Keep in sync with:
  * - drakkar_sync/apps/octovault/projections.py   (Python mirror, same logic)
- * - @drakkar.software/octospaces-sdk readObjectDirectory (client reader)
+ * - @drakkar.software/starfish-spaces readObjectDirectory (client reader)
  * - The `objectindex` collection in config.ts     (pullOnly target collection)
  */
 
