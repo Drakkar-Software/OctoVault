@@ -95,6 +95,7 @@ export {
   writeProfile,
   buildAuthHeaders,
   buildEncryptor,
+  buildEncryptorTofu,
   ownerEnsureKeyring,
 } from './starfish/client';
 

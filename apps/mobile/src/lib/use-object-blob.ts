@@ -11,8 +11,9 @@ import { File as FSFile, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 
 import type { ByteSealer, ObjectNode } from '@drakkar.software/octovault-sdk';
-import { humanizeError, loadObjectBlob, propsOf, getSpaceClient, buildEncryptor, ownerTrustedAdders } from '@drakkar.software/octovault-sdk';
+import { humanizeError, loadObjectBlob, propsOf, getSpaceClient, buildEncryptor, buildEncryptorTofu, ownerTrustedAdders } from '@drakkar.software/octovault-sdk';
 import { useSession } from './session-context';
+import { useTrustBypass } from './use-trust-bypass';
 
 /** Convert a Uint8Array to a base64 data URI safely for any size.
  *  `btoa(String.fromCharCode(...bytes))` hits the call-stack spread limit in
@@ -38,6 +39,8 @@ export interface ObjectBlobState {
 
 export function useObjectBlob(spaceId: string, node: ObjectNode | undefined): ObjectBlobState {
   const { session } = useSession();
+  const { isBypassed } = useTrustBypass();
+  const bypassed = isBypassed(spaceId);
 
   const props = node ? propsOf(node) : {};
   const blobId = props['blobId'] as string | undefined;
@@ -63,7 +66,9 @@ export function useObjectBlob(spaceId: string, node: ObjectNode | undefined): Ob
     (async () => {
       try {
         const blobClient = getSpaceClient(spaceId, session);
-        const blobEnc = await buildEncryptor(blobClient, session.keys, spaceId, ownerTrustedAdders(session));
+        const blobEnc = bypassed
+          ? await buildEncryptorTofu(blobClient, session.keys, spaceId, ownerTrustedAdders(session))
+          : await buildEncryptor(blobClient, session.keys, spaceId, ownerTrustedAdders(session));
         if (!blobEnc) throw new Error(`[octovault] no space keyring for ${spaceId}`);
         const enc = blobEnc as unknown as ByteSealer;
         const data = await loadObjectBlob(blobClient, enc, spaceId, blobId);
@@ -75,7 +80,7 @@ export function useObjectBlob(spaceId: string, node: ObjectNode | undefined): Ob
       }
     })();
     return () => { cancelled = true; };
-  }, [blobId, spaceId, session]);
+  }, [blobId, spaceId, session, bypassed]);
 
   const dataUri = bytes && isImage ? toDataUri(mime, bytes) : null;
 

@@ -26,6 +26,7 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { TextField } from '@/components/ui/TextField';
 import { useToast } from '@/components/ui/Toast';
 import { Txt } from '@/components/ui/Txt';
+import { KeyringTrustNotice } from '@/components/work/KeyringTrustNotice';
 import { ObjectHero } from '@/components/work/ObjectHero';
 
 /** react-native-web forwards the keydown event, so `preventDefault` and the
@@ -202,7 +203,7 @@ export function BoardView({ spaceId, objectId, emoji, title, onRenameTitle, onCh
       />
 
       {board.offline ? <Callout tone="info" iconName="info">Offline — showing the last synced board.</Callout> : null}
-      {board.openError ? <Callout tone="danger" iconName="alert">{board.openError}</Callout> : null}
+      <KeyringTrustNotice spaceId={spaceId} openError={board.openError} onRetry={board.reload} />
 
       {loading ? (
         <BoardSkeleton />

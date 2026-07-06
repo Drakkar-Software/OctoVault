@@ -176,3 +176,40 @@ export async function buildEncryptor(
 ): Promise<Encryptor | null> {
   return _buildEncryptor(client, keys, keyringPull(spaceId), trustedAdders);
 }
+
+/**
+ * TOFU variant of {@link buildEncryptor} for post-migration recovery. Harvests the
+ * observed `addedBy` of our own wrapped-key entries from the space keyring and adds
+ * them to `trustedAdders`.
+ *
+ * SECURITY: this defeats the keyring's provenance check (a hostile server could
+ * substitute a wrapped-key entry) — invoke ONLY behind an explicit, user-initiated
+ * "trust this space" bypass, never automatically.
+ */
+export async function buildEncryptorTofu(
+  client: StarfishClient,
+  keys: DeviceKeys,
+  spaceId: string,
+  trustedAdders: string[],
+): Promise<Encryptor | null> {
+  const observed = await observedKeyringAdders(client, spaceId, keys.kemPub);
+  const union = Array.from(new Set([...trustedAdders, ...observed]));
+  return _buildEncryptor(client, keys, keyringPull(spaceId), union);
+}
+
+/** Read a space keyring and collect the `addedBy` of every entry sealed to `kemPub`. */
+async function observedKeyringAdders(
+  client: StarfishClient,
+  spaceId: string,
+  kemPub: string,
+): Promise<string[]> {
+  const res = await client.pull(keyringPull(spaceId)).catch(() => null);
+  const kr = (res as { data?: { epochs?: Record<string, { wrappedKeys?: Array<{ subKem?: string; addedBy?: string }> }> } } | null)?.data;
+  const out: string[] = [];
+  for (const epoch of Object.values(kr?.epochs ?? {})) {
+    for (const entry of epoch.wrappedKeys ?? []) {
+      if (entry.subKem === kemPub && typeof entry.addedBy === 'string') out.push(entry.addedBy);
+    }
+  }
+  return out;
+}

@@ -14,11 +14,12 @@ import { useEffect, useState } from 'react';
 import type { Encryptor, StarfishClient } from '@drakkar.software/starfish-client';
 
 import { getMemberCap } from '@drakkar.software/octovault-sdk';
-import { getNodeAccess, getSpaceClient, buildEncryptor, ownerTrustedAdders } from '@drakkar.software/octovault-sdk';
+import { getNodeAccess, getSpaceClient, buildEncryptor, buildEncryptorTofu, ownerTrustedAdders } from '@drakkar.software/octovault-sdk';
 import type { NodeAccess } from '@drakkar.software/octovault-sdk';
 import { useSpaceRegistryActions } from './space-registry-context';
 import { useSession } from './session-context';
 import { useSpaceOpenState } from './use-space-open';
+import { useTrustBypass } from './use-trust-bypass';
 
 export interface RoomOpenFlow {
   encryptor: Encryptor | null;
@@ -41,6 +42,8 @@ export function useSpaceOpen(opts: {
   const { docId, spaceId, enabled } = opts;
   const { session } = useSession();
   const { ensure: ensureRegistry } = useSpaceRegistryActions();
+  const { isBypassed } = useTrustBypass();
+  const bypassed = isBypassed(spaceId);
   const [encryptor, setEncryptor] = useState<Encryptor | null>(null);
   const [client, setClient] = useState<StarfishClient | null>(null);
   const { opening, openError, offline, reloadNonce, reload, beginOpen, finishOpening, failOpen } =
@@ -68,7 +71,7 @@ export function useSpaceOpen(opts: {
             setClient(docClient);
             finishOpening();
           }
-        } else if (nodeId) {
+        } else if (nodeId && !bypassed) {
           // Per-node: use getNodeAccess — null encryptor for plaintext nodes,
           // space-keyring encryptor for enc:true nodes.
           const reg = getMemberCap(spaceId) ? null : await ensureRegistry(spaceId);
@@ -81,11 +84,17 @@ export function useSpaceOpen(opts: {
             finishOpening();
           }
         } else {
-          // Space-wide E2EE (typeindex, or any call without a node): space keyring.
+          // Space-wide E2EE (typeindex, or any call without a node), OR any node
+          // once the user has opted into the trust bypass for this space: open the
+          // space keyring directly. Bypassed uses buildEncryptorTofu, which also
+          // trusts the keyring's own observed `addedBy` — the recovery path for the
+          // userId-vs-edPub trusted-adder mismatch.
           const reg = getMemberCap(spaceId) ? null : await ensureRegistry(spaceId);
           const docClient = getSpaceClient(spaceId, session);
           const trustedAdders = reg?.owner ? [reg.owner] : ownerTrustedAdders(session);
-          const enc = await buildEncryptor(docClient, session.keys, spaceId, trustedAdders);
+          const enc = bypassed
+            ? await buildEncryptorTofu(docClient, session.keys, spaceId, trustedAdders)
+            : await buildEncryptor(docClient, session.keys, spaceId, trustedAdders);
           if (!cancelled) {
             setEncryptor(enc);
             setClient(docClient);
@@ -101,7 +110,7 @@ export function useSpaceOpen(opts: {
     return () => {
       cancelled = true;
     };
-  }, [enabled, session, docId, spaceId, nodeId, nodeAccess, nodeEnc, plaintext, ensureRegistry, reloadNonce, beginOpen, finishOpening, failOpen]);
+  }, [enabled, session, docId, spaceId, nodeId, nodeAccess, nodeEnc, plaintext, bypassed, ensureRegistry, reloadNonce, beginOpen, finishOpening, failOpen]);
 
   return { encryptor, client, opening, openError, offline, reload };
 }

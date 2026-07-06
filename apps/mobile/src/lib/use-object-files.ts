@@ -9,10 +9,11 @@ import { useCallback } from 'react';
 import * as DocumentPicker from 'expo-document-picker';
 
 import type { ByteSealer } from '@drakkar.software/octovault-sdk';
-import { uploadObjectBlob, MAX_OBJECT_BLOB_BYTES, FileTooLargeError, getSpaceClient, buildEncryptor, ownerTrustedAdders } from '@drakkar.software/octovault-sdk';
+import { uploadObjectBlob, MAX_OBJECT_BLOB_BYTES, FileTooLargeError, getSpaceClient, buildEncryptor, buildEncryptorTofu, ownerTrustedAdders } from '@drakkar.software/octovault-sdk';
 import type { Encryptor } from '@drakkar.software/starfish-client';
 import { useSession } from './session-context';
 import { useSpaceObjects } from './space-objects-context';
+import { useTrustBypass } from './use-trust-bypass';
 import type { ID } from '@drakkar.software/octovault-sdk';
 
 export interface UseObjectFilesResult {
@@ -27,6 +28,8 @@ export interface UseObjectFilesResult {
 export function useObjectFiles(spaceId: string): UseObjectFilesResult {
   const { session } = useSession();
   const { objects } = useSpaceObjects();
+  const { isBypassed } = useTrustBypass();
+  const bypassed = isBypassed(spaceId);
 
   const pickAndUpload = useCallback(async (mimeFilter: string[], asImage: boolean) => {
     const result = await DocumentPicker.getDocumentAsync({
@@ -55,13 +58,15 @@ export function useObjectFiles(spaceId: string): UseObjectFilesResult {
     if (!session) throw new Error('No active session');
     // Blobs are always space-keyring sealed; open the keyring directly.
     const blobClient = getSpaceClient(spaceId, session);
-    const blobEnc = await buildEncryptor(blobClient, session.keys, spaceId, ownerTrustedAdders(session));
+    const blobEnc = bypassed
+      ? await buildEncryptorTofu(blobClient, session.keys, spaceId, ownerTrustedAdders(session))
+      : await buildEncryptor(blobClient, session.keys, spaceId, ownerTrustedAdders(session));
     if (!blobEnc) throw new Error(`[octovault] no space keyring for ${spaceId}`);
     const enc = blobEnc as unknown as ByteSealer;
 
     const ref = await uploadObjectBlob(blobClient, enc, spaceId, bytes, name, mime);
     return { ...ref, asImage };
-  }, [session, spaceId]);
+  }, [session, spaceId, bypassed]);
 
   /** Swallow cancellation silently; re-throw real errors (FileTooLargeError, network, etc.). */
   const pickAndUploadOrNull = useCallback(async (mimeFilter: string[], asImage: boolean) => {

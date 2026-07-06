@@ -1,5 +1,37 @@
 # Changelog
 
+## 0.5.1 — "keyring trust bypass (post-migration recovery)"
+
+Adds `buildEncryptorTofu` (`@drakkar.software/octovault-sdk` `0.3.0` → `0.3.1`) to
+`packages/sdk`, and a "Trust this space" recovery button in the app, for spaces that
+can't decrypt after the 0.5.0 dk-spaces migration.
+
+### Root cause
+
+The dk-spaces migration exposed a pre-existing **userId-vs-edPub mismatch**: the
+keyring open path resolves `trustedAdders` as `reg?.owner ? [reg.owner] : …`, but
+`reg.owner` is a **userId** (`sha256(edPub)[0:32]`) while a keyring entry's `addedBy`
+is an **Ed25519 pubkey** — they can never match, so `starfish-keyring` logs
+`"addedBy … is not a trusted adder"` and skips the epoch, and content can't decrypt.
+
+### `buildEncryptorTofu` (new SDK export)
+
+- **`packages/sdk/src/starfish/client.ts`**: harvests the space keyring's observed
+  `addedBy` for our own wrapped-key entries and unions them into `trustedAdders`
+  before calling the underlying `buildEncryptor`. **SECURITY:** this trusts whatever
+  `addedBy` the server serves for our recipient entry, which defeats the keyring's
+  provenance check (a hostile server could substitute a wrapped-key entry) — it must
+  only be invoked behind an explicit, user-initiated bypass, never automatically.
+- Exported from the package root alongside `buildEncryptor`.
+
+### App wiring
+
+- `use-room-open-flow.ts` / `use-object-blob.ts` / `use-object-files.ts` fall back to
+  `buildEncryptorTofu` for a space only once the user has opted in via a new
+  per-space, per-identity "Trust this space & retry" bypass (persisted locally).
+- The bypass button renders next to the existing `openError` Callout on page/board
+  views, with an explicit warning about the security tradeoff above.
+
 ## 0.5.0 — "dk-spaces migration + analytics"
 
 Migrates off the renamed `octospaces` packages onto `dk-spaces-sdk@0.32.0` /

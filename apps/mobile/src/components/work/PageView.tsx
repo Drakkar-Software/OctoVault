@@ -42,6 +42,7 @@ import { AttachmentBlock } from '@/components/work/AttachmentBlock';
 import { BookmarkBlock } from '@/components/work/BookmarkBlock';
 import { TableBlock } from '@/components/work/TableBlock';
 import { BlockComments } from '@/components/work/BlockComments';
+import { KeyringTrustNotice } from '@/components/work/KeyringTrustNotice';
 import { useObjectFiles } from '@/lib/use-object-files';
 import type { BookmarkMeta } from '@/lib/use-page';
 
@@ -589,7 +590,7 @@ export function PageView({ spaceId, objectId, emoji, title, subtitle, onRenameTi
       />
 
       {page.offline ? <Callout tone="info" iconName="info">Offline — showing the last synced version.</Callout> : null}
-      {page.openError ? <Callout tone="danger" iconName="alert">{page.openError}</Callout> : null}
+      <KeyringTrustNotice spaceId={spaceId} openError={page.openError} onRetry={page.reload} />
 
       {/* The blocks container is the slash card's positioning context. */}
       <View style={styles.blocks}>
