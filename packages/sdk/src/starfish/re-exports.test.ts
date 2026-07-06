@@ -87,7 +87,8 @@ describe('pairing re-exports', () => {
 });
 
 // ── space-encryptor ───────────────────────────────────────────────────────────
-// space-encryptor.ts deleted — hoisted into barrel; import from barrel to guard re-export coverage
+// space-encryptor.ts's exports were hoisted into the barrel (file itself removed);
+// import from the barrel to guard re-export coverage
 import {
   getNodeAccess,
   clearNodeAccessCache,
@@ -113,7 +114,8 @@ describe('space-encryptor re-exports', () => {
 });
 
 // ── pull-cache ────────────────────────────────────────────────────────────────
-// pull-cache.ts deleted — hoisted into barrel; import from barrel to guard re-export coverage
+// pull-cache.ts still exists (vendored createKvPullCache wrapper) and is re-exported
+// from the barrel; import from the barrel to guard re-export coverage
 import { pullCache, PULL_CACHE_MAX_AGE_MS } from '../index';
 
 describe('pull-cache re-exports', () => {

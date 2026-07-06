@@ -233,7 +233,8 @@ export type { ObjectDirectoryEntry } from '@drakkar.software/starfish-spaces';
 export type { ObjectDirectoryEntry as PublicObjectDirEntry } from '@drakkar.software/starfish-spaces';
 
 // Session / cache
-export { sessionFromPersisted, activeAccountOf, rootIdentityOf } from './starfish/identity';
+// sessionFromPersisted / activeAccountOf / rootIdentityOf already covered by the
+// `export * from './starfish/identity'` barrel above — not repeated here.
 // pullCache / PULL_CACHE_MAX_AGE_MS were removed from octospaces-sdk in 0.24 —
 // vendored locally via starfish-client's createKvPullCache.
 export { pullCache, PULL_CACHE_MAX_AGE_MS } from './starfish/pull-cache';

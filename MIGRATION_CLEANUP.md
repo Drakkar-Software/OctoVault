@@ -42,27 +42,39 @@ have launched at least once on the new build).
   ever wanted here, add `kvAdapter`/`persistPrefix`/`persistIndexKey` options to its
   `createSealedBlobStore(...)` call — mirroring `starfish/attachments.ts`'s store.
 
-## Security-posture note — worth a second look, not urgent
+## Security-posture note — not a downgrade, verified
 
 - **`completeDevicePairing`'s `confirmUnpinnedRoot` always returns `true`**
   (`packages/sdk/src/starfish/pairing.ts`). starfish `alpha.63` made root-trust
   verification mandatory on pairing completion (`expectedRootEdPub` or
-  `confirmUnpinnedRoot`, else it throws). OctoVault has no prior-pinned root to
-  check against at pairing time (the new device is bootstrapping from the scan),
-  so trust is granted unconditionally — the actual security boundary remains the
-  PIN-sealed bundle + physical QR proximity, same as pre-bump behavior. If a
-  stronger posture is wanted later (e.g. prompting the user to confirm a
-  fingerprint), this is the place to add it.
+  `confirmUnpinnedRoot`, else it throws). OctoVault's QR actually DOES carry a
+  pinned root: `startDevicePairing` mints it as `octovault-pair:<nonce>.<edPub>`
+  (the existing device's session `edPub`), so on completion `expectedRootEdPub`
+  resolves from the QR itself and root-trust IS enforced against that pinned key
+  — the `confirmUnpinnedRoot: () => true` callback is an inert fallback that only
+  fires if the QR were ever minted without its `.edPub` suffix, which OctoVault
+  never does. Net posture is unchanged from pre-bump: PIN-sealed bundle
+  (Argon2id→AES-GCM) + physical QR proximity remain the real gate. No action
+  needed here.
 
-## Runtime behavior change — not a bug, but worth knowing
+## Runtime behavior change — not a bug, but scoped narrowly
 
 - **`createSpacesRoleEnricher(store, undefined, { allowTofu: true })`**
-  (`apps/server/src/index.ts`) restores first-write provisioning on this server's
-  gate, which is now fail-closed by default upstream (starfish alpha.39). This is
-  required — without it, `createSpace` 403s the first time a fresh account's
-  `_access` doc hasn't been durably seen yet. `allowTofu: true` re-opens the
-  original TOFU (trust-on-first-use) window for space creation specifically; it
-  does not affect read/write gating on already-provisioned spaces.
+  (`apps/server/src/index.ts`) restores first-write provisioning on the sync
+  router's gate, which is now fail-closed by default upstream (starfish
+  alpha.39). This is required — without it, `createSpace` 403s the first time a
+  fresh account's `_access` doc hasn't been durably seen yet. `allowTofu: true`
+  re-opens the original TOFU (trust-on-first-use) window for space creation
+  specifically; it does not affect read/write gating on already-provisioned
+  spaces (the branch only fires when the `_access` doc is absent).
+
+  Because `allowTofu: true` grants owner+member for *any* spaceId whose `_access`
+  doc is absent — not just on the create-write path — it is deliberately **not**
+  shared with the `/events` SSE proxy, which only ever reads membership and never
+  provisions anything. `/events` uses a second, strict (`allowTofu: false`)
+  enricher instance instead, so a caller can't TOFU-subscribe to an
+  unprovisioned spaceId's event stream. See the enricher comment block in
+  `apps/server/src/index.ts` for the full rationale.
 
 ## Wire-format note — cross-version invite links
 

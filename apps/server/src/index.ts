@@ -100,14 +100,24 @@ const queuing = createQueuingServerPlugin({
   },
 });
 
-// Space-membership enricher: synthesizes `space:owner` / `space:member` from
-// the access record at `spaces/{spaceId}/_access`. Shared between the sync router
-// (collection-level gating) and the /events proxy (membership validation).
-// createSpacesRoleEnricher (starfish-spaces) replaces the hand-rolled makeSpaceRoleEnricher.
-// starfish alpha.39 flipped the default to fail-closed (allowTofu: false — absent `_access`
-// doc → 403). allowTofu: true restores first-write provisioning so a brand-new space's
-// first write (createSpace) isn't rejected before its `_access` doc has been seen.
+// Space-membership enrichers: synthesize `space:owner` / `space:member` from the
+// access record at `spaces/{spaceId}/_access`. createSpacesRoleEnricher (starfish-spaces)
+// replaces the hand-rolled makeSpaceRoleEnricher. starfish alpha.39 flipped the default
+// to fail-closed (allowTofu: false — absent `_access` doc → 403).
+//
+// Two separate instances, NOT shared, because allowTofu grants owner+member for ANY
+// spaceId whose `_access` doc is absent — including read paths — and the upstream
+// docstring warns against using it on reads ("prevent a caller from claiming an
+// unclaimed spaceId by being the first to read it"):
+//   - `spaceEnricher` (allowTofu: true) — used ONLY by the sync router, which needs
+//     first-write provisioning so createSpace's initial `_access` write isn't rejected
+//     before the doc exists.
+//   - `strictSpaceEnricher` (allowTofu: false) — used by the /events SSE proxy, which is
+//     read-only (membership filtering, never writes) and has no provisioning need. This
+//     keeps a caller from being able to TOFU-subscribe to an unprovisioned spaceId's
+//     event stream.
 const spaceEnricher = createSpacesRoleEnricher(store, undefined, { allowTofu: true });
+const strictSpaceEnricher = createSpacesRoleEnricher(store, undefined, { allowTofu: false });
 
 // Legacy projection: maintains the public-space directory at `_index/spaces/public`.
 const projection = createProjectionServerPlugin({ store, projections });
@@ -158,7 +168,7 @@ app.use("*", async (c, next) => {
 // Must be mounted BEFORE the sync router so /events is not swallowed by its catch-all.
 app.route(
   "/",
-  createEventsRoute({ enricher: spaceEnricher, nonceCache, revocationStore }),
+  createEventsRoute({ enricher: strictSpaceEnricher, nonceCache, revocationStore }),
 );
 
 // Public OG-unfurl endpoint: fetches a URL server-side and returns OpenGraph metadata.
