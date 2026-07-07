@@ -44,6 +44,7 @@ import { TableBlock } from '@/components/work/TableBlock';
 import { BlockComments } from '@/components/work/BlockComments';
 import { KeyringTrustNotice } from '@/components/work/KeyringTrustNotice';
 import { useObjectFiles } from '@/lib/use-object-files';
+import { useRecreateObject } from '@/lib/use-recreate-object';
 import type { BookmarkMeta } from '@/lib/use-page';
 
 /** Where the caret should land when a block (re)opens for editing. */
@@ -97,6 +98,7 @@ export function PageView({ spaceId, objectId, emoji, title, subtitle, onRenameTi
   const { isWide } = useResponsive();
   const { objects } = useSpaceObjects();
   const { attachBlob } = useObjectFiles(spaceId);
+  const recreate = useRecreateObject(spaceId, objectId);
 
   /** The one open editor: `seed` forces a remount (re-seed) of the same block's
    *  field after a conversion; `selection` places the caret (merge seam, travel). */
@@ -590,7 +592,7 @@ export function PageView({ spaceId, objectId, emoji, title, subtitle, onRenameTi
       />
 
       {page.offline ? <Callout tone="info" iconName="info">Offline — showing the last synced version.</Callout> : null}
-      <KeyringTrustNotice spaceId={spaceId} openError={page.openError} onRetry={page.reload} />
+      <KeyringTrustNotice spaceId={spaceId} openError={page.openError} onRetry={page.reload} onRecreate={recreate} />
 
       {/* The blocks container is the slash card's positioning context. */}
       <View style={styles.blocks}>

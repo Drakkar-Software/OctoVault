@@ -1,6 +1,7 @@
 import { StyleSheet, View } from 'react-native';
 
 import { radii, spacing } from '@/theme';
+import { useConfirm } from '@/lib/use-confirm';
 import { useTheme } from '@/lib/use-theme';
 import { useTrustBypass } from '@/lib/use-trust-bypass';
 
@@ -13,6 +14,11 @@ interface KeyringTrustNoticeProps {
   spaceId: string;
   openError: string | null;
   onRetry: () => void;
+  /** Archive this node and replace it with an empty one of the same type/title
+   *  — the last resort when the content itself can never be decrypted (as
+   *  opposed to the trust bypass, which fixes an untrusted-adder mismatch but
+   *  can't recover content sealed under a key the keyring no longer holds). */
+  onRecreate: () => void;
 }
 
 /**
@@ -27,12 +33,24 @@ interface KeyringTrustNoticeProps {
  * the open still fails after that, the plain `openError` Callout is the only
  * thing shown, since retrying the bypass again would not help.
  */
-export function KeyringTrustNotice({ spaceId, openError, onRetry }: KeyringTrustNoticeProps) {
+export function KeyringTrustNotice({ spaceId, openError, onRetry, onRecreate }: KeyringTrustNoticeProps) {
   const { colors } = useTheme();
   const { isBypassed, enableBypass } = useTrustBypass();
+  const confirm = useConfirm();
 
   if (!openError) return null;
   const alreadyTrusted = isBypassed(spaceId);
+
+  const askRecreate = async () => {
+    const ok = await confirm({
+      title: 'Delete this and start fresh?',
+      message:
+        "The old content moves to Trash, but its encryption key no longer matches — it can never be opened again. A new, empty replacement takes its place with the same name.",
+      confirmLabel: 'Delete & start fresh',
+      danger: true,
+    });
+    if (ok) onRecreate();
+  };
 
   return (
     <View style={styles.stack}>
@@ -63,6 +81,12 @@ export function KeyringTrustNotice({ spaceId, openError, onRetry }: KeyringTrust
           </Txt>
         </View>
       )}
+      <View style={styles.escapeHatch}>
+        <Button label="Delete & start fresh" variant="danger" size="sm" onPress={askRecreate} />
+        <Txt variant="footnote" tone="inkFaint">
+          Still stuck? This content&apos;s key may be gone for good — replace it with an empty one.
+        </Txt>
+      </View>
     </View>
   );
 }
@@ -71,4 +95,5 @@ const styles = StyleSheet.create({
   stack: { gap: spacing.md },
   notice: { borderRadius: radii.md, padding: spacing.md, gap: spacing.sm },
   heading: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  escapeHatch: { gap: spacing.xs, alignItems: 'flex-start' },
 });

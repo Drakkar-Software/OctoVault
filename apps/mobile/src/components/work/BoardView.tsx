@@ -11,6 +11,7 @@ import { useBoardDrag, type BoardDrag } from '@/lib/use-board-drag';
 import { tapFeedback } from '@/lib/haptics';
 import { useConfirm } from '@/lib/use-confirm';
 import { useHover, useRowHover } from '@/lib/use-hover';
+import { useRecreateObject } from '@/lib/use-recreate-object';
 import { useResponsive } from '@/lib/use-responsive';
 import { useTheme } from '@/lib/use-theme';
 import { AutosaveField } from '@/components/ui/AutosaveField';
@@ -66,6 +67,7 @@ export function BoardView({ spaceId, objectId, emoji, title, onRenameTitle, onCh
   const { colors } = useTheme();
   const { isWide } = useResponsive();
   const board = useBoard(spaceId, objectId);
+  const recreate = useRecreateObject(spaceId, objectId);
   const toast = useToast();
   const { columns, tasksByColumn, done, total } = board.board;
 
@@ -203,7 +205,7 @@ export function BoardView({ spaceId, objectId, emoji, title, onRenameTitle, onCh
       />
 
       {board.offline ? <Callout tone="info" iconName="info">Offline — showing the last synced board.</Callout> : null}
-      <KeyringTrustNotice spaceId={spaceId} openError={board.openError} onRetry={board.reload} />
+      <KeyringTrustNotice spaceId={spaceId} openError={board.openError} onRetry={board.reload} onRecreate={recreate} />
 
       {loading ? (
         <BoardSkeleton />
