@@ -17,6 +17,9 @@
       ],
       "@drakkar.software/octovault-sdk/hash-wasm-shim": [
         "../../packages/sdk/src/platform/hash-wasm-shim.ts"
+      ],
+      "@octovault/ui": [
+        "../../packages/octovault-ui/src/index.ts"
       ]
     }
   },

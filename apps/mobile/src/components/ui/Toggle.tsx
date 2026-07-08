@@ -1,4 +1,5 @@
-import { Switch } from 'react-native';
+import { Platform, Switch as RNSwitch } from 'react-native';
+import { Switch as NativeSwitch } from '@octovault/ui';
 
 import { useTheme } from '@/lib/use-theme';
 
@@ -10,21 +11,30 @@ interface ToggleProps {
 }
 
 /**
- * Themed on/off switch — wraps the platform `Switch` (iOS-style on iOS, material
- * on Android, the react-native-web fallback on web) so every settings toggle
- * picks up the marine accent track from one place rather than restyling inline.
+ * Themed on/off switch. On native it renders the @expo/ui `Switch` (real SwiftUI
+ * `Toggle` / Material switch), which inherits the marine accent from the native
+ * Host seed — no inline track color. On web it keeps the react-native-web
+ * `Switch` styled with the accent track, since the native control's web fallback
+ * doesn't pick up the seed color the same way.
  */
 export function Toggle({ value, onValueChange, disabled, accessibilityLabel }: ToggleProps) {
   const { colors } = useTheme();
-  return (
-    <Switch
-      value={value}
-      onValueChange={onValueChange}
-      disabled={disabled}
-      accessibilityLabel={accessibilityLabel}
-      trackColor={{ false: colors.fillDeep, true: colors.accent }}
-      thumbColor={colors.paper}
-      ios_backgroundColor={colors.fillDeep}
-    />
-  );
+
+  if (Platform.OS === 'web') {
+    return (
+      <RNSwitch
+        value={value}
+        onValueChange={onValueChange}
+        disabled={disabled}
+        accessibilityLabel={accessibilityLabel}
+        trackColor={{ false: colors.fillDeep, true: colors.accent }}
+        thumbColor={colors.paper}
+        ios_backgroundColor={colors.fillDeep}
+      />
+    );
+  }
+
+  // The @expo/ui Switch takes no accessibilityLabel prop; the enclosing
+  // ToggleRow renders the visible label that names the control.
+  return <NativeSwitch value={value} onValueChange={onValueChange} disabled={disabled} />;
 }

@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, View } from 'react-native';
 import Animated from 'react-native-reanimated';
+import { SegmentedControl as NativeSegmentedControl } from '@octovault/ui';
 
 import { focusRingStyle, useFocusRing } from '@/lib/focus';
 import { useHover } from '@/lib/use-hover';
@@ -77,6 +78,26 @@ export interface SegmentedProps<T extends string> {
 }
 
 export function Segmented<T extends string>({ options, value, onChange, disabled }: SegmentedProps<T>) {
+  // iOS: the real UISegmentedControl. Android + web keep the brand pill below —
+  // the native Android control paints the selected label with a Material default
+  // that reads poorly on our accent fill, and the pill carries the accent/onAccent
+  // brand look. (No call site uses per-option disabled/hint, which the native
+  // control can't express.)
+  if (Platform.OS === 'ios') {
+    const selectedIndex = Math.max(0, options.findIndex((o) => o.value === value));
+    return (
+      <NativeSegmentedControl
+        values={options.map((o) => o.label)}
+        selectedIndex={selectedIndex}
+        enabled={!disabled}
+        onSelect={(i) => {
+          const opt = options[i];
+          if (opt && !opt.disabled) onChange(opt.value);
+        }}
+      />
+    );
+  }
+
   return (
     <View style={styles.row}>
       {options.map((opt) => (

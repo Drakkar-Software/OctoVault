@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { Dimensions, Modal, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { BottomSheet } from '@octovault/ui';
 
 import { dropShadow, layers, layout, motion, paperBorder, radii, shadows, spacing } from '@/theme';
 import { useResponsive } from '@/lib/use-responsive';
@@ -58,11 +59,51 @@ interface SheetProps {
  * unmounts (RN Modal kills children instantly otherwise), driven by a small
  * mounted-state machine.
  */
-export function Sheet({ visible, onClose, title, onBack, presentation = 'auto', width, align = 'center', children, footer }: SheetProps) {
-  const { colors } = useTheme();
+export function Sheet(props: SheetProps) {
   const { isWide } = useResponsive();
-  const insets = useSafeAreaInsets();
+  const { presentation = 'auto' } = props;
   const mode: Exclude<SheetPresentation, 'auto'> = presentation === 'auto' ? (isWide ? 'dialog' : 'sheet') : presentation;
+
+  // Phone bottom sheets become the native @expo/ui BottomSheet (SwiftUI sheet /
+  // Material3 sheet), hosting the same RN interior. Centered dialogs and the
+  // right-docked panel (wide/desktop) keep the hand-rolled Modal — the native
+  // sheet has no dialog/panel shape. Web keeps the custom Modal everywhere.
+  if (mode === 'sheet' && Platform.OS !== 'web') {
+    return <NativeSheet {...props} />;
+  }
+  return <CustomSheet {...props} mode={mode} />;
+}
+
+/** Native bottom sheet (phone `sheet` mode) hosting the RN interior. */
+function NativeSheet({ visible, onClose, title, onBack, children, footer }: SheetProps) {
+  const { colors } = useTheme();
+  return (
+    <BottomSheet visible={visible} onDismiss={onClose} backgroundColor={colors.paper}>
+      {title ? (
+        <View style={styles.titleRow}>
+          {onBack ? <IconButton name="arrow-l" size={18} onPress={onBack} accessibilityLabel="Back" /> : null}
+          <Txt variant="heading" numberOfLines={1} style={styles.title}>
+            {title}
+          </Txt>
+          <IconButton name="x" size={18} onPress={onClose} accessibilityLabel="Close" />
+        </View>
+      ) : null}
+      <ScrollView
+        style={styles.nativeScroll}
+        contentContainerStyle={styles.body}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        {children}
+      </ScrollView>
+      {footer ? <View style={[styles.footer, { borderTopColor: colors.lineFaint }]}>{footer}</View> : null}
+    </BottomSheet>
+  );
+}
+
+function CustomSheet({ visible, onClose, title, onBack, width, align = 'center', children, footer, mode }: SheetProps & { mode: Exclude<SheetPresentation, 'auto'> }) {
+  const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const panelWidth = width ?? layout.peekPaneWidth;
 
   // Keep the Modal alive past `visible=false` so the exit animation can play,
@@ -241,6 +282,9 @@ const styles = StyleSheet.create({
   scroll: { flexGrow: 0, flexShrink: 1 },
   // The docked pane always fills its full height.
   scrollPanel: { flex: 1 },
+  // Native sheet body: cap the height so long interiors scroll within the
+  // native detent instead of overflowing it; short content sizes naturally.
+  nativeScroll: { flexGrow: 0, flexShrink: 1, maxHeight: Dimensions.get('window').height * 0.8 },
   body: {
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,

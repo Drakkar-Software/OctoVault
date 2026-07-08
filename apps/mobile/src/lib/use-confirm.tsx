@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Alert, Platform, StyleSheet, View } from 'react-native';
 
 import { spacing } from '@/theme';
 import { Button } from '@/components/ui/Button';
@@ -84,13 +84,40 @@ interface ConfirmSheetProps {
 
 function ConfirmSheet({ pending, onSettle }: ConfirmSheetProps) {
   const { isWide } = useResponsive();
+  // Phone gets the real native Alert (system modal, destructive role); web and
+  // wide/desktop keep the branded Sheet dialog (no native Alert on web).
+  const nativeAlert = Platform.OS !== 'web' && !isWide;
+
   // Retain the last options so the Sheet's exit animation doesn't blank out.
   const lastOpts = useRef<ConfirmOptions | null>(null);
   useEffect(() => {
     if (pending) lastOpts.current = pending.opts;
   }, [pending]);
+
+  // Fire the native Alert once per new pending ask; every dismissal path
+  // (cancel button, destructive button, Android back) resolves the promise.
+  const alertedRef = useRef<PendingConfirm | null>(null);
+  useEffect(() => {
+    if (!nativeAlert || !pending || alertedRef.current === pending) return;
+    alertedRef.current = pending;
+    const o = pending.opts;
+    Alert.alert(
+      o.title,
+      o.message,
+      [
+        { text: o.cancelLabel ?? 'Cancel', style: 'cancel', onPress: () => onSettle(false) },
+        {
+          text: o.confirmLabel ?? (o.danger ? 'Delete' : 'Confirm'),
+          style: o.danger ? 'destructive' : 'default',
+          onPress: () => onSettle(true),
+        },
+      ],
+      { cancelable: true, onDismiss: () => onSettle(false) },
+    );
+  }, [pending, nativeAlert, onSettle]);
+
   const opts = pending?.opts ?? lastOpts.current;
-  if (!opts) return null;
+  if (nativeAlert || !opts) return null;
 
   const confirmLabel = opts.confirmLabel ?? (opts.danger ? 'Delete' : 'Confirm');
   const cancelLabel = opts.cancelLabel ?? 'Cancel';

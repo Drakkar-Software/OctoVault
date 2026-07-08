@@ -24,6 +24,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 
 import { DKSpacesThemeProvider } from '@drakkar.software/dk-spaces-ui';
+import { OctoUIThemeProvider } from '@octovault/ui';
 import { TelemetryProvider, useTelemetryScreenTracking } from '@drakkar.software/dk-spaces-analytics-sdk';
 import { colors, resolveOctoSpacesTheme } from '@/theme';
 import { useAppFonts } from '@/lib/use-app-fonts';
@@ -58,6 +59,21 @@ export default function RootLayout() {
   return (
     <TelemetryProvider client={analytics} fallback={<AppErrorFallback />}>
     <DKSpacesThemeProvider theme={resolveOctoSpacesTheme(scheme)}>
+    {/* Feeds the @octovault/ui native primitives their few tokens live from the
+        active palette — so native controls seed the Ink & Pearl accent and flip
+        with the OS scheme. `paper` (solid) is used for native sheet backgrounds,
+        never the translucent `surface` token. */}
+    <OctoUIThemeProvider
+      value={{
+        accent: palette.accent,
+        paper: palette.paper,
+        danger: palette.danger,
+        ink: palette.ink,
+        inkSoft: palette.inkSoft,
+        onAccent: palette.onAccent,
+        scrim: palette.scrim,
+      }}
+    >
     <BrandProvider>
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
@@ -96,6 +112,7 @@ export default function RootLayout() {
       </SafeAreaProvider>
     </GestureHandlerRootView>
     </BrandProvider>
+    </OctoUIThemeProvider>
     </DKSpacesThemeProvider>
     </TelemetryProvider>
   );

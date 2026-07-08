@@ -20,26 +20,12 @@
  */
 import { useState } from 'react';
 import { Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { DateTimePicker as NativeDateTimePicker } from '@octovault/ui';
 
 import { radii, spacing } from '@/theme';
 import { useTheme } from '@/lib/use-theme';
 import { Sheet } from './Sheet';
 import { Txt } from './Txt';
-
-// Native DateTimePicker — only required on iOS/Android
-let NativeDateTimePicker: React.ComponentType<{
-  value: Date;
-  mode: 'date' | 'time' | 'datetime';
-  display?: string;
-  onChange: (event: unknown, date?: Date) => void;
-  minimumDate?: Date;
-  maximumDate?: Date;
-}> | null = null;
-
-if (Platform.OS !== 'web') {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  NativeDateTimePicker = require('@react-native-community/datetimepicker').default;
-}
 
 // ── Formatting ─────────────────────────────────────────────────────────────────
 
@@ -241,7 +227,7 @@ export function DateTimeField({ value, onChange, allDay = false, label, disabled
       </Pressable>
 
       {/* ── Native picker (iOS / Android) ── */}
-      {Platform.OS !== 'web' && open && NativeDateTimePicker ? (
+      {Platform.OS !== 'web' && open ? (
         Platform.OS === 'ios' ? (
           <Sheet visible={open} onClose={handleNativeDone} title={label ?? 'Select date'} presentation="dialog">
             <View style={styles.nativePickerWrap}>
