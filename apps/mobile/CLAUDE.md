@@ -90,6 +90,36 @@ the app consumes them through hooks in `src/lib/`.
   (`AppFrame` + `WorkspaceNav`) appears at/above `breakpointDesktop`. Haptics are
   native-only via `src/lib/haptics.ts`.
 
+## Native UI — `@octovault/ui` (@expo/ui wrappers)
+
+Native controls (real SwiftUI / Jetpack Compose) live in the workspace package
+**`@octovault/ui`** (`packages/octovault-ui`), consumed by the `ui/*` primitives.
+Each `ui/*` wrapper keeps its public API and branches `Platform.OS === 'web'` to
+the RN fallback, so screens are untouched. Rules (learned the hard way):
+
+- **Never import `@expo/ui/swift-ui/modifiers` directly** — it runs
+  `requireNativeModule('ExpoUI')` at load and crashes the web bundle (and the
+  Electron shell, which ships the same web export). Import from
+  `_host/modifiers` (the `.ts`/`.web.ts` split). Web-safety is a definition of
+  done: after `pnpm --filter @octovault/mobile export:web`,
+  `grep -rc ExpoUI apps/mobile/dist/_expo/static/js/web/entry-*.js` MUST be `0`.
+- **One barrel export only.** `@octovault/ui` exposes a single `.` export; never
+  add per-file export subpaths (a new subpath resolves to unbuilt `dist` on web
+  and breaks `expo export`).
+- **Host seed** = the accent, fed live from `useTheme()` via `OctoUIThemeProvider`
+  in `_layout.tsx`. Native sheet backgrounds use the SOLID `paper` token, never
+  the translucent `surface` (which ghosts the screen behind the sheet).
+- **BottomSheet**: iOS needs `enableDynamicSizing={false}` (fitToContents desyncs
+  the RNHostView touch handler). Only phone `sheet` mode goes native; dialog/panel
+  stay on the hand-rolled Modal.
+- **SegmentedControl**: iOS-native only; Android/web keep the brand pill (native
+  Android paints the selected label with a Material default that reads poorly on
+  the accent fill).
+- **Button**: keep the custom gradient/glow `primary`; native `.plain` variant
+  only fits `secondary`/`ghost`/`danger` (a custom `backgroundColor` under a
+  filled native variant double-draws a halo). `foregroundStyle` is iOS-only —
+  Android needs a colored `Text` child for the label color.
+
 ## Commands (from the repo root)
 
 - `pnpm web` / `pnpm start` / `pnpm ios` / `pnpm android`

@@ -65,6 +65,8 @@ export interface Block {
   ref?: string;
   /** Only meaningful for `type === 'bookmark'` — cached OG metadata from the unfurl server. */
   bookmark?: BookmarkMeta;
+  /** Categorical swatch name tinting the block background (callout look). App-owned palette. */
+  color?: string;
 }
 
 export interface NewBlock {
@@ -82,6 +84,7 @@ const indentReg = (id: string) => `indent:${id}`;
 const collapsedReg = (id: string) => `collapsed:${id}`;
 const refReg = (id: string) => `ref:${id}`;
 const bookmarkReg = (id: string) => `bookmark:${id}`;
+const colorReg = (id: string) => `color:${id}`;
 const textList = (id: string) => `text:${id}`;
 
 /** Project the WAL document into an ordered, de-duplicated list of blocks. */
@@ -92,6 +95,7 @@ export function readBlocks(doc: WalDocument): Block[] {
     const type = (state[typeReg(raw)] as BlockType | undefined) ?? 'paragraph';
     const indentVal = state[indentReg(raw)];
     const refVal = state[refReg(raw)];
+    const colorVal = state[colorReg(raw)];
     blocks.push({
       id: raw,
       type,
@@ -102,6 +106,7 @@ export function readBlocks(doc: WalDocument): Block[] {
       collapsed: asBool(state[collapsedReg(raw)]),
       ref: typeof refVal === 'string' ? refVal : undefined,
       bookmark: asObj<BookmarkMeta>(state[bookmarkReg(raw)]),
+      color: typeof colorVal === 'string' ? colorVal : undefined,
     });
   }
   return blocks;
@@ -170,6 +175,12 @@ export function setBlockCollapsed(doc: WalDocument, id: string, collapsed: boole
   doc.setField(collapsedReg(id), collapsed);
 }
 
+/** Set (or clear, when falsy) a block's background color swatch name. */
+export function setBlockColor(doc: WalDocument, id: string, color: string | undefined): void {
+  if (!color) doc.deleteField(colorReg(id));
+  else doc.setField(colorReg(id), color);
+}
+
 /** Point a `page` block at the child Object it links to. */
 export function setBlockRef(doc: WalDocument, id: string, ref: string): void {
   doc.setField(refReg(id), ref);
@@ -185,6 +196,7 @@ export function removeBlock(doc: WalDocument, id: string): void {
   doc.deleteField(collapsedReg(id));
   doc.deleteField(refReg(id));
   doc.deleteField(bookmarkReg(id));
+  doc.deleteField(colorReg(id));
 }
 
 /** Move a block to `toIndex` via a minimal reconcile of the order list. */
@@ -253,6 +265,8 @@ export function duplicateBlock(doc: WalDocument, id: string): string | null {
   if (bkVal && typeof bkVal === 'object' && !Array.isArray(bkVal)) {
     doc.setField(bookmarkReg(newId), bkVal);
   }
+  const colorVal = state[colorReg(id)];
+  if (typeof colorVal === 'string') doc.setField(colorReg(newId), colorVal);
   return newId;
 }
 
@@ -270,6 +284,7 @@ export function restoreBlock(doc: WalDocument, index: number, block: Block): voi
   if (block.collapsed !== undefined) doc.setField(collapsedReg(block.id), block.collapsed);
   if (block.ref) doc.setField(refReg(block.id), block.ref);
   if (block.bookmark) doc.setField(bookmarkReg(block.id), block.bookmark as unknown as Json);
+  if (block.color) doc.setField(colorReg(block.id), block.color);
   const order = rgaList(doc, ORDER).filter((x) => x !== block.id);
   const at = Math.max(0, Math.min(index, order.length));
   doc.setList(ORDER, [...order.slice(0, at), block.id, ...order.slice(at)]);

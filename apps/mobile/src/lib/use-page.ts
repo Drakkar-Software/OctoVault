@@ -31,6 +31,8 @@ export interface PageHook {
   setBlockChecked: (id: string, checked: boolean) => void;
   setBlockIndent: (id: string, indent: number) => void;
   setBlockCollapsed: (id: string, collapsed: boolean) => void;
+  /** Set (or clear, when undefined) a block's background swatch color. */
+  setBlockColor: (id: string, color: string | undefined) => void;
   /** Point a `page` block at the child Object it links to. */
   setBlockRef: (id: string, ref: string) => void;
   removeBlock: (id: string) => void;
@@ -85,6 +87,7 @@ export function usePage(spaceId: string, pageId: string, opts: { enabled?: boole
     setBlockChecked: (id, checked) => mut((d) => page.setBlockChecked(d, id, checked)),
     setBlockIndent: (id, indent) => mut((d) => page.setBlockIndent(d, id, indent)),
     setBlockCollapsed: (id, collapsed) => mut((d) => page.setBlockCollapsed(d, id, collapsed)),
+    setBlockColor: (id, color) => mut((d) => page.setBlockColor(d, id, color)),
     setBlockRef: (id, ref) => mut((d) => page.setBlockRef(d, id, ref)),
     removeBlock: (id) => mut((d) => page.removeBlock(d, id)),
     moveBlock: (id, toIndex) => mut((d) => page.moveBlock(d, id, toIndex)),

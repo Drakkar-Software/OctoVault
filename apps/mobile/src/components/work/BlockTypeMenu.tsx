@@ -3,7 +3,7 @@ import type { RefObject } from 'react';
 import type { View as ViewType, ViewProps } from 'react-native';
 import { Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
-import { dropShadow, layers, layout, paperBorder, radii, shadows, spacing } from '@/theme';
+import { dropShadow, layers, layout, paperBorder, radii, shadows, spacing, swatch, SWATCH_NAMES } from '@/theme';
 import { BLOCK_SECTIONS, BLOCK_TYPES, REF_BLOCK_TYPES, type BlockTypeDef } from '@drakkar.software/octovault-sdk';
 import { useHover } from '@/lib/use-hover';
 import { useResponsive } from '@/lib/use-responsive';
@@ -221,6 +221,41 @@ export function InsertBlockMenu({ visible, anchorRef, onSelect, onClose }: Inser
   );
 }
 
+/* ────────────────────────────── color strip ────────────────────────────── */
+
+/** Horizontal swatch picker for the block handle menu — a "no color" chip plus
+ *  the 8 categorical swatches. Selecting one tints the block (Notion callout). */
+function ColorStrip({ current, onSet }: { current?: string; onSet: (color: string | undefined) => void }) {
+  const { colors, scheme } = useTheme();
+  return (
+    <View style={styles.colorStrip}>
+      <Pressable
+        accessibilityRole="radio"
+        accessibilityLabel="No color"
+        accessibilityState={{ checked: !current }}
+        onPress={() => onSet(undefined)}
+        style={[styles.colorDot, { backgroundColor: colors.fill, borderColor: !current ? colors.accent : colors.lineSoft, borderWidth: !current ? 2 : 1 }]}
+      >
+        <Icon name="x" size={12} color={colors.inkMuted} />
+      </Pressable>
+      {SWATCH_NAMES.map((name) => {
+        const s = swatch(scheme, name);
+        const selected = current === name;
+        return (
+          <Pressable
+            key={name}
+            accessibilityRole="radio"
+            accessibilityLabel={name}
+            accessibilityState={{ checked: selected }}
+            onPress={() => onSet(name)}
+            style={[styles.colorDot, { backgroundColor: s.solid, borderColor: selected ? colors.accent : 'transparent', borderWidth: selected ? 2 : 0 }]}
+          />
+        );
+      })}
+    </View>
+  );
+}
+
 /* ────────────────────────────── handle menu ────────────────────────────── */
 
 interface BlockHandleMenuProps {
@@ -239,6 +274,11 @@ interface BlockHandleMenuProps {
   onTurnInto?: (def: BlockTypeDef) => void;
   onDelete: () => void;
   onClose: () => void;
+  /** The block's current background swatch (checked in the color strip). */
+  currentColor?: string;
+  /** Set (or clear, when undefined) the block's background color. Omit for
+   *  blocks that can't be tinted (ref/attachment blocks). */
+  onSetColor?: (color: string | undefined) => void;
 }
 
 /**
@@ -259,6 +299,8 @@ export function BlockHandleMenu({
   onTurnInto,
   onDelete,
   onClose,
+  currentColor,
+  onSetColor,
 }: BlockHandleMenuProps) {
   const { isWide } = useResponsive();
 
@@ -268,6 +310,13 @@ export function BlockHandleMenu({
       <MenuItem icon="arrow-up" label="Move up" shortcut="⌥↑" disabled={!canMoveUp} onPress={onMoveUp} />
       <MenuItem icon="arrow-down" label="Move down" shortcut="⌥↓" disabled={!canMoveDown} onPress={onMoveDown} />
       <MenuItem icon="trash" label="Delete" danger onPress={onDelete} />
+      {onSetColor ? (
+        <>
+          <MenuSeparator />
+          <MenuLabel>Color</MenuLabel>
+          <ColorStrip current={currentColor} onSet={onSetColor} />
+        </>
+      ) : null}
       {onTurnInto ? (
         <>
           <MenuSeparator />
@@ -320,4 +369,18 @@ const styles = StyleSheet.create({
     zIndex: layers.popover,
   },
   empty: { padding: spacing.lg },
+  colorStrip: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  colorDot: {
+    width: 24,
+    height: 24,
+    borderRadius: radii.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 });

@@ -4,7 +4,8 @@ import type { View as ViewType } from 'react-native';
 import { Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
-import { layout, radii, spacing, type as typeScale } from '@/theme';
+import { layout, radii, spacing, swatch, type as typeScale, type SwatchName } from '@/theme';
+import { successFeedback, tapFeedback } from '@/lib/haptics';
 import {
   continuationType,
   endsListOnEmptyEnter,
@@ -394,6 +395,7 @@ export function PageView({ spaceId, objectId, emoji, title, subtitle, onRenameTi
     const idx = all.findIndex((b) => b.id === id);
     const snapshot = all[idx];
     if (!snapshot) return;
+    successFeedback();
     deadRef.current.add(id);
     page.removeBlock(id);
     setEditing((cur) => (cur?.id === id ? null : cur));
@@ -625,8 +627,8 @@ export function PageView({ spaceId, objectId, emoji, title, subtitle, onRenameTi
             onArrowBoundary={(dir) => onArrowBoundary(b, dir)}
             onTab={(shift) => indentBlock(b.id, shift ? -1 : 1)}
             onKeyDownCapture={(key, mods) => onKeyCapture(b, key, mods)}
-            onToggleChecked={() => page.setBlockChecked(b.id, !b.checked)}
-            onToggleCollapsed={() => page.setBlockCollapsed(b.id, !b.collapsed)}
+            onToggleChecked={() => { tapFeedback(); page.setBlockChecked(b.id, !b.checked); }}
+            onToggleCollapsed={() => { tapFeedback(); page.setBlockCollapsed(b.id, !b.collapsed); }}
             onPressDivider={() => setSelectedDivider((cur) => (cur === b.id ? null : b.id))}
             onOpenRef={() => (b.ref ? openObject(b.ref) : undefined)}
             onOpenHandle={(anchor) => setHandleMenu({ id: b.id, anchor })}
@@ -744,6 +746,16 @@ export function PageView({ spaceId, objectId, emoji, title, subtitle, onRenameTi
           if (handleMenu) deleteBlockWithUndo(handleMenu.id);
           setHandleMenu(null);
         }}
+        currentColor={handleMenu ? getBlock(handleMenu.id)?.color : undefined}
+        onSetColor={
+          handleMenu && !REF_BLOCK_TYPES.has(getBlock(handleMenu.id)?.type ?? 'paragraph')
+            ? (color) => {
+                tapFeedback();
+                page.setBlockColor(handleMenu.id, color);
+                setHandleMenu(null);
+              }
+            : undefined
+        }
         onClose={() => setHandleMenu(null)}
       />
 
@@ -839,9 +851,14 @@ function BlockRow({
   commentUnread,
   onOpenComments,
 }: BlockRowProps) {
-  const { colors } = useTheme();
+  const { colors, scheme } = useTheme();
   const { hovered, hoverProps } = useRowHover();
   const rowRef = useRef<ViewType | null>(null);
+  // Notion-style colored callout: tint the block background from its swatch.
+  const co = block.color ? swatch(scheme, block.color as SwatchName) : null;
+  const calloutStyle = co
+    ? { backgroundColor: co.bg, borderRadius: radii.md, paddingVertical: spacing.xs, paddingRight: spacing.sm }
+    : null;
   // Web reveals gutter controls on hover; native has no pointer (`useRowHover` is
   // constant-false), so the actively-edited block reveals them instead — and every
   // row offers long-press as the touch path to the same handle menu.
@@ -947,7 +964,7 @@ function BlockRow({
       ref={setRef}
       collapsable={false}
       onLayout={(e) => onLayoutRow(e.nativeEvent.layout.y, e.nativeEvent.layout.height)}
-      style={[styles.row, indentPad ? { marginLeft: indentPad } : null]}
+      style={[styles.row, indentPad ? { marginLeft: indentPad } : null, calloutStyle]}
       {...hoverProps}
     >
       <BlockGutter visible={showGutter} onAdd={onOpenInsert} onHandle={onOpenHandle} />
