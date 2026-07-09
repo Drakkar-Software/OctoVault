@@ -277,6 +277,9 @@ interface BlockHandleMenuProps {
   onMoveDown: () => void;
   onTurnInto?: (def: BlockTypeDef) => void;
   onDelete: () => void;
+  /** Enter multi-block selection mode starting from this block (native entry point;
+   *  web selects via drag / Shift+click). Omitted → the "Select" item is hidden. */
+  onSelectBlock?: () => void;
   onClose: () => void;
   /** The block's current background swatch (checked in the color strip). */
   currentColor?: string;
@@ -302,6 +305,7 @@ export function BlockHandleMenu({
   onMoveDown,
   onTurnInto,
   onDelete,
+  onSelectBlock,
   onClose,
   currentColor,
   onSetColor,
@@ -310,6 +314,7 @@ export function BlockHandleMenu({
 
   const body = (
     <Menu>
+      {onSelectBlock ? <MenuItem icon="check-circle" label="Select" onPress={onSelectBlock} /> : null}
       {onDuplicate ? <MenuItem icon="duplicate" label="Duplicate" onPress={onDuplicate} /> : null}
       <MenuItem icon="arrow-up" label="Move up" shortcut="⌥↑" disabled={!canMoveUp} onPress={onMoveUp} />
       <MenuItem icon="arrow-down" label="Move down" shortcut="⌥↓" disabled={!canMoveDown} onPress={onMoveDown} />

@@ -4,7 +4,7 @@ import type { View as ViewType } from 'react-native';
 import { Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
-import { layout, radii, spacing, swatch, type as typeScale, type SwatchName } from '@/theme';
+import { layers, layout, radii, spacing, swatch, type as typeScale, type SwatchName } from '@/theme';
 import { successFeedback, tapFeedback } from '@/lib/haptics';
 import {
   continuationType,
@@ -27,6 +27,7 @@ import { iconForNode } from '@drakkar.software/octovault-sdk';
 import { useSpaceObjects } from '@/lib/space-objects-context';
 import type { ObjectNode } from '@drakkar.software/octovault-sdk';
 import { useCopy } from '@/lib/clipboard';
+import { useBlockSelection, type BlockSelectionApi } from '@/lib/use-block-selection';
 import { useHover, useRowHover } from '@/lib/use-hover';
 import { useResponsive } from '@/lib/use-responsive';
 import { useTheme } from '@/lib/use-theme';
@@ -117,10 +118,11 @@ export function PageView({ spaceId, objectId, emoji, title, subtitle, onRenameTi
   const [handleMenu, setHandleMenu] = useState<{ id: string; anchor: RefObject<ViewType | null> } | null>(null);
   const [insertMenu, setInsertMenu] = useState<{ afterId: string; anchor: RefObject<ViewType | null> } | null>(null);
   const [iconOpen, setIconOpen] = useState(false);
-  const [selectedDivider, setSelectedDivider] = useState<string | null>(null);
   /** The block whose discussion panel/sheet is open (null = closed). */
   const [commentsFor, setCommentsFor] = useState<string | null>(null);
   const iconAnchorRef = useRef<ViewType | null>(null);
+  /** The blocks container — its DOM node anchors the web pointer-drag/paste listeners. */
+  const blocksContainerRef = useRef<ViewType | null>(null);
   /** Per-row anchors (handle menus from the native toolbar) + row geometry
    *  (the slash card hangs off the active row inside the blocks container). */
   const rowRefs = useRef(new Map<string, ViewType | null>());
@@ -145,9 +147,25 @@ export function PageView({ spaceId, objectId, emoji, title, subtitle, onRenameTi
 
   const focusBlock = (id: string, selection?: FieldSelection) => {
     seedRef.current += 1;
-    setSelectedDivider(null);
     setEditing({ id, seed: seedRef.current, selection });
   };
+
+  /** Whole-block selection (multi-block copy/cut/paste) — the range model, web
+   *  drag/keyboard/clipboard listeners and native select mode live in the hook;
+   *  entering a selection clears the open editor and vice-versa. */
+  const sel = useBlockSelection({
+    page,
+    blocksRef,
+    visibleRef,
+    rowLayouts,
+    deadRef,
+    containerRef: blocksContainerRef,
+    toast,
+    focusBlock: (id) => focusBlock(id),
+    closeEditor: () => setEditing(null),
+    editingId: editing?.id ?? null,
+    resolveRefTitle: (ref) => objects.get(ref)?.title,
+  });
 
   const getBlock = (id: string) => blocksRef.current.find((b) => b.id === id);
   const visIndexOf = (id: string) => visibleRef.current.findIndex((b) => b.id === id);
@@ -399,7 +417,6 @@ export function PageView({ spaceId, objectId, emoji, title, subtitle, onRenameTi
     deadRef.current.add(id);
     page.removeBlock(id);
     setEditing((cur) => (cur?.id === id ? null : cur));
-    setSelectedDivider((cur) => (cur === id ? null : cur));
     toast.show({
       message: 'Block deleted',
       action: {
@@ -493,28 +510,27 @@ export function PageView({ spaceId, objectId, emoji, title, subtitle, onRenameTi
     return false;
   };
 
-  /* ───────────────────────── selected divider keyboard delete (web) ──────── */
+  /* ───────────────────────── native accessory (edit / selection) ─────────── */
 
-  useEffect(() => {
-    if (Platform.OS !== 'web' || !selectedDivider) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Backspace' || e.key === 'Delete') {
-        e.preventDefault();
-        deleteBlockWithUndo(selectedDivider);
-      } else if (e.key === 'Escape') {
-        setSelectedDivider(null);
-      }
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-    // deleteBlockWithUndo reads refs; only the selected id matters here.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedDivider]);
-
-  /* ───────────────────────── native editing accessory ────────────────────── */
-
+  // One route-footer slot serves two mutually-exclusive states: the per-block edit
+  // toolbar while a field is open, and the multi-block action bar while a selection
+  // is live (native has no hardware keyboard, so copy/cut/delete surface here).
   useEffect(() => {
     if (!onToolbar || Platform.OS === 'web') return;
+    if (sel.count > 0) {
+      onToolbar(
+        <SelectionActionBar
+          count={sel.count}
+          onCopy={sel.copy}
+          onCut={sel.cut}
+          onPaste={sel.paste}
+          onDuplicate={sel.duplicate}
+          onDelete={sel.deleteSelected}
+          onClear={sel.clear}
+        />,
+      );
+      return;
+    }
     const id = editing?.id;
     if (!id || !getBlock(id)) {
       onToolbar(null);
@@ -538,14 +554,19 @@ export function PageView({ spaceId, objectId, emoji, title, subtitle, onRenameTi
         onDone={() => setEditing(null)}
       />,
     );
-    // Handlers read live refs; re-render only when the edited block changes.
+    // Handlers read live refs; re-render only when the edited block / selection changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editing?.id, page.ready]);
+  }, [editing?.id, page.ready, sel.count]);
   useEffect(() => () => onToolbar?.(null), [onToolbar]);
 
   /* ───────────────────────── render ──────────────────────────────────────── */
 
   const onTailPress = () => {
+    if (sel.count > 0) {
+      // A tap on the empty page tail dismisses a live block selection first.
+      sel.clear();
+      return;
+    }
     const last = visible[visible.length - 1];
     if (last && last.type === 'paragraph' && !last.text && editing?.id !== last.id) {
       // Don't stack empties: re-focus the trailing blank paragraph instead.
@@ -602,8 +623,15 @@ export function PageView({ spaceId, objectId, emoji, title, subtitle, onRenameTi
         onRecreate={recreate}
       />
 
-      {/* The blocks container is the slash card's positioning context. */}
-      <View style={styles.blocks}>
+      {/* The blocks container is the slash card's positioning context AND (web) the
+          pointer-drag / clipboard listener host — `collapsable={false}` keeps a real
+          DOM node under it so the hook can attach listeners.
+          While the slash card is open the container must also outrank its later
+          siblings (`subPages`, the "Add a block" tail): every react-native-web View is
+          a `z-index: 0` stacking context, so the card's own zIndex cannot escape this
+          View — the transparent tail button would hit-test above the card and swallow
+          its wheel and its clicks. */}
+      <View ref={blocksContainerRef} collapsable={false} style={[styles.blocks, slash ? styles.blocksRaised : null]}>
         {visible.map((b) => (
           <BlockRow
             key={b.id}
@@ -614,7 +642,8 @@ export function PageView({ spaceId, objectId, emoji, title, subtitle, onRenameTi
             editing={editing?.id === b.id}
             editSeed={editing?.id === b.id ? editing.seed : 0}
             editSelection={editing?.id === b.id ? editing.selection : undefined}
-            dividerSelected={selectedDivider === b.id}
+            selected={sel.isSelected(b.id)}
+            onSelectPress={() => sel.onBlockPress(b.id)}
             registerRow={(node) => rowRefs.current.set(b.id, node)}
             onLayoutRow={(y, h) => rowLayouts.current.set(b.id, { y, h })}
             onEdit={() => focusBlock(b.id, selEnd(b.text))}
@@ -641,9 +670,14 @@ export function PageView({ spaceId, objectId, emoji, title, subtitle, onRenameTi
             onKeyDownCapture={(key, mods) => onKeyCapture(b, key, mods)}
             onToggleChecked={() => { tapFeedback(); page.setBlockChecked(b.id, !b.checked); }}
             onToggleCollapsed={() => { tapFeedback(); page.setBlockCollapsed(b.id, !b.collapsed); }}
-            onPressDivider={() => setSelectedDivider((cur) => (cur === b.id ? null : b.id))}
+            onPressDivider={() => sel.toggleOnly(b.id)}
             onOpenRef={() => (b.ref ? openObject(b.ref) : undefined)}
-            onOpenHandle={(anchor) => setHandleMenu({ id: b.id, anchor })}
+            onOpenHandle={(anchor) => {
+              // Shift+grip selects the block instead of opening the menu (web); a plain
+              // grip / long-press still opens the handle menu on every platform.
+              if (sel.peekMods().shift) sel.selectOnly(b.id);
+              else setHandleMenu({ id: b.id, anchor });
+            }}
             onOpenInsert={(anchor) => setInsertMenu({ afterId: b.id, anchor })}
             spaceId={spaceId}
             onBookmarkFetched={(meta) => page.setBlockBookmark(b.id, meta)}
@@ -726,6 +760,17 @@ export function PageView({ spaceId, objectId, emoji, title, subtitle, onRenameTi
         currentType={(handleMenu && getBlock(handleMenu.id)?.type) || 'paragraph'}
         canMoveUp={!!handleMenu && visIndexOf(handleMenu.id) > 0}
         canMoveDown={!!handleMenu && visIndexOf(handleMenu.id) < visible.length - 1}
+        onSelectBlock={
+          // Native has no mouse — "Select" is the entry into multi-block select mode
+          // (tap-to-toggle + action bar). Web selects via drag / Shift+click / Shift+grip.
+          Platform.OS === 'web'
+            ? undefined
+            : () => {
+                const id = handleMenu?.id;
+                setHandleMenu(null);
+                if (id) sel.enterSelectMode(id);
+              }
+        }
         onDuplicate={
           handleMenu && !REF_BLOCK_TYPES.has(getBlock(handleMenu.id)?.type ?? 'paragraph')
             ? () => {
@@ -799,7 +844,11 @@ interface BlockRowProps {
   /** Bumps to force a re-seed of the SAME block's field (md/slash conversion). */
   editSeed: number;
   editSelection?: FieldSelection;
-  dividerSelected: boolean;
+  /** This block is part of the active multi-block selection (highlight it). */
+  selected: boolean;
+  /** A press on the read row — returns true when it was consumed as a selection
+   *  gesture (Shift/Cmd-click, native select mode), in which case editing must NOT open. */
+  onSelectPress: () => boolean;
   registerRow: (node: ViewType | null) => void;
   onLayoutRow: (y: number, h: number) => void;
   onEdit: () => void;
@@ -840,7 +889,8 @@ function BlockRow({
   editing,
   editSeed,
   editSelection,
-  dividerSelected,
+  selected,
+  onSelectPress,
   registerRow,
   onLayoutRow,
   onEdit,
@@ -873,6 +923,9 @@ function BlockRow({
   const calloutStyle = co
     ? { backgroundColor: co.bg, borderRadius: radii.md, paddingVertical: spacing.xs, paddingRight: spacing.sm }
     : null;
+  // Multi-block selection wash — a full-row fill (reuses the divider/nav `selected`
+  // token). Sits over the callout tint so a selected callout still reads as selected.
+  const selStyle = selected ? { backgroundColor: colors.selected, borderRadius: radii.sm } : null;
   // Web reveals gutter controls on hover; native has no pointer (`useRowHover` is
   // constant-false), so the actively-edited block reveals them instead — and every
   // row offers long-press as the touch path to the same handle menu.
@@ -897,7 +950,7 @@ function BlockRow({
         ref={setRef}
         collapsable={false}
         onLayout={(e) => onLayoutRow(e.nativeEvent.layout.y, e.nativeEvent.layout.height)}
-        style={[styles.row, indentPad ? { marginLeft: indentPad } : null]}
+        style={[styles.row, indentPad ? { marginLeft: indentPad } : null, selStyle]}
       >
         <TableBlock page={page} blockId={block.id} />
       </View>
@@ -910,18 +963,18 @@ function BlockRow({
         ref={setRef}
         collapsable={false}
         onLayout={(e) => onLayoutRow(e.nativeEvent.layout.y, e.nativeEvent.layout.height)}
-        style={[styles.row, indentPad ? { marginLeft: indentPad } : null]}
+        style={[styles.row, indentPad ? { marginLeft: indentPad } : null, selStyle]}
         {...hoverProps}
       >
         <BlockGutter visible={showGutter} onAdd={onOpenInsert} onHandle={onOpenHandle} />
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={dividerSelected ? 'Divider, selected — press Backspace to delete' : 'Select divider'}
+          accessibilityLabel={selected ? 'Divider, selected — press Backspace to delete' : 'Select divider'}
           onPress={onPressDivider}
           onLongPress={openHandle}
-          style={[styles.dividerHit, dividerSelected ? { backgroundColor: colors.selected, borderRadius: radii.sm } : null]}
+          style={styles.dividerHit}
         >
-          <View style={[styles.rule, { backgroundColor: dividerSelected ? colors.accent : colors.lineSoft }]} />
+          <View style={[styles.rule, { backgroundColor: selected ? colors.accent : colors.lineSoft }]} />
         </Pressable>
       </View>
     );
@@ -933,7 +986,7 @@ function BlockRow({
         ref={setRef}
         collapsable={false}
         onLayout={(e) => onLayoutRow(e.nativeEvent.layout.y, e.nativeEvent.layout.height)}
-        style={[styles.row, indentPad ? { marginLeft: indentPad } : null]}
+        style={[styles.row, indentPad ? { marginLeft: indentPad } : null, selStyle]}
         {...hoverProps}
       >
         <BlockGutter visible={showGutter} onAdd={onOpenInsert} onHandle={onOpenHandle} />
@@ -954,7 +1007,7 @@ function BlockRow({
         ref={setRef}
         collapsable={false}
         onLayout={(e) => onLayoutRow(e.nativeEvent.layout.y, e.nativeEvent.layout.height)}
-        style={[styles.row, indentPad ? { marginLeft: indentPad } : null]}
+        style={[styles.row, indentPad ? { marginLeft: indentPad } : null, selStyle]}
         {...hoverProps}
       >
         <BlockGutter visible={showGutter} onAdd={onOpenInsert} onHandle={onOpenHandle} />
@@ -978,7 +1031,7 @@ function BlockRow({
       ref={setRef}
       collapsable={false}
       onLayout={(e) => onLayoutRow(e.nativeEvent.layout.y, e.nativeEvent.layout.height)}
-      style={[styles.row, indentPad ? { marginLeft: indentPad } : null, calloutStyle]}
+      style={[styles.row, indentPad ? { marginLeft: indentPad } : null, calloutStyle, selStyle]}
       {...hoverProps}
     >
       <BlockGutter visible={showGutter} onAdd={onOpenInsert} onHandle={onOpenHandle} />
@@ -1045,7 +1098,9 @@ function BlockRow({
             <Pressable
               accessibilityRole="button"
               accessibilityLabel={block.text ? 'Edit block' : 'Empty block'}
-              onPress={onEdit}
+              // A selection gesture (Shift/Cmd-click, native select mode) consumes the
+              // press; otherwise it opens the editor.
+              onPress={() => { if (!onSelectPress()) onEdit(); }}
               onLongPress={openHandle}
               style={[styles.read, { minHeight: typeScale[variantFor(block.type)].lineHeight + spacing.sm }]}
             >
@@ -1272,9 +1327,47 @@ function PageEditToolbar({
   );
 }
 
+/**
+ * Native action bar for a live multi-block selection (native has no hardware
+ * keyboard, so the copy/cut/duplicate/delete verbs surface here). Shares the
+ * edit toolbar's route-footer slot and {@link styles.toolbar} chrome.
+ */
+function SelectionActionBar({
+  count,
+  onCopy,
+  onCut,
+  onPaste,
+  onDuplicate,
+  onDelete,
+  onClear,
+}: {
+  count: number;
+  onCopy: () => void;
+  onCut: () => void;
+  onPaste: () => void;
+  onDuplicate: () => void;
+  onDelete: () => void;
+  onClear: () => void;
+}) {
+  const { colors } = useTheme();
+  return (
+    <View style={[styles.toolbar, { borderTopColor: colors.lineSoft, backgroundColor: colors.paper }]}>
+      <Txt variant="subhead" weight="medium" style={styles.selCount}>{`${count} selected`}</Txt>
+      <View style={styles.toolbarSpacer} />
+      <IconButton name="copy" size={18} color={colors.inkSoft} onPress={onCopy} accessibilityLabel="Copy blocks" />
+      <IconButton name="scissors" size={18} color={colors.inkSoft} onPress={onCut} accessibilityLabel="Cut blocks" />
+      <IconButton name="clipboard" size={18} color={colors.inkSoft} onPress={onPaste} accessibilityLabel="Paste over selection" />
+      <IconButton name="duplicate" size={18} color={colors.inkSoft} onPress={onDuplicate} accessibilityLabel="Duplicate blocks" />
+      <IconButton name="trash" size={18} color={colors.danger} onPress={onDelete} accessibilityLabel="Delete blocks" />
+      <IconButton name="x" size={18} color={colors.inkSoft} onPress={onClear} accessibilityLabel="Clear selection" />
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   wrap: { flex: 1, gap: spacing.sm },
   blocks: { gap: layout.blockRowGap },
+  blocksRaised: { zIndex: layers.popover },
   row: { flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 1 },
   gutter: { width: layout.blockGutterWidth },
   // The handle cluster lives in the left margin, ending a touch BEFORE the text
@@ -1326,6 +1419,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
   },
   toolbarSpacer: { flex: 1 },
+  selCount: { paddingLeft: spacing.xs },
   // Right-margin comment control, vertically centered against the first text line.
   commentTab: {
     flexDirection: 'row',

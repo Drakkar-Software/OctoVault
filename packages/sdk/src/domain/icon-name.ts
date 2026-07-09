@@ -48,6 +48,8 @@ export type IconName =
   | 'key'
   | 'devices'
   | 'copy'
+  | 'scissors'
+  | 'clipboard'
   | 'eye'
   | 'eye-off'
   | 'alert'

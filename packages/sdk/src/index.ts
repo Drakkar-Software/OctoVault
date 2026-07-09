@@ -53,6 +53,7 @@ export * from './live-sync-bus';
 
 // ── Blocks (editor vocabulary) ────────────────────────────────────────────────
 export * from './blocks';
+export * from './block-clipboard';
 
 // ── Content models (WAL/CRDT) ─────────────────────────────────────────────────
 export * from './object-content-model';

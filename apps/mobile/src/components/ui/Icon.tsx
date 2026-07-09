@@ -59,6 +59,8 @@ const ICONS = {
   key: { lib: Feather, n: 'key' },
   devices: { lib: MaterialCommunityIcons, n: 'devices' },
   copy: { lib: Feather, n: 'copy' },
+  scissors: { lib: Feather, n: 'scissors' },
+  clipboard: { lib: Feather, n: 'clipboard' },
   eye: { lib: Feather, n: 'eye' },
   'eye-off': { lib: Feather, n: 'eye-off' },
   alert: { lib: Feather, n: 'alert-triangle' },
