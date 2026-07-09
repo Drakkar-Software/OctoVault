@@ -377,7 +377,7 @@ interface CreateControlProps {
   grow?: boolean;
 }
 
-function CreateControl({ label, iconName, onPress, disabled, grow }: CreateControlProps) {
+export function CreateControl({ label, iconName, onPress, disabled, grow }: CreateControlProps) {
   const { colors } = useTheme();
   const { hovered, hoverProps } = useHover();
   return (

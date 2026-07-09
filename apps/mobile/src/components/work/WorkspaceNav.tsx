@@ -1,16 +1,18 @@
 import { useState } from 'react';
-import { useRouter, usePathname } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { layout, spacing } from '@/theme';
 import { setSidebarCollapsedPref } from '@/lib/use-nav-prefs';
+import { useNewNote, useNotesMode } from '@/lib/use-notes';
 import { useOpenObjectId } from '@/lib/use-open-object-id';
 import { useProfile } from '@/lib/profile-context';
 import { openQuickFind } from '@/lib/use-quick-find';
 import { useQuickCreate } from '@/lib/use-quick-create';
 import { formatShortcut } from '@/lib/use-shortcuts';
 import { useSpaces } from '@/lib/use-spaces';
+import { useTheme } from '@/lib/use-theme';
 import { initialsFor } from '@drakkar.software/octovault-sdk';
 import { Sidebar, SidebarHeader, SpacesRail } from '@drakkar.software/dk-spaces-ui';
 import type { RailIconName, RailSpace } from '@drakkar.software/dk-spaces-ui';
@@ -20,7 +22,9 @@ import { Badge } from '@/components/ui/Badge';
 import { Icon } from '@/components/ui/Icon';
 import type { IconName } from '@/components/ui/Icon';
 import { IconButton } from '@/components/ui/IconButton';
+import { Txt } from '@/components/ui/Txt';
 import { SpaceSwitcher } from '@/components/work/SpaceSwitcher';
+import { WorkNotes } from '@/components/work/WorkNotes';
 import { WorkObjects } from '@/components/work/WorkObjects';
 
 // ── RailIconName → OctoVault IconName mapping ─────────────────────────────────
@@ -45,15 +49,19 @@ const RAIL_ICON: Record<RailIconName, IconName> = {
  */
 export function WorkspaceNav() {
   const router = useRouter();
-  const pathname = usePathname();
+  const { colors } = useTheme();
   const { profile } = useProfile();
   const { spaces, activeId, switchSpace } = useSpaces();
   const { newPage } = useQuickCreate();
+  const { newNote } = useNewNote();
   const { has } = useBrand();
   const openObjectId = useOpenObjectId();
   const space = spaces.find((s) => s.id === activeId) ?? spaces[0];
 
-  const notesActive = pathname === '/notes';
+  // Notes mode swaps the space sidebar (switcher + tree) for the personal
+  // notes list — and sticks while the open object is a note, so opening a
+  // note from the list doesn't flip the sidebar back to the space tree.
+  const notesMode = useNotesMode();
 
   const railSpaces: RailSpace[] = spaces.map((s) => ({
     id: s.id,
@@ -74,7 +82,7 @@ export function WorkspaceNav() {
         addLabel="Join or create a space"
         specialTiles={
           has('notes')
-            ? [{ key: 'notes', icon: 'notes', active: notesActive, label: 'My Notes', onPress: () => router.navigate('/(tabs)/notes') }]
+            ? [{ key: 'notes', icon: 'notes', active: notesMode, label: 'My Notes', onPress: () => router.navigate('/(tabs)/notes') }]
             : undefined
         }
         renderIcon={(name, size, color) => (
@@ -109,7 +117,18 @@ export function WorkspaceNav() {
         header={
           <SidebarHeader
             style={styles.head}
-            leading={<SpaceSwitcher variant="sidebar" />}
+            leading={
+              notesMode ? (
+                <View style={styles.notesHead}>
+                  <Icon name="book" size={15} color={colors.inkMuted} />
+                  <Txt variant="heading" weight="semibold" numberOfLines={1}>
+                    My Notes
+                  </Txt>
+                </View>
+              ) : (
+                <SpaceSwitcher variant="sidebar" />
+              )
+            }
             actions={
               <View style={styles.headActions}>
                 <IconButton
@@ -123,10 +142,10 @@ export function WorkspaceNav() {
                 <IconButton
                   name="plus"
                   size={15}
-                  onPress={newPage}
-                  tooltip="New page"
-                  shortcut={formatShortcut('mod+n')}
-                  accessibilityLabel="New page"
+                  onPress={notesMode ? newNote : newPage}
+                  tooltip={notesMode ? 'New note' : 'New page'}
+                  shortcut={notesMode ? undefined : formatShortcut('mod+n')}
+                  accessibilityLabel={notesMode ? 'New note' : 'New page'}
                 />
                 <IconButton
                   name="sidebar"
@@ -142,7 +161,11 @@ export function WorkspaceNav() {
         }
         contentContainerStyle={styles.tree}
       >
-        <WorkObjects spaceId={space?.id ?? null} selectedId={openObjectId ?? undefined} />
+        {notesMode ? (
+          <WorkNotes />
+        ) : (
+          <WorkObjects spaceId={space?.id ?? null} selectedId={openObjectId ?? undefined} />
+        )}
       </Sidebar>
     </>
   );
@@ -158,6 +181,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
+  },
+  notesHead: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs + 2,
   },
   tree: { paddingHorizontal: spacing.sm, paddingBottom: spacing.lg },
 });
