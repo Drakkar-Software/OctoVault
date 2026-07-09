@@ -612,8 +612,14 @@ export function PageView({ spaceId, objectId, emoji, title, subtitle, onRenameTi
             registerRow={(node) => rowRefs.current.set(b.id, node)}
             onLayoutRow={(y, h) => rowLayouts.current.set(b.id, { y, h })}
             onEdit={() => focusBlock(b.id, selEnd(b.text))}
-            onClose={() => {
-              setEditing((cur) => (cur?.id === b.id ? null : cur));
+            onClose={(seed) => {
+              // Only the CURRENT field may close editing. A conversion (e.g. → code)
+              // bumps the seed and remounts the field; the outgoing field's unmount
+              // blur then arrives with its STALE seed — ignore it, or it would clear
+              // the fresh focus `focusBlock` just set (leaving a code block with no
+              // caret). A code block restructures its wrapper on convert, so its blur
+              // lands late enough to lose this race without the guard.
+              setEditing((cur) => (cur?.id === b.id && cur.seed === seed ? null : cur));
               // Wide: a blur means the user left the block — drop the slash menu
               // with it. Narrow: the slash SHEET itself blurs the field on open
               // (RN Modal steals focus), so the menu must survive that blur.
@@ -801,7 +807,9 @@ interface BlockRowProps {
   commentUnread: boolean;
   /** Open this block's discussion; omitted when comments aren't supported (hides the tab). */
   onOpenComments?: () => void;
-  onClose: () => void;
+  /** Leave edit mode. Receives the field's own `editSeed` so the owner can ignore
+   *  a stale (already-superseded) field's unmount blur. */
+  onClose: (seed: number) => void;
   onCommitText: (text: string) => void;
   onChange: (text: string) => void;
   onEnter?: (head: string, tail: string) => void;
@@ -1008,7 +1016,7 @@ function BlockRow({
               initialSelection={editSelection}
               onCommit={(t) => onCommitText(t)}
               onChange={onChange}
-              onClose={onClose}
+              onClose={() => onClose(editSeed)}
               onDeleteEmpty={onDeleteEmpty}
               onEnter={onEnter}
               onBackspaceAtStart={onBackspaceAtStart}

@@ -167,14 +167,18 @@ export function SlashMenu({ visible, items, activeIndex, top, onSelect, onClose 
   return (
     <View
       {...keepFocusProps}
-      style={[
-        styles.slashCard,
-        paperBorder(colors),
-        dropShadow(colors.shadow, 'md'),
-        { top, maxHeight: Math.round(height * 0.4) },
-      ]}
+      style={[styles.slashCard, paperBorder(colors), dropShadow(colors.shadow, 'md'), { top }]}
     >
-      <ScrollView ref={scrollRef} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+      <ScrollView
+        ref={scrollRef}
+        // The height cap lives on the ScrollView itself, not the card: on
+        // react-native-web only the scroll node's own bounded height makes its
+        // overflow scrollable (a cap on the parent View just clips it). Mirrors
+        // the Popover pattern.
+        style={{ maxHeight: Math.round(height * 0.4) }}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
         {flat.length === 0 ? (
           <Txt variant="callout" tone="inkMuted" style={styles.empty}>
             No matching block — Esc to dismiss
