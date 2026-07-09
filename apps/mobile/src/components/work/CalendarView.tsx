@@ -303,7 +303,7 @@ export function CalendarView({ spaceId, objectId }: CalendarViewProps) {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.editorCanvas }]}>
+    <View style={styles.container}>
       {/* ── Header ──────────────────────────────────────────────────── */}
       <View style={[styles.header, { borderBottomColor: colors.lineFaint }]}>
         {viewMode === 'month' ? (
@@ -447,7 +447,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.screenX,
     paddingVertical: spacing.sm,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
@@ -474,7 +474,7 @@ const styles = StyleSheet.create({
 
   // Agenda
   agendaContent: {
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.screenX,
     paddingBottom: spacing.xxxl,
   },
   eventRow: {

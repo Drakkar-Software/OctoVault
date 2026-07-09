@@ -237,7 +237,7 @@ export function FormView({ spaceId, objectId }: FormViewProps) {
 
   return (
     <ScrollView
-      style={[styles.container, { backgroundColor: colors.editorCanvas }]}
+      style={styles.container}
       contentContainerStyle={styles.content}
     >
       {/* ── Fields section ── */}
@@ -314,7 +314,7 @@ export function FormView({ spaceId, objectId }: FormViewProps) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  content: { padding: spacing.lg, gap: spacing.xs },
+  content: { paddingVertical: spacing.lg, paddingHorizontal: spacing.screenX, gap: spacing.xs },
 
   // Section header
   sectionHeader: {

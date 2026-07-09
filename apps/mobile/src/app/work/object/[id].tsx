@@ -106,23 +106,17 @@ export default function WorkObjectScreen() {
         />
       </ErrorBoundary>
     ) : editor === 'calendar' ? (
-      <Stage maxWidth={layout.editorMaxWidth} style={styles.stage}>
-        <ErrorBoundary label="Calendar">
-          <CalendarView spaceId={spaceId} objectId={id} />
-        </ErrorBoundary>
-      </Stage>
+      <ErrorBoundary label="Calendar">
+        <CalendarView spaceId={spaceId} objectId={id} />
+      </ErrorBoundary>
     ) : editor === 'form' ? (
-      <Stage maxWidth={layout.editorMaxWidth} style={styles.stage}>
-        <ErrorBoundary label="Form">
-          <FormView spaceId={spaceId} objectId={id} />
-        </ErrorBoundary>
-      </Stage>
+      <ErrorBoundary label="Form">
+        <FormView spaceId={spaceId} objectId={id} />
+      </ErrorBoundary>
     ) : editor === 'feedback' ? (
-      <Stage maxWidth={layout.editorMaxWidth} style={styles.stage}>
-        <ErrorBoundary label="Feedback">
-          <FeedbackView spaceId={spaceId} objectId={id} />
-        </ErrorBoundary>
-      </Stage>
+      <ErrorBoundary label="Feedback">
+        <FeedbackView spaceId={spaceId} objectId={id} />
+      </ErrorBoundary>
     ) : (
       <Stage maxWidth={layout.editorMaxWidth} style={styles.stage}>
         {node?.type === 'task' ? (

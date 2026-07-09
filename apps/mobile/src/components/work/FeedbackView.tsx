@@ -151,7 +151,7 @@ export function FeedbackView({ spaceId, objectId }: FeedbackViewProps) {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.paper }]}>
+    <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <Txt variant="heading" weight="bold">Feedback</Txt>
@@ -195,7 +195,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.screenX,
     paddingVertical: spacing.sm,
   },
   list: { flex: 1 },
@@ -204,7 +204,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.screenX,
     paddingVertical: spacing.sm,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
