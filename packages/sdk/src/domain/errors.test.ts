@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { SpaceAccessError } from '@drakkar.software/starfish-spaces';
 
 import { classifyError } from './errors';
 
@@ -63,6 +64,19 @@ describe('classifyError', () => {
     expect(classifyError(Object.assign(new Error('decryption failed'), { status: 503 }))).toBe('unknown');
     // A network failure wins over crypto vocabulary in the same message.
     expect(classifyError(new Error('Failed to fetch: decryption failed'))).toBe('network');
+  });
+
+  // Not a string literal: the REAL error object, built the way starfish-spaces'
+  // `openEncryptor` builds it. This pins the two properties the gate depends on —
+  // that the human message lands on `.message` (not the `spaceId` positional), and
+  // that no numeric `status` short-circuits the check before CRYPTO_RE runs.
+  it('classifies the real SpaceAccessError of a keyring-open failure as crypto', () => {
+    const e = new SpaceAccessError(
+      '',
+      undefined,
+      "You're not a recipient of this node's keyring — ask the owner to invite you.",
+    );
+    expect(classifyError(e)).toBe('crypto');
   });
 
   // The other SpaceAccessError messages are genuine denials: the space key simply

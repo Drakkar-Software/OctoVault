@@ -103,6 +103,23 @@ describe('createCachingWalTransport — writes', () => {
     await expect(readWalOutbox(DOC)).resolves.toEqual([]);
   });
 
+  // Reporting success here would make `WalDocument.commit()` clear its pending ops
+  // against an outbox that never received them — the edit would simply vanish.
+  it('rejects rather than losing the edit when the outbox cannot be persisted', async () => {
+    const inner: WalTransport = { pull: vi.fn(), append: vi.fn().mockRejectedValue(netErr()) };
+    configureKv({
+      async get() {
+        return null;
+      },
+      async set() {
+        throw new Error('QuotaExceededError');
+      },
+      async remove() {},
+    });
+
+    await expect(createCachingWalTransport(inner).append(DOC, body)).rejects.toThrow(/Failed to fetch/);
+  });
+
   it('keeps offline edits visible by replaying the outbox at the checkpoint', async () => {
     const inner: WalTransport = {
       pull: vi.fn().mockResolvedValue([]),
@@ -158,7 +175,9 @@ describe('flushWalOutbox', () => {
       .mockRejectedValueOnce(Object.assign(new Error('revoked'), { status: 403 }));
     await park({ pull: vi.fn(), append: vi.fn() });
 
-    await flushWalOutbox(DOC, { pull: vi.fn(), append });
+    // One accepted, one discarded — the discarded entry is NOT counted as pushed,
+    // because it never reached the server and nothing will ever re-send it.
+    await expect(flushWalOutbox(DOC, { pull: vi.fn(), append })).resolves.toBe(1);
     await expect(readWalOutbox(DOC)).resolves.toEqual([bodies[2]]);
   });
 

@@ -68,12 +68,20 @@ async function readJson<T>(key: string, fallback: T): Promise<T> {
   }
 }
 
+/** Best-effort write, for caches whose loss costs a re-fetch and nothing more. */
 async function writeJson(key: string, value: unknown): Promise<void> {
   try {
     await kvSet(key, JSON.stringify(value));
   } catch {
     /* a full/unavailable KV must not fail the pull that triggered the write */
   }
+}
+
+/** Throwing write, for the outbox — the one store whose contents are the ONLY
+ *  copy of a user's edit. A swallowed failure here reads as "commit persisted",
+ *  and `WalDocument.commit()` would drop the ops on the floor. */
+async function writeJsonOrThrow(key: string, value: unknown): Promise<void> {
+  await kvSet(key, JSON.stringify(value));
 }
 
 /** True when `e` is a transport failure — the only class for which serving a
@@ -110,32 +118,36 @@ export async function clearWalCache(documentKey: string): Promise<void> {
 }
 
 /**
- * Replay parked commits, oldest first, and stop at the first failure so the
- * per-author sequence inside the envelopes stays contiguous. Returns how many
- * were accepted. Safe to call concurrently with a pull: an entry that reaches
- * the server twice folds to a no-op (CRDT ops are idempotent).
+ * Replay parked commits, oldest first, stopping at the first failure so the
+ * per-author sequence inside the envelopes stays contiguous. Returns how many the
+ * server accepted. Safe to run alongside a pull: an entry that reaches the server
+ * twice folds to a no-op (CRDT ops are idempotent).
+ *
+ * A commit the server *rejects* (revoked cap, malformed batch) is discarded, since
+ * it would otherwise wedge every later edit behind an entry that can never land.
+ * Be clear about the cost: those ops stay folded in this device's document but will
+ * never reach the server, so this replica has silently diverged. Nothing re-sends
+ * them — a CRDT op is appended once. Dropping is the lesser evil, not a repair.
  */
 export async function flushWalOutbox(documentKey: string, transport: WalTransport): Promise<number> {
   const queued = await readWalOutbox(documentKey);
   if (queued.length === 0) return 0;
 
-  let sent = 0;
+  let pushed = 0;
+  /** How many entries leave the queue — the accepted ones, plus a rejected one. */
+  let consumed = 0;
   try {
     for (const entry of queued) {
       const { ts } = await transport.append(documentKey, entry);
       await cacheElements(documentKey, [{ ts, ...entry }]);
-      sent += 1;
+      pushed += 1;
+      consumed += 1;
     }
   } catch (e) {
-    if (!isOffline(e)) {
-      // A rejected commit (revoked cap, malformed batch) would block the queue
-      // forever. Drop it — the ops are already folded into the local CRDT, and
-      // the next successful commit re-sends the state they produced.
-      sent += 1;
-    }
+    if (!isOffline(e)) consumed += 1; // discard the rejected entry, keep the rest
   }
-  await writeJson(outboxKey(documentKey), queued.slice(sent));
-  return sent;
+  await writeJson(outboxKey(documentKey), queued.slice(consumed));
+  return pushed;
 }
 
 // ── Transport ──────────────────────────────────────────────────────────────────
@@ -186,7 +198,13 @@ export function createCachingWalTransport(
         if (!isOffline(e)) throw e;
         onReachable?.(false);
         const queued = await readWalOutbox(documentKey);
-        await writeJson(outboxKey(documentKey), [...queued, body]);
+        // If the outbox write fails (a full KV), rethrow the TRANSPORT error rather
+        // than reporting success. `commit()` then keeps its pending ops in memory,
+        // so the edit survives the session and is re-tried on the next commit —
+        // whereas a swallowed failure here would destroy it outright.
+        await writeJsonOrThrow(outboxKey(documentKey), [...queued, body]).catch(() => {
+          throw e;
+        });
         // Report success so `WalDocument.commit()` clears its pending ops: they
         // are now durable in the outbox, and leaving them queued in memory would
         // re-send them on the next commit under a *different* sequence number.
