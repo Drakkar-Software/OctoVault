@@ -87,7 +87,7 @@ export function useWalDoc(opts: UseWalDocOptions): WalDocHandle {
     let cancelled = false;
     setOpening(true);
 
-    const { doc: d, transport: live } = createOfflineWalDocument({
+    const { doc: d, transport: live, maybeCompact } = createOfflineWalDocument({
       // TODO: remove cast when starfish-wal is bumped to alpha.32 — its WalStarfishClient.pull
       // is a single-signature function while StarfishClient.pull is overloaded; runtime-compatible.
       client: client as never,
@@ -105,12 +105,19 @@ export function useWalDoc(opts: UseWalDocOptions): WalDocHandle {
     });
     transport.current = live;
 
+    const openedAt = Date.now();
     d.open()
       .then(() => {
         if (cancelled) return;
+        if (__DEV__) {
+          console.debug(`[wal] open ${documentKey}: ${Date.now() - openedAt}ms, tail ${d.retainedTail().length}`);
+        }
         setDoc(d);
         setOpening(false);
         bump();
+        // This open replayed a long tail — checkpoint in the background so the
+        // next open resumes from the snapshot instead of the full history.
+        void maybeCompact();
         // A commit parked by an earlier session is still owed to the server.
         void flushWalOutbox(documentKey, live).then((sent) => {
           if (sent > 0 && !cancelled) bump();

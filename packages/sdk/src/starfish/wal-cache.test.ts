@@ -5,6 +5,8 @@ import {
   clearWalCache,
   createCachingWalSnapshotStore,
   createCachingWalTransport,
+  createOfflineWalDocument,
+  createSwrWalSnapshotStore,
   flushWalOutbox,
   readWalOutbox,
 } from './wal-cache';
@@ -221,6 +223,76 @@ describe('createCachingWalSnapshotStore', () => {
     const boom = Object.assign(new Error('nope'), { status: 500 });
     const inner = { read: vi.fn().mockRejectedValue(boom), write: vi.fn() };
     await expect(createCachingWalSnapshotStore(inner).read('k__snapshot')).rejects.toBe(boom);
+  });
+});
+
+describe('createSwrWalSnapshotStore', () => {
+  const snap = {
+    state: { sealed: 1 },
+    uptoTs: 20,
+    writerSeq: { 'ed-pub': 2 },
+    producedBy: 'ed-pub',
+    authorPubkey: 'ed-pub',
+    authorSignature: 'sig',
+  };
+  const client = (pull: ReturnType<typeof vi.fn>, push = vi.fn()) => ({ pull, push, append: vi.fn() });
+
+  it('reads through the client pull cache with staleWhileRevalidate', async () => {
+    const pull = vi.fn().mockResolvedValue({ data: snap, hash: 'h' });
+    await expect(createSwrWalSnapshotStore(client(pull)).read('k__snapshot')).resolves.toEqual(snap);
+    expect(pull).toHaveBeenCalledWith('/pull/k__snapshot', { staleWhileRevalidate: true });
+  });
+
+  it('treats a 404 as "no snapshot yet" — a cold start, not a failure', async () => {
+    const pull = vi.fn().mockRejectedValue(Object.assign(new Error('not found'), { status: 404 }));
+    await expect(createSwrWalSnapshotStore(client(pull)).read('k__snapshot')).resolves.toBeNull();
+  });
+
+  it('returns null on a malformed snapshot doc', async () => {
+    const pull = vi.fn().mockResolvedValue({ data: { state: { sealed: 1 } }, hash: 'h' }); // no uptoTs
+    await expect(createSwrWalSnapshotStore(client(pull)).read('k__snapshot')).resolves.toBeNull();
+  });
+
+  // The upstream store swallows this into null, which would silently downgrade an
+  // offline open to a full-history replay instead of using the KV mirror.
+  it('rethrows a network failure so the caching wrapper can serve its KV mirror', async () => {
+    const pull = vi.fn().mockRejectedValue(netErr());
+    await expect(createSwrWalSnapshotStore(client(pull)).read('k__snapshot')).rejects.toThrow(/Failed to fetch/);
+  });
+
+  it('delegates writes to the upstream CAS store', async () => {
+    const pull = vi.fn().mockRejectedValue(Object.assign(new Error('not found'), { status: 404 }));
+    const push = vi.fn().mockResolvedValue({ hash: 'h1' });
+    await createSwrWalSnapshotStore(client(pull, push)).write('k__snapshot', snap);
+    expect(push).toHaveBeenCalledWith('/push/k__snapshot', snap, null);
+  });
+});
+
+describe('createOfflineWalDocument — maybeCompact', () => {
+  it('is a no-op when snapshots are disabled', async () => {
+    const client = { pull: vi.fn(), push: vi.fn(), append: vi.fn() };
+    const { maybeCompact } = createOfflineWalDocument({
+      client,
+      documentKey: DOC,
+      edPubHex: 'ab',
+      edPrivHex: 'cd',
+      withSnapshots: false,
+    });
+    await expect(maybeCompact()).resolves.toBe(false);
+    expect(client.pull).not.toHaveBeenCalled();
+  });
+
+  it('skips compaction below the tail threshold without touching the network', async () => {
+    const client = { pull: vi.fn(), push: vi.fn(), append: vi.fn() };
+    const { doc, maybeCompact } = createOfflineWalDocument({
+      client,
+      documentKey: DOC,
+      edPubHex: 'ab',
+      edPrivHex: 'cd',
+    });
+    expect(doc.retainedTail()).toHaveLength(0); // never opened — empty tail
+    await expect(maybeCompact()).resolves.toBe(false);
+    expect(client.pull).not.toHaveBeenCalled();
   });
 });
 

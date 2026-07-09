@@ -26,6 +26,12 @@
  * Both caches hold ciphertext only. The op-batch envelopes and the snapshot
  * `state` are sealed with the space CEK, so a device with a KV dump but no
  * keyring learns nothing beyond element counts and timestamps.
+ *
+ * This module also owns open-time SPEED: the snapshot read is served
+ * stale-while-revalidate from the client's pull cache
+ * ({@link createSwrWalSnapshotStore}), and `maybeCompact` (returned by
+ * {@link createOfflineWalDocument}) checkpoints a long log after a slow open so
+ * the next one resumes from the snapshot instead of replaying full history.
  */
 import { WalDocument } from '@drakkar.software/starfish-wal';
 import type {
@@ -41,7 +47,7 @@ import {
   walEncryptorFromKeyring,
   walSignerFromKeys,
 } from '@drakkar.software/starfish-wal/client';
-import type { CreateWalDocumentOptions } from '@drakkar.software/starfish-wal/client';
+import type { CreateWalDocumentOptions, WalStarfishClient } from '@drakkar.software/starfish-wal/client';
 
 import { classifyError } from '../domain/errors';
 import { kvGet, kvRemove, kvSet } from '../config/kv';
@@ -215,6 +221,37 @@ export function createCachingWalTransport(
   };
 }
 
+/**
+ * Snapshot store whose `read` goes through the StarfishClient pull cache with
+ * `staleWhileRevalidate: true`: a previously-seen snapshot is adopted instantly
+ * (no round-trip; a background revalidation refreshes the cache for the next
+ * open), and a stale one only means a longer tail pull. `write` delegates to the
+ * upstream store, keeping its hash-CAS + retry.
+ *
+ * Unlike the upstream store's read — which swallows every failure into `null`
+ * (= "no snapshot, cold start") — this one rethrows NETWORK failures, so the
+ * {@link createCachingWalSnapshotStore} wrapper can serve its KV mirror instead
+ * of silently downgrading an offline open to a full-history replay.
+ */
+export function createSwrWalSnapshotStore(client: WalStarfishClient): WalSnapshotStore {
+  const upstream = createWalSnapshotStore(client);
+  return {
+    async read(snapshotKey) {
+      let res: { data?: unknown } | null = null;
+      try {
+        res = await client.pull(`/pull/${snapshotKey}`, { staleWhileRevalidate: true });
+      } catch (e) {
+        if (isOffline(e)) throw e; // let the caching wrapper fall back to KV
+        return null; // 404 = no snapshot yet; any other answer = cold start
+      }
+      const data = (res?.data ?? null) as WalSnapshotDoc | null;
+      if (!data || typeof data.uptoTs !== 'number' || !data.state) return null;
+      return data;
+    },
+    write: (snapshotKey, doc) => upstream.write(snapshotKey, doc),
+  };
+}
+
 /** Wrap the snapshot store so a cold start offline still adopts the last
  *  snapshot instead of rejecting the whole `open()`. The snapshot carries its own
  *  `producedBy` + signature, which `WalDocument` verifies after we hand it back. */
@@ -251,31 +288,81 @@ export interface CreateOfflineWalDocumentOptions extends CreateWalDocumentOption
 }
 
 /**
+ * Tail cap passed as the doc's `retainTailN` AND used as the compaction
+ * threshold — the two must agree: `retainedTail()` is capped at `retainTailN`,
+ * so "the tail reached the cap" is exactly "this open replayed at least this
+ * many elements".
+ */
+export const WAL_COMPACT_TAIL_N = 64;
+
+/**
  * The offline-first counterpart of `createWalDocument`: same wiring, but the
  * transport and snapshot store are cache-backed. Returns the document alongside
- * the transport, which the caller needs to drive {@link flushWalOutbox}.
+ * the transport, which the caller needs to drive {@link flushWalOutbox}, and
+ * `maybeCompact`, which the caller fires after a slow `open()`.
  */
 export function createOfflineWalDocument(opts: CreateOfflineWalDocumentOptions): {
   doc: WalDocument;
   transport: WalTransport;
+  /**
+   * Checkpoint the op-log when the just-finished `open()` replayed a full
+   * `retainTailN` tail, so the NEXT open adopts the snapshot instead of
+   * re-verifying/decrypting/folding the whole history from ts=0
+   * (`doc.snapshot()` had no caller before this, so opens got slower with
+   * every commit — the root cause of a sluggish "Opening page…").
+   *
+   * Fire-and-forget. Every failure (CAS race with another device compacting,
+   * offline, a server without the snapshot collection) is benign — the open
+   * already succeeded, only the next-open speedup is lost. Returns whether a
+   * snapshot was written.
+   */
+  maybeCompact: () => Promise<boolean>;
 } {
   const { client, documentKey, edPubHex, edPrivHex, encryptor, onReachable, sessionNonce, posture, withSnapshots } = opts;
 
   const live = createWalTransport(client);
+  const signer = walSignerFromKeys(edPubHex, edPrivHex);
+  const walEncryptor = encryptor ? walEncryptorFromKeyring(encryptor) : noopEncryptor;
+  const snapshotStore =
+    withSnapshots === false ? undefined : createCachingWalSnapshotStore(createSwrWalSnapshotStore(client), onReachable);
 
   const doc = new WalDocument({
     documentKey,
     transport: createCachingWalTransport(live, onReachable),
-    signer: walSignerFromKeys(edPubHex, edPrivHex),
-    encryptor: encryptor ? walEncryptorFromKeyring(encryptor) : noopEncryptor,
-    ...(withSnapshots === false
-      ? {}
-      : { snapshotStore: createCachingWalSnapshotStore(createWalSnapshotStore(client), onReachable) }),
+    signer,
+    encryptor: walEncryptor,
+    ...(snapshotStore ? { snapshotStore } : {}),
     ...(sessionNonce ? { sessionNonce } : {}),
     ...(posture ? { posture } : {}),
+    retainTailN: WAL_COMPACT_TAIL_N,
   });
+
+  const maybeCompact = async (): Promise<boolean> => {
+    if (!snapshotStore) return false;
+    try {
+      if (doc.retainedTail().length < WAL_COMPACT_TAIL_N) return false;
+      // A throwaway document on the LIVE transport — `snapshot()` re-pulls the
+      // full history itself (no `open()` needed) and MUST see the server's log,
+      // not the cache: folding a partial cached tail through the caching
+      // transport during a network flake would publish a truncated snapshot.
+      // Offline, the live pull throws and the compaction is skipped. The server
+      // log also never contains parked outbox commits, so a snapshot written
+      // here can't publish an op the server hasn't accepted.
+      const compactor = new WalDocument({
+        documentKey,
+        transport: live,
+        signer,
+        encryptor: walEncryptor,
+        snapshotStore,
+      });
+      await compactor.snapshot();
+      return true;
+    } catch {
+      return false;
+    }
+  };
 
   // The LIVE transport, deliberately: `flushWalOutbox` must see a real network
   // failure rather than have the caching wrapper re-park the entry it is draining.
-  return { doc, transport: live };
+  return { doc, transport: live, maybeCompact };
 }

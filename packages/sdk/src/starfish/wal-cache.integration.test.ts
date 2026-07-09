@@ -19,7 +19,13 @@ import {
 } from '@drakkar.software/starfish-wal';
 
 import { configureKv } from '../config/kv';
-import { createCachingWalTransport, flushWalOutbox, readWalOutbox } from './wal-cache';
+import {
+  WAL_COMPACT_TAIL_N,
+  createCachingWalTransport,
+  createOfflineWalDocument,
+  flushWalOutbox,
+  readWalOutbox,
+} from './wal-cache';
 
 import { vi } from 'vitest';
 vi.mock('@drakkar.software/dk-spaces-sdk', () => ({ configureKv: () => {} }));
@@ -195,5 +201,93 @@ describe('offline WAL round-trip', () => {
       encryptor: noopEncryptor,
     });
     await expect(d.open()).rejects.toBe(denied);
+  });
+});
+
+/**
+ * The full StarfishClient surface `createOfflineWalDocument` consumes: an
+ * append-only op-log (`append`/`pull?since=`) plus the sibling `__snapshot`
+ * LWW doc (`pull`/`push`). The real server derives each element's author proof
+ * from the cap-signed request; here the fake signs with the same key the
+ * document's own signer uses, which is exactly the invariant the wiring relies
+ * on (`createWalTransport`'s doc says the two MUST be the same Ed25519 key).
+ */
+class FakeStarfish {
+  els: WalAppendElement[] = [];
+  snap: { data: Record<string, unknown>; hash: string } | null = null;
+  offline = false;
+  /** The `since` of the most recent op-log pull — proves snapshot resume. */
+  lastSince: number | null = null;
+  private ts = 0;
+  private snapVer = 0;
+  constructor(private author: WalSigner) {}
+
+  private guard() {
+    if (this.offline) throw new Error('Failed to fetch');
+  }
+  async append(path: string, data: Record<string, unknown>) {
+    this.guard();
+    const proof = await this.author.signAppend(path.replace('/push/', ''), data);
+    this.ts += 1;
+    this.els.push({ ts: this.ts, data, ...proof });
+    return { timestamp: this.ts };
+  }
+  async pull(path: string, opts?: Record<string, unknown>) {
+    this.guard();
+    if (path.endsWith('__snapshot')) {
+      if (!this.snap) throw Object.assign(new Error('not found'), { status: 404 });
+      return { data: this.snap.data, hash: this.snap.hash };
+    }
+    const since = Number(opts?.since ?? 0);
+    this.lastSince = since;
+    return this.els.filter((e) => e.ts > since);
+  }
+  async push(_path: string, data: Record<string, unknown>) {
+    this.guard();
+    this.snap = { data, hash: `h${++this.snapVer}` };
+    return { hash: this.snap.hash };
+  }
+}
+
+describe('compaction round-trip', () => {
+  it('compacts after a long open, and the next open resumes from the snapshot', async () => {
+    const priv = ed25519.utils.randomSecretKey();
+    const keys = { edPubHex: hex(ed25519.getPublicKey(priv)), edPrivHex: hex(priv) };
+    const fake = new FakeStarfish(createEd25519Signer(keys.edPubHex, keys.edPrivHex));
+    const mk = () => createOfflineWalDocument({ client: fake, documentKey: DOC, ...keys });
+
+    // 1. Author a log long enough to hit the tail cap — one element per commit.
+    const a = mk();
+    await a.doc.open();
+    for (let i = 0; i < WAL_COMPACT_TAIL_N; i++) {
+      a.doc.setField(`f${i}`, i);
+      await a.doc.commit();
+    }
+    expect(fake.els).toHaveLength(WAL_COMPACT_TAIL_N);
+    // Self-commits never enter the retained tail, so the WRITING session does
+    // not compact — only a session that had to replay the history does.
+    await expect(a.maybeCompact()).resolves.toBe(false);
+    expect(fake.snap).toBeNull();
+
+    // 2. A fresh open replays the full history (the slow open) and compacts.
+    const b = mk();
+    await b.doc.open();
+    expect(b.doc.retainedTail()).toHaveLength(WAL_COMPACT_TAIL_N);
+    await expect(b.maybeCompact()).resolves.toBe(true);
+    expect(fake.snap).not.toBeNull();
+
+    // 3. A cold device (fresh KV) adopts the snapshot: the op-log pull resumes
+    //    from `uptoTs`, replays nothing, and sees the full content.
+    useFreshKv();
+    const c = mk();
+    await c.doc.open();
+    expect(fake.lastSince).toBe(WAL_COMPACT_TAIL_N);
+    expect(c.doc.retainedTail()).toHaveLength(0);
+    expect(c.doc.materialize()).toMatchObject({ f0: 0, [`f${WAL_COMPACT_TAIL_N - 1}`]: WAL_COMPACT_TAIL_N - 1 });
+    await expect(c.maybeCompact()).resolves.toBe(false);
+
+    // 4. Offline, a due compaction is skipped — never built from the cache.
+    fake.offline = true;
+    await expect(b.maybeCompact()).resolves.toBe(false);
   });
 });
