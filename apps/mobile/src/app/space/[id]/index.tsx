@@ -322,22 +322,6 @@ export default function SpaceDetailsScreen() {
         </Card>
       ) : null}
 
-      {/* TYPES — owner-only; custom object types for this space. */}
-      {details.isOwner ? (
-        <Card title="TYPES">
-          <Txt variant="footnote" tone="inkSoft">
-            Define custom object types with their own fields and icon — boards, trackers, databases, anything.
-          </Txt>
-          <Button
-            label="Manage types"
-            variant="secondary"
-            size="md"
-            iconName="layers"
-            onPress={() => router.push({ pathname: '/space/[id]/types', params: { id: spaceId } })}
-          />
-        </Card>
-      ) : null}
-
       {/* DANGER ZONE — leaving gates through the app-wide confirm dialog. */}
       <Card title="DANGER ZONE">
         <Txt variant="footnote" tone="inkSoft">

@@ -210,6 +210,9 @@ function TypeTile({
   const { colors } = useTheme();
   const { hovered, hoverProps } = useHover();
   const { animStyle, onPressIn, onPressOut } = useScalePress({ scaleTo: 0.97 });
+  // Reanimated drops a function-form `style` on web, taking the tile's layout
+  // with it — track pressed via state so `style` stays a plain array.
+  const [pressed, setPressed] = useState(false);
 
   const description = TYPE_DESCRIPTIONS[entry.type as string] ?? '';
 
@@ -219,10 +222,16 @@ function TypeTile({
       accessibilityLabel={`Create ${entry.label}`}
       disabled={disabled}
       onPress={onPress}
-      onPressIn={onPressIn}
-      onPressOut={onPressOut}
+      onPressIn={() => {
+        setPressed(true);
+        onPressIn();
+      }}
+      onPressOut={() => {
+        setPressed(false);
+        onPressOut();
+      }}
       {...hoverProps}
-      style={({ pressed }) => [
+      style={[
         styles.typeTile,
         {
           backgroundColor: pressed
