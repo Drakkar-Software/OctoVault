@@ -7,7 +7,7 @@ import { capProviderFor } from '@drakkar.software/octovault-sdk';
 import { fetchWithTimeout } from '@drakkar.software/octovault-sdk';
 import { getMemberCap, getNodeAccessEntry } from '@drakkar.software/octovault-sdk';
 import { pullCache, PULL_CACHE_MAX_AGE_MS } from '@drakkar.software/octovault-sdk';
-import type { NodeAccess, SpaceAccessEntry } from '@drakkar.software/octovault-sdk';
+import type { ErrorKind, NodeAccess, SpaceAccessEntry } from '@drakkar.software/octovault-sdk';
 import { useSession } from './session-context';
 import { useSpaceOpen } from './use-room-open-flow';
 
@@ -47,6 +47,8 @@ export interface MergeDocResult {
   loaded: boolean;
   opening: boolean;
   openError: string | null;
+  /** Why {@link openError} happened — `'crypto'` unlocks the keyring recovery UI. */
+  openErrorKind: ErrorKind | null;
   offline: boolean;
   reload: () => void;
   /** Apply an update to the live doc (no-op + false when not ready). */
@@ -69,7 +71,7 @@ export function useMergeDoc(opts: MergeDocOptions): MergeDocResult {
   const { spaceId, openId, enabled, storeKey, privatePaths, node, nodeId, plaintext } = opts;
   const { session } = useSession();
 
-  const { encryptor, client, opening, openError, offline, reload } = useSpaceOpen({
+  const { encryptor, client, opening, openError, openErrorKind, offline, reload } = useSpaceOpen({
     docId: openId,
     spaceId,
     enabled,
@@ -145,5 +147,5 @@ export function useMergeDoc(opts: MergeDocOptions): MergeDocResult {
     if (store) void (store.getState() as { pull?: () => Promise<unknown> }).pull?.();
   }, [store]);
 
-  return { doc, ready: !!store, loaded: doc !== null, opening: enabled ? opening : false, openError, offline, reload, apply, pull };
+  return { doc, ready: !!store, loaded: doc !== null, opening: enabled ? opening : false, openError, openErrorKind, offline, reload, apply, pull };
 }

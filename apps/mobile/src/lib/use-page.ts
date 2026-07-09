@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 
 import { useObjectContent, useWalMutator } from './use-object-content';
 import * as page from '@drakkar.software/octovault-sdk';
-import type { Block, BlockType, BookmarkMeta, NewBlock } from '@drakkar.software/octovault-sdk';
+import type { Block, BlockType, BookmarkMeta, ErrorKind, NewBlock } from '@drakkar.software/octovault-sdk';
 import type { WalDocument } from '@drakkar.software/starfish-wal';
 
 export type { Block, BlockType, BookmarkMeta, NewBlock } from '@drakkar.software/octovault-sdk';
@@ -21,6 +21,8 @@ export interface PageHook {
   mutate: <T>(fn: (d: WalDocument) => T) => T | undefined;
   opening: boolean;
   openError: string | null;
+  /** Why {@link openError} happened — drives which recovery UI is offered. */
+  openErrorKind: ErrorKind | null;
   offline: boolean;
   reload: () => void;
   /** Returns the new block id (or undefined before the doc is open). */
@@ -57,7 +59,7 @@ export interface PageHook {
  * Concurrent edits converge (per-block char-RGA text).
  */
 export function usePage(spaceId: string, pageId: string, opts: { enabled?: boolean } = {}): PageHook {
-  const { walDoc: doc, ready, version, touch, opening, openError, offline, reload } = useObjectContent(
+  const { walDoc: doc, ready, version, touch, opening, openError, openErrorKind, offline, reload } = useObjectContent(
     spaceId,
     pageId,
     'append',
@@ -75,6 +77,7 @@ export function usePage(spaceId: string, pageId: string, opts: { enabled?: boole
     ready,
     opening,
     openError,
+    openErrorKind,
     offline,
     reload,
     doc,

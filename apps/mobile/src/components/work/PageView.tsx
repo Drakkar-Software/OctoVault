@@ -594,7 +594,13 @@ export function PageView({ spaceId, objectId, emoji, title, subtitle, onRenameTi
       />
 
       {page.offline ? <Callout tone="info" iconName="info">Offline — showing the last synced version.</Callout> : null}
-      <KeyringTrustNotice spaceId={spaceId} openError={page.openError} onRetry={page.reload} onRecreate={recreate} />
+      <KeyringTrustNotice
+        spaceId={spaceId}
+        openError={page.openError}
+        openErrorKind={page.openErrorKind}
+        onRetry={page.reload}
+        onRecreate={recreate}
+      />
 
       {/* The blocks container is the slash card's positioning context. */}
       <View style={styles.blocks}>

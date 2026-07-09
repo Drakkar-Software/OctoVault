@@ -15,7 +15,7 @@ import type { Encryptor, StarfishClient } from '@drakkar.software/starfish-clien
 
 import { getMemberCap } from '@drakkar.software/octovault-sdk';
 import { getNodeAccess, getSpaceClient, buildEncryptor, buildEncryptorTofu, ownerTrustedAdders } from '@drakkar.software/octovault-sdk';
-import type { NodeAccess } from '@drakkar.software/octovault-sdk';
+import type { ErrorKind, NodeAccess } from '@drakkar.software/octovault-sdk';
 import { useSpaceRegistryActions } from './space-registry-context';
 import { useSession } from './session-context';
 import { useSpaceOpenState } from './use-space-open';
@@ -26,6 +26,8 @@ export interface RoomOpenFlow {
   client: StarfishClient | null;
   opening: boolean;
   openError: string | null;
+  /** Why {@link openError} happened — `'crypto'` unlocks the keyring recovery UI. */
+  openErrorKind: ErrorKind | null;
   offline: boolean;
   reload: () => void;
 }
@@ -46,7 +48,7 @@ export function useSpaceOpen(opts: {
   const bypassed = isBypassed(spaceId);
   const [encryptor, setEncryptor] = useState<Encryptor | null>(null);
   const [client, setClient] = useState<StarfishClient | null>(null);
-  const { opening, openError, offline, reloadNonce, reload, beginOpen, finishOpening, failOpen } =
+  const { opening, openError, openErrorKind, offline, reloadNonce, reload, beginOpen, finishOpening, failOpen } =
     useSpaceOpenState();
 
   const nodeId = opts.node?.id;
@@ -112,5 +114,5 @@ export function useSpaceOpen(opts: {
     };
   }, [enabled, session, docId, spaceId, nodeId, nodeAccess, nodeEnc, plaintext, bypassed, ensureRegistry, reloadNonce, beginOpen, finishOpening, failOpen]);
 
-  return { encryptor, client, opening, openError, offline, reload };
+  return { encryptor, client, opening, openError, openErrorKind, offline, reload };
 }

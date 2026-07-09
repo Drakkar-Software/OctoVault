@@ -1,6 +1,8 @@
 import { useCallback } from 'react';
 import { useRouter } from 'expo-router';
 
+import { clearWalCache, objLogName } from '@drakkar.software/octovault-sdk';
+
 import { useSpaceObjects } from './space-objects-context';
 
 /**
@@ -18,6 +20,9 @@ export function useRecreateObject(spaceId: string, objectId: string) {
     const node = objects.get(objectId);
     if (!node) return;
     objects.archive(objectId);
+    // The abandoned doc's cached op-log can never be decrypted again, and any
+    // outbox entry for it must not be pushed now that the node is archived.
+    void clearWalCache(objLogName(spaceId, objectId));
     const newId = objects.create({
       type: node.type,
       title: node.title || 'Untitled',

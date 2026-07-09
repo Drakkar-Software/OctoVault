@@ -8,6 +8,11 @@ import { kvGet, kvSet, kvRemove } from '@drakkar.software/dk-spaces-sdk';
 /** 30 days — mirrors the default from the old octospaces pullCache. */
 export const PULL_CACHE_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 
+/** HTTP status codes that trigger a stale cache-fallback (rate-limit + server errors).
+ *  A network-level failure already falls back to cache unconditionally; these are the
+ *  statuses where the server *answered* but the answer is worth ignoring. */
+export const CACHE_FALLBACK_STATUSES = [429, 500, 502, 503, 504] as const;
+
 /** Singleton cache instance — created on first call and reused like the original octospaces pullCache. */
 let _cache: ReturnType<typeof createKvPullCache> | null = null;
 

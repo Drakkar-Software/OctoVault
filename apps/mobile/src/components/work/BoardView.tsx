@@ -205,7 +205,13 @@ export function BoardView({ spaceId, objectId, emoji, title, onRenameTitle, onCh
       />
 
       {board.offline ? <Callout tone="info" iconName="info">Offline — showing the last synced board.</Callout> : null}
-      <KeyringTrustNotice spaceId={spaceId} openError={board.openError} onRetry={board.reload} onRecreate={recreate} />
+      <KeyringTrustNotice
+        spaceId={spaceId}
+        openError={board.openError}
+        openErrorKind={board.openErrorKind}
+        onRetry={board.reload}
+        onRecreate={recreate}
+      />
 
       {loading ? (
         <BoardSkeleton />

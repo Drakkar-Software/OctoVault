@@ -16,7 +16,7 @@
 import { configureDKSpaces } from '@drakkar.software/dk-spaces-sdk';
 import { configureSpaces } from '@drakkar.software/starfish-spaces';
 import { octoVaultLayout } from '../starfish/client';
-import { resetPullCache } from '../starfish/pull-cache';
+import { CACHE_FALLBACK_STATUSES, PULL_CACHE_MAX_AGE_MS, pullCache, resetPullCache } from '../starfish/pull-cache';
 
 interface OctoVaultConfig {
   syncBase: string;
@@ -28,6 +28,9 @@ interface OctoVaultConfig {
    *  shared joined-space list across OctoVault and OctoChat. When set, both apps
    *  must agree on the same value. Absent → uses `syncNamespace` (per-app silo). */
   sharedSpacesNamespace?: string;
+  /** Invoked when a background revalidation succeeds after a stale cache-fallback.
+   *  The app wires this to its connectivity signal so offline views recover. */
+  onServerReachable?: () => void;
 }
 
 let _config: OctoVaultConfig = {
@@ -59,6 +62,15 @@ export function configureOctoVault(config: Partial<OctoVaultConfig>): void {
     syncNamespace: _config.syncNamespace,
     eventsUrl: _config.eventsUrl,
     ...(_config.sharedSpacesNamespace ? { sharedSpacesNamespace: _config.sharedSpacesNamespace } : {}),
+    // Offline reads for the session clients dk-spaces builds itself. (Space clients
+    // from `makeSpaceClient` already fall back to their own `defaultPullCache()`;
+    // what they lack is the stale-on-5xx policy and the recovery callback.)
+    // `pullCache()` is lazy: it captures the kv shims that `configureKv` installs
+    // right after this call.
+    cache: pullCache(),
+    cacheMaxAgeMs: PULL_CACHE_MAX_AGE_MS,
+    cacheFallbackStatuses: [...CACHE_FALLBACK_STATUSES],
+    ...(_config.onServerReachable ? { onServerReachable: _config.onServerReachable } : {}),
   });
   // Install the OctoVault layout module-wide. configureSpaces merges, so any kvAdapter
   // already set by configureKv is preserved. Must run after configureOctoSpaces so

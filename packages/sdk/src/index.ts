@@ -253,7 +253,11 @@ export { parseSseFrames } from '@drakkar.software/starfish-client/events';
 // WalDocument class/type lives in the root entry; createWalDocument + noopEncryptor
 // are the client-side factory exported from the /client subpath.
 export { WalDocument } from '@drakkar.software/starfish-wal';
+export type { WalAppendElement, WalTransport } from '@drakkar.software/starfish-wal';
 export { createWalDocument, noopEncryptor } from '@drakkar.software/starfish-wal/client';
+
+// Offline-first WAL wiring (cache-backed transport + persisted commit outbox).
+export * from './starfish/wal-cache';
 
 // Storage types (platform-agnostic; implementations live in ./platform)
 // PersistedSession is exported via ./starfish/identity above — not repeated here.

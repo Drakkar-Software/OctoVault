@@ -9,6 +9,7 @@
  */
 import { configureKv, configureOctoVault } from '@drakkar.software/octovault-sdk';
 import { kvGet, kvRemove, kvSet } from '@drakkar.software/octovault-sdk/platform';
+import { reportReachability } from './connectivity';
 // One-time octospaces→dk KV prefix migration (spaceaccess store only) — must run
 // before the first sync call. Side-effect import; Metro resolves the .native
 // variant on native. See kv-migration.ts / kv-migration.native.ts, MIGRATION_CLEANUP.md.
@@ -37,6 +38,9 @@ configureOctoVault({
   eventsUrl: EVENTS_URL,
   webBase: WEB_BASE,
   ...(SHARED_SPACES_NAMESPACE ? { sharedSpacesNamespace: SHARED_SPACES_NAMESPACE } : {}),
+  // A background revalidation that succeeds proves the server came back — clear
+  // the offline shells even if no view happened to re-pull on its own.
+  onServerReachable: () => reportReachability(true),
 });
 
 configureKv({ get: kvGet, set: kvSet, remove: kvRemove });

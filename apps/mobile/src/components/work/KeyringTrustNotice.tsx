@@ -1,5 +1,7 @@
 import { StyleSheet, View } from 'react-native';
 
+import type { ErrorKind } from '@drakkar.software/octovault-sdk';
+
 import { radii, spacing } from '@/theme';
 import { useConfirm } from '@/lib/use-confirm';
 import { useTheme } from '@/lib/use-theme';
@@ -13,6 +15,9 @@ import { Txt } from '../ui/Txt';
 interface KeyringTrustNoticeProps {
   spaceId: string;
   openError: string | null;
+  /** What kind of failure `openError` was. ONLY `'crypto'` unlocks the recovery
+   *  affordances below — see the note on destructive recovery. */
+  openErrorKind: ErrorKind | null;
   onRetry: () => void;
   /** Archive this node and replace it with an empty one of the same type/title
    *  — the last resort when the content itself can never be decrypted (as
@@ -32,13 +37,22 @@ interface KeyringTrustNoticeProps {
  * Once a space has been trusted, this card no longer reappears for it — if
  * the open still fails after that, the plain `openError` Callout is the only
  * thing shown, since retrying the bypass again would not help.
+ *
+ * BOTH recovery affordances are gated on `openErrorKind === 'crypto'`. Trusting
+ * a space and — far worse — replacing its content with an empty document are
+ * irreversible answers to "this can never be decrypted". A server that is merely
+ * unreachable, or a 5xx, must never offer them: the content is fine and will
+ * open on the next successful pull. `classifyError` only returns `'crypto'` for
+ * the messages the keyring and WAL layers actually throw on a seal/open or
+ * author-verification failure, so anything ambiguous lands here as a bare error.
  */
-export function KeyringTrustNotice({ spaceId, openError, onRetry, onRecreate }: KeyringTrustNoticeProps) {
+export function KeyringTrustNotice({ spaceId, openError, openErrorKind, onRetry, onRecreate }: KeyringTrustNoticeProps) {
   const { colors } = useTheme();
   const { isBypassed, enableBypass } = useTrustBypass();
   const confirm = useConfirm();
 
   if (!openError) return null;
+  if (openErrorKind !== 'crypto') return <Callout tone="danger" iconName="alert">{openError}</Callout>;
   const alreadyTrusted = isBypassed(spaceId);
 
   const askRecreate = async () => {

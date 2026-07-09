@@ -4,6 +4,7 @@ import { useObjectContent, useWalMutator } from './use-object-content';
 import { useSpaceObjects } from './space-objects-context';
 import * as boardContent from '@drakkar.software/octovault-sdk';
 import * as taskModel from '@drakkar.software/octovault-sdk';
+import type { ErrorKind } from '@drakkar.software/octovault-sdk';
 
 export type { Column } from '@drakkar.software/octovault-sdk';
 export type { Task, TaskStatus } from '@drakkar.software/octovault-sdk';
@@ -23,6 +24,8 @@ export interface BoardHook {
   ready: boolean;
   opening: boolean;
   openError: string | null;
+  /** Why {@link openError} happened — drives which recovery UI is offered. */
+  openErrorKind: ErrorKind | null;
   offline: boolean;
   reload: () => void;
   /** Returns the new column id (or undefined before the doc is open). */
@@ -57,7 +60,7 @@ export interface BoardHook {
  * Column ops write to the WAL. Task ops write through the object index.
  */
 export function useBoard(spaceId: string, boardId: string, opts: { enabled?: boolean } = {}): BoardHook {
-  const { walDoc: doc, ready, version, touch, opening, openError, offline, reload } = useObjectContent(
+  const { walDoc: doc, ready, version, touch, opening, openError, openErrorKind, offline, reload } = useObjectContent(
     spaceId,
     boardId,
     'append',
@@ -85,6 +88,7 @@ export function useBoard(spaceId: string, boardId: string, opts: { enabled?: boo
     ready,
     opening,
     openError,
+    openErrorKind,
     offline,
     reload,
 

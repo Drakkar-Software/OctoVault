@@ -14,7 +14,7 @@ import { useCallback } from 'react';
 import type { WalDocument } from '@drakkar.software/starfish-wal';
 
 import { objLogName, objPubPull, objPubPush, objInvPull, objInvPush } from '@drakkar.software/octovault-sdk';
-import type { ObjectContentKind, NodeAccess } from '@drakkar.software/octovault-sdk';
+import type { ErrorKind, ObjectContentKind, NodeAccess } from '@drakkar.software/octovault-sdk';
 import { useSession } from './session-context';
 import { useSpaceOpen } from './use-room-open-flow';
 import { useMergeDoc } from './use-merge-doc';
@@ -72,6 +72,9 @@ export interface ObjectContentHandle {
   pull: () => void;
   opening: boolean;
   openError: string | null;
+  /** Why {@link openError} happened, so a caller can pick a recovery affordance.
+   *  Never `'network'` — an unreachable server sets {@link offline} instead. */
+  openErrorKind: ErrorKind | null;
   offline: boolean;
   reload: () => void;
 }
@@ -109,7 +112,18 @@ export function useObjectContent(
   });
 
   // WAL doc (always called; gate via enabled for hook-order stability).
-  const { doc: walDoc, ready: walReady, version, touch, pull: walPull, reload: reloadDoc, opening: walOpening, openError: walOpenError } = useWalDoc({
+  const {
+    doc: walDoc,
+    ready: walReady,
+    version,
+    touch,
+    pull: walPull,
+    reload: reloadDoc,
+    opening: walOpening,
+    openError: walOpenError,
+    openErrorKind: walOpenErrorKind,
+    offline: walOffline,
+  } = useWalDoc({
     client: spaceOpen.client,
     encryptor: spaceOpen.encryptor,
     documentKey: objLogName(spaceId, objectId),
@@ -152,7 +166,15 @@ export function useObjectContent(
   const activePull  = isPublicPlaintext ? pubResult.pull  : isInvitePlaintext ? invResult.pull  : walPull;
   const activeOpening   = isPublicPlaintext ? pubResult.opening   : isInvitePlaintext ? invResult.opening   : (spaceOpen.opening || walOpening);
   const activeOpenError = isPublicPlaintext ? pubResult.openError : isInvitePlaintext ? invResult.openError : (spaceOpen.openError ?? walOpenError);
-  const activeOffline   = isPublicPlaintext ? pubResult.offline   : isInvitePlaintext ? invResult.offline   : spaceOpen.offline;
+  const activeOffline   = isPublicPlaintext ? pubResult.offline   : isInvitePlaintext ? invResult.offline   : (spaceOpen.offline || walOffline);
+  // The space open fails first and shadows the WAL open, so its kind wins when set.
+  // It carries the keyring's own `'crypto'` verdict — the trusted-adder mismatch that
+  // the trust bypass recovers from — so this must NOT be flattened to `'access'`.
+  const activeOpenErrorKind: ErrorKind | null = isPublicPlaintext
+    ? pubResult.openErrorKind
+    : isInvitePlaintext
+      ? invResult.openErrorKind
+      : (spaceOpen.openError ? spaceOpen.openErrorKind : walOpenErrorKind);
 
   // Live cross-device sync (focus-pull + SSE poll).
   useDocLiveSync({ docId: objectId, ready: activeReady, pull: activePull, skipFirstFocus: true, firstFocusKey: objectId });
@@ -174,6 +196,7 @@ export function useObjectContent(
     pull: activePull,
     opening: base ? activeOpening : false,
     openError: activeOpenError,
+    openErrorKind: activeOpenErrorKind,
     offline: activeOffline,
     reload,
   };

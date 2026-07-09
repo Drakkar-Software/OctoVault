@@ -17,12 +17,17 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { reportReachability, subscribeOnline } from './connectivity';
-import { SpaceAccessError } from '@drakkar.software/octovault-sdk';
+import { classifyError, SpaceAccessError } from '@drakkar.software/octovault-sdk';
+import type { ErrorKind } from '@drakkar.software/octovault-sdk';
 
 export interface SpaceOpenState {
   opening: boolean;
   /** A hard, user-facing error (genuine access denial) — not connectivity. */
   openError: string | null;
+  /** Why {@link openError} happened. `'crypto'` when the keyring itself refused to
+   *  open (the trusted-adder mismatch), which is what unlocks the recovery UI;
+   *  `'access'` for a plain denial. */
+  openErrorKind: ErrorKind | null;
   /** The open couldn't reach the server: degrade to an offline shell, don't error. */
   offline: boolean;
   /** Bumped to re-run the caller's open effect (manual retry or reconnect). */
@@ -42,6 +47,7 @@ export interface SpaceOpenState {
 export function useSpaceOpenState(): SpaceOpenState {
   const [opening, setOpening] = useState(true);
   const [openError, setOpenError] = useState<string | null>(null);
+  const [openErrorKind, setOpenErrorKind] = useState<ErrorKind | null>(null);
   const [offline, setOffline] = useState(false);
   // Bumped by `reload()` to re-run the caller's open effect after a timeout/error
   // without leaving the screen (the rejected pull already cleared the encryptor cache).
@@ -57,19 +63,25 @@ export function useSpaceOpenState(): SpaceOpenState {
 
   const beginOpen = useCallback(() => {
     setOpenError(null);
+    setOpenErrorKind(null);
     setOffline(false);
     setOpening(true);
   }, []);
   const openReached = useCallback(() => reportReachability(true), []);
   const finishOpening = useCallback(() => setOpening(false), []);
   const failOpen = useCallback((e: unknown) => {
-    if (e instanceof SpaceAccessError) setOpenError(String(e.message));
-    else {
+    if (e instanceof SpaceAccessError) {
+      setOpenError(String(e.message));
+      // A `SpaceAccessError` is access-shaped by default, but the keyring raises one
+      // when it cannot build an encryptor at all — a crypto failure wearing an access
+      // error's clothes, and the trigger the trust bypass exists to recover from.
+      setOpenErrorKind(classifyError(e) === 'crypto' ? 'crypto' : 'access');
+    } else {
       setOffline(true);
       reportReachability(false);
     }
     setOpening(false);
   }, []);
 
-  return { opening, openError, offline, reloadNonce, reload, beginOpen, openReached, finishOpening, failOpen };
+  return { opening, openError, openErrorKind, offline, reloadNonce, reload, beginOpen, openReached, finishOpening, failOpen };
 }
